@@ -34,6 +34,7 @@ Be creative! Everyone on the team should participate.
 | Name | Role |
 | ---- | ---- |
 | Jason Kong | |
+| Anna He | Co-Lead |
 |  | |
 
 ## Warm-up Task: Graphing Tool
