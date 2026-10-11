@@ -1,122 +1,125 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useCallback, useRef, useState } from 'react'
+import TopNav from './components/TopNav.jsx'
+import TitleBar from './components/TitleBar.jsx'
+import ChartTypePicker from './components/ChartTypePicker.jsx'
+import DataPanel from './components/DataPanel.jsx'
+import ChartPreview from './components/ChartPreview.jsx'
+import ExportPanel from './components/ExportPanel.jsx'
+import SpecsPanel from './components/SpecsPanel.jsx'
+import { DEFAULT_SPECS, initialState } from './state.js'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+export default function App() {
+  const [state, setState] = useState(initialState)
+  // Ref to the DOM node wrapping the rendered chart (title + svg). Used by ExportPanel.
+  const chartRef = useRef(null)
+
+  const update = useCallback((patch) => setState((s) => ({ ...s, ...patch })), [])
+
+  // ---- data handlers ----
+  const setCell = useCallback((row, col, value) => {
+    setState((s) => {
+      const rows = s.rows.map((r, i) => (i === row ? r.map((v, j) => (j === col ? value : v)) : r))
+      return { ...s, rows }
+    })
+  }, [])
+
+  const selectCell = useCallback((row, col) => update({ selectedCell: { row, col } }), [update])
+
+  const addRow = useCallback(() => {
+    setState((s) => ({
+      ...s,
+      rows: [...s.rows, s.columns.map(() => '')],
+      selectedCell: { row: s.rows.length, col: 0 },
+    }))
+  }, [])
+
+  const removeRow = useCallback((row) => {
+    setState((s) => ({
+      ...s,
+      rows: s.rows.filter((_, i) => i !== row),
+      selectedCell: null,
+    }))
+  }, [])
+
+  const setColumnName = useCallback((col, name) => {
+    setState((s) => ({
+      ...s,
+      columns: s.columns.map((c, i) => (i === col ? { ...c, name } : c)),
+    }))
+  }, [])
+
+  /** Replace the whole dataset (CSV upload / paste). Rebuilds series from columns. */
+  const importData = useCallback(({ columns, rows }) => {
+    setState((s) => {
+      const series = columns.slice(1).map((c, i) => ({
+        id: `s${i + 1}`,
+        columnIndex: i + 1,
+        name: c.name,
+        legendLabel: c.name,
+        color: DEFAULT_SPECS.series[i % DEFAULT_SPECS.series.length].color,
+        width: 2,
+      }))
+      return { ...s, columns, rows, series, xColumn: 0, yMode: 'both', selectedCell: null }
+    })
+  }, [])
+
+  // ---- spec handlers ----
+  const setSeriesProp = useCallback((id, patch) => {
+    setState((s) => ({
+      ...s,
+      series: s.series.map((sr) => (sr.id === id ? { ...sr, ...patch } : sr)),
+    }))
+  }, [])
+
+  const resetSpecs = useCallback(() => update({ ...DEFAULT_SPECS }), [update])
+
+  const handlers = {
+    update,
+    setCell,
+    selectCell,
+    addRow,
+    removeRow,
+    setColumnName,
+    importData,
+    setSeriesProp,
+    resetSpecs,
+  }
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+    <div className="app">
+      <TopNav userInitials="LK" />
+      <main className="page">
+        <TitleBar
+          graphName={state.graphName}
+          onRename={(graphName) => update({ graphName })}
+          onNewGraph={() => update({ ...initialState })}
+          onExport={() => chartRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+        />
 
-      <div className="ticks"></div>
+        <div className="workspace">
+          <aside className="column column-left">
+            <ChartTypePicker
+              value={state.chartType}
+              onChange={(chartType) => update({ chartType })}
+            />
+            <DataPanel state={state} handlers={handlers} />
+          </aside>
 
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
+          <section className="column column-center">
+            <ChartPreview state={state} chartRef={chartRef} />
+            <ExportPanel state={state} update={update} chartRef={chartRef} />
+          </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
+          <aside className="column column-right">
+            <SpecsPanel state={state} handlers={handlers} />
+          </aside>
+        </div>
+
+        <footer className="page-footer">
+          We are selling your data. Don&apos;t say we didn&apos;t warn you.
+        </footer>
+      </main>
+    </div>
   )
 }
-
-export default App
