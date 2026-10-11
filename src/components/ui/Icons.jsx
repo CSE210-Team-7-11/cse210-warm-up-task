@@ -130,6 +130,15 @@ export function CheckCircleIcon({ size = 14 }) {
   )
 }
 
+export function AlertCircleIcon({ size = 14 }) {
+  return (
+    <svg {...base(size)}>
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 8v5M12 16h.01" />
+    </svg>
+  )
+}
+
 export function ResetIcon({ size = 12 }) {
   return (
     <svg {...base(size)}>

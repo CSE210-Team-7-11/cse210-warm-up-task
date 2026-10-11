@@ -17,11 +17,17 @@
   /* brand greens */
   --green-700: #1e5e3c; /* hover */
   --green-600: #26734b; /* primary */
-  --green-500: #4e8d6d; /* step numbers, active nav */
+  --green-500: #4e8d6d; /* step numbers, tab underline (active nav / avatar / status dot use green-600) */
   --green-300: #a1c3ac;
   --green-200: #c9dcd2;
   --leaf: #a6ca57;
   --leaf-dark: #95c15e;
+  --brand-ink: #174b34; /* wordmark */
+
+  /* feedback */
+  --danger: #b8564c;
+  --danger-muted: #b9736b;
+  --danger-bg: #fbf1ef;
 
   /* chart series */
   --series-1: #26734b;

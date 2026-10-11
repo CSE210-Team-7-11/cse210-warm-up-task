@@ -1,0 +1,257 @@
+/* SpecsPanel — right column "03 Graph Specifications".
+   Sizes are measured from design/figma-mockup.png (×1.4). */
+
+.specs-panel {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* ---------- Heading + tab strip ---------- */
+.specs-panel-top {
+  padding: 16px 16px 0;
+}
+
+.specs-panel-tabs {
+  display: flex;
+  gap: 16px;
+  margin-top: 24px;
+  border-bottom: 1px solid var(--border-soft);
+}
+
+.specs-panel-tab {
+  margin-bottom: -1px;
+  padding: 0 0 6px;
+  border-bottom: 2px solid transparent;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--text-muted);
+  transition: color 120ms ease;
+}
+
+.specs-panel-tab:hover {
+  color: var(--text-strong);
+}
+
+.specs-panel-tab.is-active {
+  color: var(--green-600);
+  border-bottom-color: var(--green-500);
+}
+
+.specs-panel-tab:focus-visible {
+  outline: 2px solid var(--green-300);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* ---------- Collapsible sections ---------- */
+.specs-panel-section {
+  padding: 16px;
+}
+
+.specs-panel-section + .specs-panel-section {
+  border-top: 1px solid var(--border-soft);
+}
+
+.specs-panel-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 20px;
+  text-align: left;
+  border-radius: 4px;
+}
+
+.specs-panel-section-header:focus-visible {
+  outline: 2px solid var(--green-300);
+  outline-offset: 2px;
+}
+
+.specs-panel-section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-strong);
+}
+
+.specs-panel-section-chevron {
+  display: inline-flex;
+  color: var(--text-muted);
+  transition: color 120ms ease;
+}
+
+.specs-panel-section-header:hover .specs-panel-section-chevron {
+  color: var(--text-strong);
+}
+
+.specs-panel-section-body {
+  margin-top: 8px;
+}
+
+.specs-panel-section--axes .specs-panel-section-body {
+  margin-top: 5px;
+}
+
+.specs-panel-section--series .specs-panel-section-body,
+.specs-panel-section--display .specs-panel-section-body {
+  margin-top: 0;
+}
+
+/* ---------- Shared row + field bits ---------- */
+.specs-panel-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 20px;
+}
+
+.specs-panel-row-label {
+  font-size: 11px;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.specs-panel-text-input {
+  font-size: 11px;
+}
+
+.specs-panel-field-label {
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+/* ---------- 1) Titles & labels ---------- */
+.specs-panel-title-select .select select {
+  height: 32px;
+  font-size: 11px;
+}
+
+.specs-panel-section--titles .specs-panel-text-input {
+  margin-top: 6px;
+}
+
+.specs-panel-section--titles .specs-panel-toggle-row {
+  margin-top: 8px;
+}
+
+/* ---------- 2) Axes ---------- */
+.specs-panel-axes-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 10px;
+  row-gap: 8px;
+}
+
+.specs-panel-field {
+  min-width: 0;
+}
+
+.specs-panel-field-select .select select {
+  font-size: 11px;
+  text-overflow: ellipsis;
+}
+
+/* ---------- 3) Data series ---------- */
+.specs-panel-series-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 28px;
+}
+
+.specs-panel-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.specs-panel-series-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 11px;
+  color: var(--text-strong);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.specs-panel-series-width {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.specs-panel-line-sample {
+  width: 16px;
+  min-height: 1px;
+  border-radius: 1px;
+  flex-shrink: 0;
+}
+
+/* Minimal "2 px ▾" select: no box, muted text, chevron flush right. */
+.specs-panel-width-select .select select {
+  height: 20px;
+  padding: 0 18px 0 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  font-size: 11px;
+  font-weight: 400;
+  color: var(--text-muted);
+  transition: color 120ms ease;
+}
+
+.specs-panel-width-select .select select:hover {
+  color: var(--text-strong);
+}
+
+.specs-panel-width-select .select select:focus {
+  box-shadow: none;
+}
+
+.specs-panel-width-select .select select:focus-visible {
+  outline: 2px solid var(--green-300);
+  outline-offset: 1px;
+}
+
+.specs-panel-width-select .select-chevron {
+  right: 0;
+}
+
+/* ---------- 4) Display ---------- */
+.specs-panel-section--display .specs-panel-toggle-row {
+  min-height: 26px;
+}
+
+/* ---------- Footer ---------- */
+.specs-panel-footer {
+  margin-top: auto;
+  padding: 12px 16px 8px;
+}
+
+.specs-panel-reset {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 20px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-radius: 4px;
+  transition: color 120ms ease;
+}
+
+.specs-panel-reset:hover {
+  color: var(--text-strong);
+}
+
+.specs-panel-reset:focus-visible {
+  outline: 2px solid var(--green-300);
+  outline-offset: 2px;
+}
