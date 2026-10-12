@@ -25,12 +25,12 @@ function svgEl(name, attrs) {
 }
 
 /**
- * Rebuild the preview node (title, subtitle, Recharts svg, legend) as one
+ * Rebuild the preview node (title, subtitle, chart svg, legend) as one
  * standalone SVG document. HTML text is traced into <text> nodes at its
  * on-screen position; the chart svg is cloned inline; fonts are inlined.
  */
 function buildExportSvg(node) {
-  const chartSvg = node.querySelector('svg.recharts-surface') || node.querySelector('svg')
+  const chartSvg = node.querySelector('svg.chart-svg')
   if (!chartSvg) throw new Error('Nothing to export yet — the chart has not rendered.')
 
   const box = node.getBoundingClientRect()

@@ -50,10 +50,9 @@
   min-width: 0;
 }
 
-.chart-preview-chart .recharts-wrapper,
-.chart-preview-chart .recharts-wrapper svg,
-.chart-preview-chart .recharts-surface {
-  outline: none;
+.chart-preview-chart .chart-svg {
+  display: block;
+  overflow: visible;
 }
 
 .chart-preview-empty {
