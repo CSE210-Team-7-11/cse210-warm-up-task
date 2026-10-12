@@ -40,7 +40,16 @@ Be creative! Everyone on the team should participate.
 
 ## Warm-up Task: Graphing Tool
 
-_Describe the project here: what it does, how to set it up, and how to run it._
+**Smitski Graph Studio** is a browser-based tool that turns a CSV/TSV file into a line graph or scatter plot with a custom title, subtitle, and axis labels. It is built with React 19 + Vite on the `vibe-code` branch.
+
+> **No Recharts.** All Recharts references have been removed: the dependency is gone from `package.json` / `package-lock.json`, and nothing in `src/` imports it. Charts are plain SVG drawn by our own code in `src/components/charts/`.
+
+```bash
+npm install
+npm run dev   # http://localhost:5173
+```
+
+See [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md) for how the app is structured and the open `TODO(...)` items.
 
 ### Approach
 
