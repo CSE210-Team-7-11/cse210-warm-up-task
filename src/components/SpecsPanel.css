@@ -94,8 +94,7 @@
   margin-top: 5px;
 }
 
-.specs-panel-section--series .specs-panel-section-body,
-.specs-panel-section--display .specs-panel-section-body {
+.specs-panel-section--series .specs-panel-section-body {
   margin-top: 0;
 }
 
@@ -151,24 +150,12 @@
   min-width: 0;
 }
 
-.specs-panel-field-select .select select {
-  font-size: 11px;
-  text-overflow: ellipsis;
-}
-
 /* ---------- 3) Data series ---------- */
 .specs-panel-series-row {
   display: flex;
   align-items: center;
   gap: 10px;
   height: 28px;
-}
-
-.specs-panel-swatch {
-  width: 14px;
-  height: 14px;
-  border-radius: 3px;
-  flex-shrink: 0;
 }
 
 .specs-panel-series-name {
@@ -179,55 +166,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-
-.specs-panel-series-width {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-
-.specs-panel-line-sample {
-  width: 16px;
-  min-height: 1px;
-  border-radius: 1px;
-  flex-shrink: 0;
-}
-
-/* Minimal "2 px ▾" select: no box, muted text, chevron flush right. */
-.specs-panel-width-select .select select {
-  height: 20px;
-  padding: 0 18px 0 0;
-  border: 0;
-  border-radius: 4px;
-  background: transparent;
-  font-size: 11px;
-  font-weight: 400;
-  color: var(--text-muted);
-  transition: color 120ms ease;
-}
-
-.specs-panel-width-select .select select:hover {
-  color: var(--text-strong);
-}
-
-.specs-panel-width-select .select select:focus {
-  box-shadow: none;
-}
-
-.specs-panel-width-select .select select:focus-visible {
-  outline: 2px solid var(--green-300);
-  outline-offset: 1px;
-}
-
-.specs-panel-width-select .select-chevron {
-  right: 0;
-}
-
-/* ---------- 4) Display ---------- */
-.specs-panel-section--display .specs-panel-toggle-row {
-  min-height: 26px;
 }
 
 /* ---------- Footer ---------- */

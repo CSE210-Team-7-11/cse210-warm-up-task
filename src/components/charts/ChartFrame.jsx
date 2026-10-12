@@ -1,16 +1,15 @@
 import { CHART_THEME as T, MARGIN, linear } from './chartUtils.js'
 
 /**
- * Shared SVG frame for every chart type: gridlines, tick labels, axis titles.
+ * Shared SVG frame for every chart type: gridlines (always on), tick labels, axis titles.
  * The chart-specific marks are drawn by `children`, a render function that
  * receives plot-space helpers:
  *
  *   children({ xPos, yPos, plotWidth, plotHeight })
  *     xPos(dataX) -> px   yPos(dataY) -> px   (already inside the plot area)
  *
- * The <svg> has class "chart-svg": ExportPanel looks for it when downloading.
  */
-export default function ChartFrame({ width, height, scales, xLabel, yLabel, gridlines, children }) {
+export default function ChartFrame({ width, height, scales, xLabel, yLabel, children }) {
   const plotWidth = Math.max(0, width - MARGIN.left - MARGIN.right)
   const plotHeight = Math.max(0, height - MARGIN.top - MARGIN.bottom)
   const xPos = linear(scales.x.domain, [0, plotWidth])
@@ -29,16 +28,14 @@ export default function ChartFrame({ width, height, scales, xLabel, yLabel, grid
     >
       <g transform={`translate(${MARGIN.left},${MARGIN.top})`}>
         {/* Gridlines */}
-        {gridlines ? (
-          <g stroke={T.grid} strokeWidth={1}>
-            {scales.y.ticks.map((t) => (
-              <line key={`gy${t}`} x1={0} x2={plotWidth} y1={yPos(t)} y2={yPos(t)} />
-            ))}
-            {scales.x.ticks.map((t) => (
-              <line key={`gx${t}`} x1={xPos(t)} x2={xPos(t)} y1={0} y2={plotHeight} />
-            ))}
-          </g>
-        ) : null}
+        <g stroke={T.grid} strokeWidth={1}>
+          {scales.y.ticks.map((t) => (
+            <line key={`gy${t}`} x1={0} x2={plotWidth} y1={yPos(t)} y2={yPos(t)} />
+          ))}
+          {scales.x.ticks.map((t) => (
+            <line key={`gx${t}`} x1={xPos(t)} x2={xPos(t)} y1={0} y2={plotHeight} />
+          ))}
+        </g>
 
         {/* X axis line + tick labels */}
         <line x1={0} x2={plotWidth} y1={plotHeight} y2={plotHeight} stroke={T.grid} />

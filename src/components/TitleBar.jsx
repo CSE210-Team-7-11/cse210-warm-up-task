@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
-import { ChevronRightIcon, DownloadIcon, PencilIcon, PlusIcon } from './ui/Icons.jsx'
+import { ChevronRightIcon, PencilIcon, PlusIcon } from './ui/Icons.jsx'
 import './TitleBar.css'
 
 /**
  * Page title bar: breadcrumb + editable graph name + save status on the left,
- * "New graph" / "Export graph" actions on the right.
+ * "New graph" action on the right.
  */
-export default function TitleBar({ graphName, onRename, onNewGraph, onExport }) {
+export default function TitleBar({ graphName, onRename, onNewGraph }) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(graphName)
   const inputRef = useRef(null)
@@ -102,13 +102,9 @@ export default function TitleBar({ graphName, onRename, onNewGraph, onExport }) 
       </div>
 
       <div className="title-bar-actions">
-        <button type="button" className="btn btn-secondary" onClick={onNewGraph}>
+        <button type="button" className="btn btn-primary" onClick={onNewGraph}>
           <PlusIcon size={14} />
           New graph
-        </button>
-        <button type="button" className="btn btn-primary" onClick={onExport}>
-          <DownloadIcon size={14} />
-          Export graph
         </button>
       </div>
     </div>

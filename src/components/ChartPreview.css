@@ -21,12 +21,8 @@
 }
 
 .chart-preview-body {
+  flex: 1; /* push the footer to the bottom of the stretched panel */
   padding: 20px 16px;
-}
-
-/* Serialized for export: must own an opaque surface. */
-.chart-preview-canvas {
-  background: var(--bg-surface);
 }
 
 .chart-preview-title {
@@ -88,20 +84,6 @@
   color: var(--text-muted);
 }
 
-.chart-preview-legend-swatch {
-  display: inline-block;
-  width: 16px;
-  height: 2px;
-  border-radius: 1px;
-  flex-shrink: 0;
-}
-
-.chart-preview-legend-swatch.is-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-}
-
 .chart-preview-footer {
   display: flex;
   justify-content: space-between;
@@ -159,4 +141,10 @@
   padding-left: 14px;
   font-weight: 600;
   color: var(--text-strong);
+}
+
+.series-key {
+  display: block;
+  flex-shrink: 0;
+  overflow: visible;
 }

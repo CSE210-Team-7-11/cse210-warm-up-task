@@ -8,72 +8,6 @@
   gap: 8px;
 }
 
-.data-panel-menu {
-  position: relative;
-  display: inline-flex;
-  margin-right: -4px;
-}
-
-.data-panel-more {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
-  border-radius: var(--radius-sm);
-  color: var(--text-muted);
-  transition:
-    background-color 120ms ease,
-    color 120ms ease;
-}
-
-.data-panel-more:hover,
-.data-panel-more[aria-expanded='true'] {
-  background: var(--bg-muted);
-  color: var(--text);
-}
-
-.data-panel-more:focus-visible {
-  outline: 2px solid var(--green-300);
-  outline-offset: 1px;
-}
-
-.data-panel-menu-list {
-  position: absolute;
-  top: calc(100% + 4px);
-  right: 0;
-  z-index: 20;
-  min-width: 148px;
-  padding: 4px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-md);
-}
-
-.data-panel-menu-item {
-  display: block;
-  width: 100%;
-  padding: 6px 8px;
-  border-radius: var(--radius-sm);
-  font-size: 12px;
-  text-align: left;
-  color: var(--text-strong);
-}
-
-.data-panel-menu-item:hover,
-.data-panel-menu-item:focus-visible {
-  background: var(--bg-tint);
-  color: var(--green-600);
-  outline: none;
-}
-
-.data-panel-menu-item.is-danger:hover,
-.data-panel-menu-item.is-danger:focus-visible {
-  color: var(--danger);
-  background: var(--danger-bg);
-}
-
 /* ---------- drop zone ---------- */
 .data-panel-dropzone {
   display: flex;
@@ -154,7 +88,8 @@
   margin-top: 10px;
   border: 1px solid var(--border-table);
   border-radius: var(--radius-md);
-  overflow: hidden;
+  overflow: auto;
+  max-height: 392px; /* ~12 rows; longer files scroll inside the panel */
   background: var(--bg-surface);
 }
 
@@ -172,17 +107,16 @@
 
 .data-panel-th {
   height: 30px;
-  padding: 0 4px;
+  padding: 6px 4px;
   background: var(--bg-tint);
   font-size: 11px;
   font-weight: 600;
-  line-height: 1;
+  line-height: 1.2;
   color: var(--green-600);
   text-align: center;
   vertical-align: middle;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  /* long column names from uploaded files wrap instead of truncating */
+  overflow-wrap: anywhere;
 }
 
 .data-panel-td {
@@ -195,184 +129,21 @@
   color: var(--text-strong);
 }
 
-/* zebra + selected row */
+/* zebra rows */
 .data-panel-table tbody tr:nth-child(even) .data-panel-td {
   background: var(--bg-muted);
 }
 
-.data-panel-table tbody tr.is-selected .data-panel-td {
-  background: var(--bg-tint-row);
-}
-
-/* selected cell ring — drawn over the cell's own separator so it reads as one box */
-.data-panel-td.is-selected::after {
-  content: '';
-  position: absolute;
-  top: -1px; /* cover the cell's own separator line */
-  right: 0;
-  bottom: 0;
-  left: 0;
-  border: 1.5px solid var(--green-600);
-  pointer-events: none;
-  z-index: 1;
+/* non-numeric cell from an uploaded file */
+.data-panel-td.is-invalid {
+  color: var(--danger);
+  background: var(--danger-bg);
 }
 
 /* row-number column */
 .data-panel-td-num {
   font-size: 11px;
   color: var(--text-faint);
-}
-
-.data-panel-row-btn {
-  display: block;
-  width: 100%;
-  height: 29px;
-  line-height: 29px;
-  color: inherit;
-  font-size: inherit;
-  cursor: default;
-}
-
-.data-panel-row-x {
-  display: none;
-  font-size: 13px;
-  line-height: 29px;
-  color: var(--text-muted);
-}
-
-.data-panel-row-btn:not(:disabled) {
-  cursor: pointer;
-}
-
-.data-panel-row-btn:not(:disabled):hover .data-panel-row-num,
-.data-panel-row-btn:not(:disabled):focus-visible .data-panel-row-num {
-  display: none;
-}
-
-.data-panel-row-btn:not(:disabled):hover .data-panel-row-x,
-.data-panel-row-btn:not(:disabled):focus-visible .data-panel-row-x {
-  display: inline;
-}
-
-.data-panel-row-btn:focus-visible {
-  outline: none;
-  background: var(--bg-tint);
-}
-
-/* editable cells */
-.data-panel-cell-input {
-  display: block;
-  width: 100%;
-  height: 29px;
-  padding: 0 4px;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  font-size: 11.5px;
-  line-height: 29px;
-  text-align: center;
-  color: var(--text-strong);
-  outline: none;
-  caret-color: var(--green-600);
-}
-
-.data-panel-cell-input::selection {
-  background: var(--green-200);
-}
-
-.data-panel-td.is-invalid .data-panel-cell-input {
-  color: var(--danger);
-}
-
-/* ---------- below-table actions ---------- */
-.data-panel-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-top: 12px;
-}
-
-.data-panel-add-row {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  line-height: 16px;
-}
-
-.data-panel-add-row:focus-visible,
-.data-panel-paste-toggle:focus-visible,
-.data-panel-paste-cancel:focus-visible {
-  outline: 2px solid var(--green-300);
-  outline-offset: 2px;
-  border-radius: 3px;
-}
-
-.data-panel-paste-toggle {
-  font-size: 11.5px;
-  line-height: 16px;
-  color: var(--text-muted);
-  transition: color 120ms ease;
-}
-
-.data-panel-paste-toggle:hover,
-.data-panel-paste-toggle[aria-expanded='true'] {
-  color: var(--text-strong);
-}
-
-/* paste area */
-.data-panel-paste {
-  margin-top: 10px;
-}
-
-.data-panel-paste-textarea {
-  display: block;
-  width: 100%;
-  min-height: 76px;
-  padding: 8px 10px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-surface);
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 11px;
-  line-height: 1.5;
-  color: var(--text-strong);
-  resize: vertical;
-  outline: none;
-}
-
-.data-panel-paste-textarea::placeholder {
-  color: var(--text-faint);
-}
-
-.data-panel-paste-textarea:focus {
-  border-color: var(--green-300);
-  box-shadow: 0 0 0 3px rgba(38, 115, 75, 0.08);
-}
-
-.data-panel-paste-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 8px;
-}
-
-.data-panel-paste-import {
-  height: 28px;
-  padding: 0 12px;
-}
-
-.data-panel-paste-import:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.data-panel-paste-cancel {
-  font-size: 11.5px;
-  color: var(--text-muted);
-}
-
-.data-panel-paste-cancel:hover {
-  color: var(--text-strong);
 }
 
 /* ---------- validation line ---------- */
@@ -408,4 +179,10 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
   border: 0;
+}
+
+.data-panel-th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }

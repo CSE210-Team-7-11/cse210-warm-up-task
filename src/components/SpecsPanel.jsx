@@ -2,7 +2,7 @@ import { useState } from 'react'
 import Select from './ui/Select.jsx'
 import Toggle from './ui/Toggle.jsx'
 import { ChevronDownIcon, ChevronUpIcon, ResetIcon } from './ui/Icons.jsx'
-import { LINE_WIDTHS } from '../state.js'
+import SeriesKey from './charts/SeriesKey.jsx'
 import './SpecsPanel.css'
 
 // Which text field the "Titles & labels" pill select edits.
@@ -15,8 +15,6 @@ const TITLE_PLACEHOLDERS = {
   title: 'Graph title',
   subtitle: 'Subtitle',
 }
-
-const WIDTH_OPTIONS = LINE_WIDTHS.map((w) => ({ value: String(w), label: `${w} px` }))
 
 /** Collapsible section: title + chevron header, body only rendered while open. */
 function Section({ id, title, open, onToggle, children }) {
@@ -54,18 +52,11 @@ function ToggleRow({ label, checked, onChange }) {
   )
 }
 
-export default function SpecsPanel({ state, handlers }) {
-  const { update, setSeriesProp, resetSpecs } = handlers
-  const [open, setOpen] = useState({ titles: true, axes: true, series: true, display: true })
+export default function SpecsPanel({ state, update, onReset }) {
+  const [open, setOpen] = useState({ titles: true, axes: true, series: true })
   const [titleField, setTitleField] = useState('title')
 
   const toggleSection = (key) => setOpen((o) => ({ ...o, [key]: !o[key] }))
-
-  const xOptions = state.columns.map((c, i) => ({ value: i, label: c.name }))
-  const yOptions = [
-    { value: 'both', label: 'Both series' },
-    ...state.series.map((s) => ({ value: s.id, label: s.name })),
-  ]
 
   return (
     <div className="panel specs-panel">
@@ -106,30 +97,9 @@ export default function SpecsPanel({ state, handlers }) {
         />
       </Section>
 
-      <Section id="axes" title="Axes" open={open.axes} onToggle={() => toggleSection('axes')}>
+      {/* Axis data is fixed: column 1 of the file is X, the rest are series. Only names are editable. */}
+      <Section id="axes" title="Axis names" open={open.axes} onToggle={() => toggleSection('axes')}>
         <div className="specs-panel-axes-grid">
-          <div className="specs-panel-field">
-            <span className="field-label specs-panel-field-label">X-axis data</span>
-            <div className="specs-panel-field-select">
-              <Select
-                value={state.xColumn}
-                options={xOptions}
-                onChange={(v) => update({ xColumn: Number(v) })}
-                ariaLabel="X-axis data"
-              />
-            </div>
-          </div>
-          <div className="specs-panel-field">
-            <span className="field-label specs-panel-field-label">Y-axis data</span>
-            <div className="specs-panel-field-select">
-              <Select
-                value={state.yMode}
-                options={yOptions}
-                onChange={(yMode) => update({ yMode })}
-                ariaLabel="Y-axis data"
-              />
-            </div>
-          </div>
           <div className="specs-panel-field">
             <label className="field-label specs-panel-field-label" htmlFor="specs-panel-x-label">
               X-axis label
@@ -139,7 +109,7 @@ export default function SpecsPanel({ state, handlers }) {
               type="text"
               className="input specs-panel-text-input"
               value={state.xLabel}
-              placeholder="Time (Months)"
+              placeholder="Time (months)"
               onChange={(e) => update({ xLabel: e.target.value })}
             />
           </div>
@@ -152,35 +122,20 @@ export default function SpecsPanel({ state, handlers }) {
               type="text"
               className="input specs-panel-text-input"
               value={state.yLabel}
-              placeholder="Plant height (cm)"
+              placeholder="Value"
               onChange={(e) => update({ yLabel: e.target.value })}
             />
           </div>
         </div>
       </Section>
 
+      {/* Read-only key: colors + line/marker styles are fixed (colorblind-safe), see SERIES_STYLES. */}
       <Section id="series" title="Data series" open={open.series} onToggle={() => toggleSection('series')}>
         {state.series.map((s) => (
           <div className="specs-panel-series-row" key={s.id}>
-            <span className="specs-panel-swatch" style={{ background: s.color }} aria-hidden="true" />
+            <SeriesKey series={s} chartType={state.chartType} />
             <span className="specs-panel-series-name" title={s.name}>
               {s.name}
-            </span>
-            <span className="specs-panel-series-width">
-              <span
-                className="specs-panel-line-sample"
-                style={{ background: s.color, height: s.width }}
-                aria-hidden="true"
-              />
-              <span className="specs-panel-width-select">
-                <Select
-                  variant="compact"
-                  value={String(s.width)}
-                  options={WIDTH_OPTIONS}
-                  onChange={(v) => setSeriesProp(s.id, { width: Number(v) })}
-                  ariaLabel={`${s.name} line width`}
-                />
-              </span>
             </span>
           </div>
         ))}
@@ -191,13 +146,8 @@ export default function SpecsPanel({ state, handlers }) {
         />
       </Section>
 
-      <Section id="display" title="Display" open={open.display} onToggle={() => toggleSection('display')}>
-        <ToggleRow label="Gridlines" checked={state.gridlines} onChange={(gridlines) => update({ gridlines })} />
-        <ToggleRow label="Legend" checked={state.legend} onChange={(legend) => update({ legend })} />
-      </Section>
-
       <div className="specs-panel-footer">
-        <button type="button" className="specs-panel-reset" onClick={resetSpecs}>
+        <button type="button" className="specs-panel-reset" onClick={onReset}>
           <ResetIcon size={12} />
           Reset to defaults
         </button>

@@ -1,7 +1,7 @@
 // Plain-JS helpers shared by every chart type. No charting library: we draw
 // SVG ourselves, so all the math (data shaping, scales, ticks) lives here.
 
-export const CHART_HEIGHT = 300
+export const CHART_HEIGHT = 420
 
 /** Space around the plot area for tick labels and axis titles (px). */
 export const MARGIN = { top: 12, right: 16, bottom: 44, left: 52 }
@@ -24,18 +24,15 @@ export function num(v) {
 }
 
 /**
- * Turn the editor state into chart-ready data.
+ * Turn the editor state into chart-ready data. Column 0 is always X.
  * Returns:
- *   data          [{ x, s1: number|null, s2: number|null, ... }] sorted by x
- *   visibleSeries the series to draw (all, or one when the Y-axis select picks it)
+ *   data    [{ x, s1: number|null, s2: number|null, ... }] sorted by x
+ *   series  the series to draw (from state.series)
  */
 export function buildChartData(state) {
-  const visibleSeries =
-    state.yMode === 'both' ? state.series : state.series.filter((s) => s.id === state.yMode)
-
   const data = []
   for (const row of state.rows) {
-    const x = num(row[state.xColumn])
+    const x = num(row[0])
     if (!Number.isFinite(x)) continue
     const point = { x }
     for (const s of state.series) {
@@ -45,7 +42,7 @@ export function buildChartData(state) {
     data.push(point)
   }
   data.sort((a, b) => a.x - b.x)
-  return { data, visibleSeries }
+  return { data, series: state.series }
 }
 
 /** Snap a rough interval to 1 / 2 / 5 x 10^n. */
@@ -66,12 +63,12 @@ function range(from, to, step) {
 
 /**
  * Domains + tick values for both axes.
- * X: data min..max on a nice step (0..14 -> 0,2,...,14).
+ * X: data range widened to a nice step (1..12 -> 0,2,...,12).
  * Y: 0..niceMax (35 -> 40, ticks every 10); extends below 0 for negative data.
  * Returns null when there is nothing to plot.
  */
-export function computeScales(data, visibleSeries) {
-  if (data.length === 0 || visibleSeries.length === 0) return null
+export function computeScales(data, series) {
+  if (data.length === 0 || series.length === 0) return null
   let xMin = Infinity
   let xMax = -Infinity
   let yMin = Infinity
@@ -79,7 +76,7 @@ export function computeScales(data, visibleSeries) {
   for (const p of data) {
     xMin = Math.min(xMin, p.x)
     xMax = Math.max(xMax, p.x)
-    for (const s of visibleSeries) {
+    for (const s of series) {
       const v = p[s.id]
       if (v === null) continue
       yMin = Math.min(yMin, v)
@@ -93,7 +90,9 @@ export function computeScales(data, visibleSeries) {
     x = { domain: [xMin - 1, xMax + 1], ticks: [xMin] }
   } else {
     const step = niceStep((xMax - xMin) / 6)
-    x = { domain: [xMin, xMax], ticks: range(Math.ceil(xMin / step - 1e-9) * step, xMax, step) }
+    const lo = Math.floor(xMin / step + 1e-9) * step
+    const hi = Math.ceil(xMax / step - 1e-9) * step
+    x = { domain: [lo, hi], ticks: range(lo, hi, step) }
   }
 
   const yStep = niceStep((Math.max(yMax, 0) || 1) / 4)
