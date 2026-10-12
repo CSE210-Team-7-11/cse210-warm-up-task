@@ -18,7 +18,7 @@ export function gridlines(min, max, count = 5) {
   return ticks(min, max, count).slice(1, -1)
 }
 
-// least squares fit through the points, the line is y = slope * x + startHeight
+// least squares fit, the line is y = slope * x + startHeight
 export function trendLine(points) {
   if (points.length < 2) return null
 
@@ -37,7 +37,7 @@ export function trendLine(points) {
     top += (point.x - averageX) * (point.y - averageY)
     bottom += (point.x - averageX) * (point.x - averageX)
   }
-  // every point has the same x so theres no line to draw (and we'd be dividing by zero)
+  // all points have the same x, cant fit a line (would divide by zero)
   if (bottom === 0) return null
 
   const slope = top / bottom

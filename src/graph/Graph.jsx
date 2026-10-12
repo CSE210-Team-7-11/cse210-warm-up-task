@@ -1,6 +1,7 @@
 import { useId, useState } from 'react'
 import { scale, ticks, gridlines, trendLine } from './scale.js'
 import Legend from './Legend.jsx'
+import Marker from './Marker.jsx'
 import Tooltip from './Tooltip.jsx'
 import './Graph.css'
 
@@ -21,26 +22,46 @@ const TICK_SIZE = 5
 const MIN_RADIUS = 3
 const MAX_RADIUS = 100
 const MIN_HOVER_TARGET_RADIUS = 10
+const HOVER_EXTRA_RADIUS = 1.5
 
 const round = (v) => Math.round(v * 10) / 10
 
 // Draws `points` ([{ x, y }, ...]) as a scatter or line plot.
-// `showTrendLine` adds a best fit line to a scatter plot.
-export default function Graph({ points, type = 'scatter', labels = {}, showTrendLine = false }) {
+// for more than one series pass series = [{ name, color, marker, points }]
+export default function Graph({ points, series, type = 'scatter', labels = {}, showTrendLine = false }) {
+  // the hovered point, as { seriesNumber, pointNumber }
   const [hovered, setHovered] = useState(null)
 
   // react puts colons in its ids and those break url(#...)
   const plotAreaId = 'plot-area-' + useId().replaceAll(':', '')
 
   const { title, subtitle, x_axis_label, y_axis_label } = { ...DEFAULT_LABELS, ...labels }
-  const xs = points.map((p) => p.x)
-  const ys = points.map((p) => p.y)
+
+  // a plain list of points counts as one series
+  let allSeries = series
+  if (!allSeries) {
+    allSeries = [{ name: labels.legend, points }]
+  }
+
+  // line plot only draws the first series for now
+  let shownSeries = allSeries
+  if (type === 'line') {
+    shownSeries = [{ name: allSeries[0].name, points: allSeries[0].points }]
+  }
+
+  const shownPoints = []
+  for (const oneSeries of shownSeries) {
+    shownPoints.push(...oneSeries.points)
+  }
+
+  const xs = shownPoints.map((p) => p.x)
+  const ys = shownPoints.map((p) => p.y)
   const xMin = Math.min(...xs)
   const xMax = Math.max(...xs)
   const yMin = Math.min(...ys)
   const yMax = Math.max(...ys)
 
-  const sizes = points.map((p) => p.z).filter(Number.isFinite)
+  const sizes = shownPoints.map((p) => p.z).filter(Number.isFinite)
   const sizeMin = Math.min(...sizes)
   const sizeMax = Math.max(...sizes)
 
@@ -59,19 +80,28 @@ export default function Graph({ points, type = 'scatter', labels = {}, showTrend
   // SVG's y-axis points down, so larger values map to smaller pixel positions.
   const toY = scale(yMin, yMax, bottom, top)
 
-  const sorted = [...points].sort((a, b) => a.x - b.x)
+  const sorted = [...shownSeries[0].points].sort((a, b) => a.x - b.x)
   const linePath = sorted
     .map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.x)},${toY(p.y)}`)
     .join(' ')
 
-  const trend = showTrendLine && type === 'scatter' ? trendLine(points) : null
+  // only show the series name when theres more than one
+  let hoveredPoint = null
+  let hoveredName
+  if (hovered && shownSeries[hovered.seriesNumber]) {
+    const hoveredSeries = shownSeries[hovered.seriesNumber]
+    hoveredPoint = hoveredSeries.points[hovered.pointNumber]
+    if (shownSeries.length > 1) {
+      hoveredName = hoveredSeries.name
+    }
+  }
 
   return (
     <svg
       className="graph"
       viewBox={`0 0 ${WIDTH} ${HEIGHT}`}
       role="img"
-      aria-label={`${type} plot of ${points.length} points`}
+      aria-label={`${type} plot of ${shownPoints.length} points`}
     >
       {/* HEADER */}
       <text
@@ -92,7 +122,7 @@ export default function Graph({ points, type = 'scatter', labels = {}, showTrend
       </text>
 
       {/* LEGEND */}
-      <Legend sizes={sizes} name={labels.legend} toRadius={toRadius} right={right} />
+      <Legend sizes={sizes} series={shownSeries} toRadius={toRadius} right={right} />
 
       {/* AXES */}
       <line className="axis" x1={left} y1={bottom} x2={right} y2={bottom} />
@@ -145,48 +175,80 @@ export default function Graph({ points, type = 'scatter', labels = {}, showTrend
         {y_axis_label}
       </text>
 
-      {/* TREND LINE, cut off at the plot edges so it doesnt poke out */}
-      {trend && (
-        <>
-          <defs>
-            <clipPath id={plotAreaId}>
-              <rect x={left} y={top} width={right - left} height={bottom - top} />
-            </clipPath>
-          </defs>
-          <line
-            className="trend"
-            clipPath={`url(#${plotAreaId})`}
-            x1={toX(xMin)}
-            y1={toY(trend.slope * xMin + trend.startHeight)}
-            x2={toX(xMax)}
-            y2={toY(trend.slope * xMax + trend.startHeight)}
-          />
-        </>
-      )}
+      {/* TREND LINES, clipped so they dont poke out of the plot */}
+      <defs>
+        <clipPath id={plotAreaId}>
+          <rect x={left} y={top} width={right - left} height={bottom - top} />
+        </clipPath>
+      </defs>
+      {showTrendLine &&
+        type === 'scatter' &&
+        shownSeries.map((oneSeries, seriesNumber) => {
+          const trend = trendLine(oneSeries.points)
+          if (!trend) return null
+          const firstX = Math.min(...oneSeries.points.map((point) => point.x))
+          const lastX = Math.max(...oneSeries.points.map((point) => point.x))
+          return (
+            <line
+              key={seriesNumber}
+              className="trend"
+              clipPath={`url(#${plotAreaId})`}
+              style={{ stroke: oneSeries.color }}
+              x1={toX(firstX)}
+              y1={toY(trend.slope * firstX + trend.startHeight)}
+              x2={toX(lastX)}
+              y2={toY(trend.slope * lastX + trend.startHeight)}
+            />
+          )
+        })}
 
       {/* POINTS */}
       {type === 'line' ? (
         <path className="line" d={linePath} />
       ) : (
-        points.map((p, i) => (
-          <circle key={i} className="point" cx={toX(p.x)} cy={toY(p.y)} r={toRadius(p.z)} />
+        shownSeries.map((oneSeries, seriesNumber) =>
+          oneSeries.points.map((point, pointNumber) => {
+            const isHovered =
+              hovered !== null &&
+              hovered.seriesNumber === seriesNumber &&
+              hovered.pointNumber === pointNumber
+
+            let radius = toRadius(point.z)
+            if (isHovered) {
+              radius += HOVER_EXTRA_RADIUS
+            }
+
+            return (
+              <Marker
+                key={`${seriesNumber}-${pointNumber}`}
+                shape={oneSeries.marker}
+                color={oneSeries.color}
+                cx={toX(point.x)}
+                cy={toY(point.y)}
+                r={radius}
+              />
+            )
+          })
+        )
+      )}
+
+      {/* HOVER TARGETS + TOOLTIP */}
+      {shownSeries.map((oneSeries, seriesNumber) =>
+        oneSeries.points.map((point, pointNumber) => (
+          <circle
+            key={`${seriesNumber}-${pointNumber}`}
+            className="hit"
+            cx={toX(point.x)}
+            cy={toY(point.y)}
+            r={Math.max(toRadius(point.z), MIN_HOVER_TARGET_RADIUS)}
+            onMouseEnter={() => setHovered({ seriesNumber, pointNumber })}
+            onMouseLeave={() => setHovered(null)}
+          />
         ))
       )}
-      
-      {/* HOVER TARGETS + TOOLTIP */}
-      {points.map((p, i) => (
-        <circle
-          key={i}
-          className="hit"
-          cx={toX(p.x)}
-          cy={toY(p.y)}
-          r={Math.max(toRadius(p.z), MIN_HOVER_TARGET_RADIUS)}
-          onMouseEnter={() => setHovered(i)}
-          onMouseLeave={() => setHovered(null)}
-        />
-      ))}
       <Tooltip
-        point={hovered !== null ? points[hovered] : null}
+        point={hoveredPoint}
+        name={hoveredName}
         type={type}
         toX={toX}
         toY={toY}

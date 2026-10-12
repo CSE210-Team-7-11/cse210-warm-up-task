@@ -3,10 +3,12 @@ const BOX_TEXT_SIZE = 10
 const APPROX_CHAR_WIDTH = 5
 const HOVER_MARKER_RADIUS = 3
 
-export default function Tooltip({ point, type, toX, toY, toRadius, bounds }) {
+export default function Tooltip({ point, name, type, toX, toY, toRadius, bounds }) {
   if (!point) return null
 
-  const text = [point.x, point.y, point.z].filter(Number.isFinite).join(', ')
+  const values = [point.x, point.y, point.z].filter(Number.isFinite).join(', ')
+  // say which series the point is from
+  const text = name ? `${name}: ${values}` : values
   const boxWidth = text.length * APPROX_CHAR_WIDTH + 2 * BOX_PADDING
   const boxHeight = BOX_TEXT_SIZE + BOX_PADDING
   const pointX = toX(point.x)

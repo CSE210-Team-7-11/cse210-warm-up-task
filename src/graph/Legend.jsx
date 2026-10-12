@@ -1,3 +1,5 @@
+import Marker from './Marker.jsx'
+
 const LEGEND_CENTER_Y = 20
 const LABEL_BASELINE_OFFSET = 3
 const LABEL_PADDING = 5
@@ -14,7 +16,7 @@ const roundToOneSignificantFigure = (value) => {
 
 const entryWidth = ({ r, label }) => 2 * r + LABEL_PADDING + label.length * APPROX_CHAR_WIDTH
 
-export default function Legend({ sizes, name, toRadius, right }) {
+export default function Legend({ sizes, series, toRadius, right }) {
   let entries = []
   if (sizes.length > 0) {
     const smallestSize = Math.min(...sizes)
@@ -26,8 +28,15 @@ export default function Legend({ sizes, name, toRadius, right }) {
     )
     const referenceValues = smallValue === largeValue ? [smallValue] : [smallValue, largeValue]
     entries = referenceValues.map((value) => ({ r: toRadius(value), label: String(value) }))
-  } else if (name) {
-    entries = [{ r: SMALLEST_DOT_RADIUS, label: name }]
+  } else {
+    entries = series
+      .filter((oneSeries) => oneSeries.name)
+      .map((oneSeries) => ({
+        r: SMALLEST_DOT_RADIUS,
+        label: oneSeries.name,
+        color: oneSeries.color,
+        shape: oneSeries.marker,
+      }))
   }
 
   const totalWidth = entries.reduce((sum, entry) => sum + entryWidth(entry) + ENTRY_GAP, -ENTRY_GAP)
@@ -42,9 +51,9 @@ export default function Legend({ sizes, name, toRadius, right }) {
 
   return (
     <g className="legend">
-      {placedEntries.map(({ r, label, x }, i) => (
+      {placedEntries.map(({ r, label, color, shape, x }, i) => (
         <g key={i}>
-          <circle className="point" cx={x + r} cy={LEGEND_CENTER_Y} r={r} />
+          <Marker shape={shape} color={color} cx={x + r} cy={LEGEND_CENTER_Y} r={r} />
           <text
             className="label"
             x={x + 2 * r + LABEL_PADDING}
