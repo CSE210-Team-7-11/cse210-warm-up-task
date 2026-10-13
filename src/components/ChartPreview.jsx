@@ -8,19 +8,20 @@ import './ChartPreview.css'
 export default function ChartPreview({ state }) {
   const { data, series } = useMemo(() => buildChartData(state), [state])
 
-  // one list of points per column, skipping empty cells
+  // Keep gaps for line segments; scatter skips empty cells.
   const graphSeries = series.map((oneSeries) => ({
     name: oneSeries.name,
     color: oneSeries.color,
     marker: oneSeries.marker,
+    dash: oneSeries.dash,
     points: data
-      .filter((row) => row[oneSeries.id] !== null)
+      .filter((row) => state.chartType === 'line' || row[oneSeries.id] !== null)
       .map((row) => ({ x: row.x, y: row[oneSeries.id] })),
   }))
 
   let pointCount = 0
   for (const oneSeries of graphSeries) {
-    pointCount += oneSeries.points.length
+    pointCount += oneSeries.points.filter((point) => Number.isFinite(point.y)).length
   }
 
   return (
@@ -41,6 +42,7 @@ export default function ChartPreview({ state }) {
           <Graph
             series={graphSeries}
             type={state.chartType}
+            showPoints={state.showPoints}
             showTrendLine
             labels={{
               title: state.title,

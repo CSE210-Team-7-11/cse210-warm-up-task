@@ -1,10 +1,54 @@
+import Marker from './Marker.jsx'
+
 const BOX_PADDING = 5
 const BOX_TEXT_SIZE = 10
 const APPROX_CHAR_WIDTH = 5
 const HOVER_MARKER_RADIUS = 3
 
-export default function Tooltip({ point, name, type, toX, toY, toRadius, bounds }) {
+export default function Tooltip({ point, name, type, toX, toY, toRadius, bounds, color, marker, xLabel = 'X', showHoverMarker = type === 'line' }) {
   if (!point) return null
+
+  if (type === 'line') {
+    const padding = 7
+    const fontSize = 8
+    const charWidth = 4.5
+    const markerSpace = 12
+    const boxHeight = 34
+    const maxWidth = bounds.right - bounds.left
+    const value = String(point.y)
+    // Keep long uploaded column names inside the plot, without changing values.
+    const shorten = (label, available) => {
+      const count = Math.max(1, Math.floor(available / charWidth))
+      return label.length > count ? label.slice(0, count - 1) + '…' : label
+    }
+    const xName = shorten(xLabel, maxWidth - 2 * padding - (String(point.x).length + 2) * charWidth)
+    const seriesName = shorten(name || 'Value', maxWidth - 2 * padding - markerSpace - (value.length + 2) * charWidth)
+    const xText = `${xName}: ${point.x}`
+    const seriesText = `${seriesName}: ${value}`
+    const boxWidth = Math.min(maxWidth, Math.max(xText.length * charWidth, markerSpace + seriesText.length * charWidth) + 2 * padding)
+    const pointX = toX(point.x)
+    const pointY = toY(point.y)
+    const gap = toRadius(point.z) + 6
+    const rightX = pointX + gap
+    const preferredX = rightX + boxWidth <= bounds.right ? rightX : pointX - gap - boxWidth
+    const boxX = Math.max(bounds.left, Math.min(preferredX, bounds.right - boxWidth))
+    const aboveY = pointY - gap - boxHeight
+    const preferredY = aboveY >= bounds.top ? aboveY : pointY + gap
+    const boxY = Math.max(bounds.top, Math.min(preferredY, (bounds.bottom ?? Infinity) - boxHeight))
+
+    return (
+      <g className="tooltip">
+        <rect x={boxX} y={boxY} width={boxWidth} height={boxHeight} rx={3} />
+        <text x={boxX + padding} y={boxY + 13} style={{ fontSize: 7.5, fill: 'var(--text-muted)' }}>
+          {xText}
+        </text>
+        <Marker shape={marker} color={color} cx={boxX + padding + 3} cy={boxY + 25} r={3} />
+        <text x={boxX + padding + markerSpace} y={boxY + 28} style={{ fontSize }}>
+          {seriesName}: <tspan fontWeight="600">{value}</tspan>
+        </text>
+      </g>
+    )
+  }
 
   const values = [point.x, point.y, point.z].filter(Number.isFinite).join(', ')
   // say which series the point is from
@@ -19,8 +63,6 @@ export default function Tooltip({ point, name, type, toX, toY, toRadius, bounds 
   const yAbovePoint = pointY - pointRadius - boxHeight - BOX_PADDING
   const yBelowPoint = pointY + pointRadius + BOX_PADDING
   const boxY = yAbovePoint < bounds.top ? yBelowPoint : yAbovePoint
-
-  const showHoverMarker = type === 'line'
 
   return (
     <g className="tooltip">

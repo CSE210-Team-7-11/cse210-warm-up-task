@@ -2,6 +2,7 @@ import { useId, useState } from 'react'
 import { scale, ticks, gridlines, trendLine } from './scale.js'
 import Legend from './Legend.jsx'
 import Marker from './Marker.jsx'
+import LineGraph from '../components/charts/LineGraph.jsx'
 import Tooltip from './Tooltip.jsx'
 import './Graph.css'
 
@@ -27,8 +28,8 @@ const HOVER_EXTRA_RADIUS = 1.5
 const round = (v) => Math.round(v * 10) / 10
 
 // Draws `points` ([{ x, y }, ...]) as a scatter or line plot.
-// for more than one series pass series = [{ name, color, marker, points }]
-export default function Graph({ points, series, type = 'scatter', labels = {}, showTrendLine = false }) {
+// for more than one series pass series = [{ name, color, dash, marker, points }]
+export default function Graph({ points, series, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true }) {
   // the hovered point, as { seriesNumber, pointNumber }
   const [hovered, setHovered] = useState(null)
 
@@ -43,15 +44,11 @@ export default function Graph({ points, series, type = 'scatter', labels = {}, s
     allSeries = [{ name: labels.legend, points }]
   }
 
-  // line plot only draws the first series for now
-  let shownSeries = allSeries
-  if (type === 'line') {
-    shownSeries = [{ name: allSeries[0].name, points: allSeries[0].points }]
-  }
+  const shownSeries = allSeries
 
   const shownPoints = []
   for (const oneSeries of shownSeries) {
-    shownPoints.push(...oneSeries.points)
+    shownPoints.push(...oneSeries.points.filter((point) => Number.isFinite(point.y)))
   }
 
   const xs = shownPoints.map((p) => p.x)
@@ -80,17 +77,14 @@ export default function Graph({ points, series, type = 'scatter', labels = {}, s
   // SVG's y-axis points down, so larger values map to smaller pixel positions.
   const toY = scale(yMin, yMax, bottom, top)
 
-  const sorted = [...shownSeries[0].points].sort((a, b) => a.x - b.x)
-  const linePath = sorted
-    .map((p, i) => `${i === 0 ? 'M' : 'L'}${toX(p.x)},${toY(p.y)}`)
-    .join(' ')
-
   // only show the series name when theres more than one
   let hoveredPoint = null
   let hoveredName
+  let hoveredStyle
   if (hovered && shownSeries[hovered.seriesNumber]) {
     const hoveredSeries = shownSeries[hovered.seriesNumber]
     hoveredPoint = hoveredSeries.points[hovered.pointNumber]
+    hoveredStyle = hoveredSeries
     if (shownSeries.length > 1) {
       hoveredName = hoveredSeries.name
     }
@@ -204,7 +198,16 @@ export default function Graph({ points, series, type = 'scatter', labels = {}, s
 
       {/* POINTS */}
       {type === 'line' ? (
-        <path className="line" d={linePath} />
+        <LineGraph
+          series={shownSeries}
+          xPos={toX}
+          yPos={toY}
+          showPoints={showPoints}
+          hovered={hovered}
+          clipPathId={plotAreaId}
+          top={top}
+          bottom={bottom}
+        />
       ) : (
         shownSeries.map((oneSeries, seriesNumber) =>
           oneSeries.points.map((point, pointNumber) => {
@@ -234,7 +237,7 @@ export default function Graph({ points, series, type = 'scatter', labels = {}, s
 
       {/* HOVER TARGETS + TOOLTIP */}
       {shownSeries.map((oneSeries, seriesNumber) =>
-        oneSeries.points.map((point, pointNumber) => (
+        oneSeries.points.map((point, pointNumber) => Number.isFinite(point.y) && (
           <circle
             key={`${seriesNumber}-${pointNumber}`}
             className="hit"
@@ -248,12 +251,16 @@ export default function Graph({ points, series, type = 'scatter', labels = {}, s
       )}
       <Tooltip
         point={hoveredPoint}
-        name={hoveredName}
+        name={type === 'line' ? hoveredStyle?.name : hoveredName}
+        color={hoveredStyle?.color}
+        marker={hoveredStyle?.marker}
+        xLabel={x_axis_label}
         type={type}
+        showHoverMarker={false}
         toX={toX}
         toY={toY}
         toRadius={toRadius}
-        bounds={{ left, right, top }}
+        bounds={{ left, right, top, bottom }}
       />
 
     </svg>
