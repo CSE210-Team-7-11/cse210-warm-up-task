@@ -1,28 +1,12 @@
 import { useMemo } from 'react'
 import { BarChartIcon } from './ui/Icons.jsx'
 import Graph from '../graph/Graph.jsx'
-import { buildChartData } from './charts/chartUtils.js'
+import { prepareChart } from './charts/chartAdapter.js'
 import './ChartPreview.css'
 
 // the chart is drawn by the graph library in src/graph
 export default function ChartPreview({ state }) {
-  const { data, series } = useMemo(() => buildChartData(state), [state])
-
-  // Keep gaps for line segments; scatter skips empty cells.
-  const graphSeries = series.map((oneSeries) => ({
-    name: oneSeries.name,
-    color: oneSeries.color,
-    marker: oneSeries.marker,
-    dash: oneSeries.dash,
-    points: data
-      .filter((row) => state.chartType === 'line' || row[oneSeries.id] !== null)
-      .map((row) => ({ x: row.x, y: row[oneSeries.id] })),
-  }))
-
-  let pointCount = 0
-  for (const oneSeries of graphSeries) {
-    pointCount += oneSeries.points.filter((point) => Number.isFinite(point.y)).length
-  }
+  const { graphProps, pointCount } = useMemo(() => prepareChart(state), [state])
 
   return (
     <section className="panel chart-preview" aria-label="Graph preview">
@@ -39,24 +23,13 @@ export default function ChartPreview({ state }) {
             Drop a file with at least two numeric rows and your graph will show up here.
           </div>
         ) : (
-          <Graph
-            series={graphSeries}
-            type={state.chartType}
-            showPoints={state.showPoints}
-            showTrendLine
-            labels={{
-              title: state.title,
-              subtitle: state.showSubtitle ? state.subtitle : '',
-              x_axis_label: state.xLabel,
-              y_axis_label: state.yLabel,
-            }}
-          />
+          <Graph {...graphProps} />
         )}
       </div>
 
       <footer className="chart-preview-footer">
         <span>
-          {series.length} series · {pointCount} data points
+          {graphProps.series.length} series · {pointCount} data points
         </span>
         <span>Hover over a point to pull up tooltips!</span>
       </footer>
