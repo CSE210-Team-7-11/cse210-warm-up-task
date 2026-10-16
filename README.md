@@ -53,6 +53,8 @@ npm run dev   # http://localhost:5173
 
 See [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md) for how the app is structured and the open `TODO(...)` items.
 
+For Part 2, see the [frontend integration proposal](docs/frontend-integration.md) for the current chart boundary and the decisions needed before changing the shared API. Run `npm test` for the adapter regression checks.
+
 ### Approach
 
 _How the team planned and divided the work._
