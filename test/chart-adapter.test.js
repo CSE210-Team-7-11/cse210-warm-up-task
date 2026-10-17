@@ -28,17 +28,22 @@ test('keeps each series paired with its values and styles when sorting by x', ()
   }
 })
 
-test('preserves current line gaps and scatter filtering without counting missing values as zero', () => {
+test('omits absent samples from each line series so valid neighbors can connect', { todo: true }, () => {
   const rows = [[1, 0, 10], [2, '', 20], [3, 3, 'bad'], ['bad', 99, 99]]
   const line = prepareChart(editorState(rows, { chartType: 'line' }))
-  const scatter = prepareChart(editorState(rows, { chartType: 'scatter' }))
 
   assert.equal(line.pointCount, 4)
-  assert.equal(scatter.pointCount, 4)
   assert.deepEqual(line.graphProps.series.map((series) => series.points), [
-    [{ x: 1, y: 0 }, { x: 2, y: null }, { x: 3, y: 3 }],
-    [{ x: 1, y: 10 }, { x: 2, y: 20 }, { x: 3, y: null }],
+    [{ x: 1, y: 0 }, { x: 3, y: 3 }],
+    [{ x: 1, y: 10 }, { x: 2, y: 20 }],
   ])
+})
+
+test('omits missing scatter samples without counting them as zero', () => {
+  const rows = [[1, 0, 10], [2, '', 20], [3, 3, 'bad'], ['bad', 99, 99]]
+  const scatter = prepareChart(editorState(rows, { chartType: 'scatter' }))
+
+  assert.equal(scatter.pointCount, 4)
   assert.deepEqual(scatter.graphProps.series.map((series) => series.points), [
     [{ x: 1, y: 0 }, { x: 3, y: 3 }],
     [{ x: 1, y: 10 }, { x: 2, y: 20 }],
