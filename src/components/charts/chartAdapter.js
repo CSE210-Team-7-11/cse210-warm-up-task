@@ -9,7 +9,7 @@ export function prepareChart(state) {
     marker: oneSeries.marker,
     dash: oneSeries.dash,
     points: data
-      .filter((row) => state.chartType === 'line' || row[oneSeries.id] !== null)
+      .filter((row) => row[oneSeries.id] !== null)
       .map((row) => ({ x: row.x, y: row[oneSeries.id] })),
   }))
 
