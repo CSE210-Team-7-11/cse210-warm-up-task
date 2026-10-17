@@ -28,7 +28,7 @@ test('keeps each series paired with its values and styles when sorting by x', ()
   }
 })
 
-test('omits absent samples from each line series so valid neighbors can connect', { todo: true }, () => {
+test('omits absent samples from each line series so valid neighbors can connect', () => {
   const rows = [[1, 0, 10], [2, '', 20], [3, 3, 'bad'], ['bad', 99, 99]]
   const line = prepareChart(editorState(rows, { chartType: 'line' }))
 
@@ -46,6 +46,28 @@ test('omits missing scatter samples without counting them as zero', () => {
   assert.equal(scatter.pointCount, 4)
   assert.deepEqual(scatter.graphProps.series.map((series) => series.points), [
     [{ x: 1, y: 0 }, { x: 3, y: 3 }],
+    [{ x: 1, y: 10 }, { x: 2, y: 20 }],
+  ])
+})
+
+test('skips leading, trailing, and consecutive missing line samples per series', () => {
+  const rows = [[5, '', 50], [2, null, 20], [3, undefined, 30], [1, 0, ''], [4, 4, 'bad'], [6, '', 60], [7, '', '']]
+  const { graphProps, pointCount } = prepareChart(editorState(rows, { chartType: 'line' }))
+
+  assert.equal(pointCount, 6)
+  assert.deepEqual(graphProps.series.map((series) => series.points), [
+    [{ x: 1, y: 0 }, { x: 4, y: 4 }],
+    [{ x: 2, y: 20 }, { x: 3, y: 30 }, { x: 5, y: 50 }, { x: 6, y: 60 }],
+  ])
+})
+
+test('keeps an entirely missing series empty without removing valid samples from another series', () => {
+  const rows = [[1, '', 10], [2, null, 20]]
+  const { graphProps, pointCount } = prepareChart(editorState(rows, { chartType: 'line' }))
+
+  assert.equal(pointCount, 2)
+  assert.deepEqual(graphProps.series.map((series) => series.points), [
+    [],
     [{ x: 1, y: 10 }, { x: 2, y: 20 }],
   ])
 })
