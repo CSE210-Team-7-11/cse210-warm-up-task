@@ -27,9 +27,9 @@ Keep the existing demo working while the chart library evolves. The first change
 }
 ```
 
-This is the inherited interface. Data stays sorted by x, invalid x values are omitted, and input data is left unchanged. Missing y values are omitted from scatter points. The preview still requires at least two valid points in total.
+Data stays sorted by x, invalid x values are omitted, and input data is left unchanged. Missing or nonnumeric y values are omitted independently from each series in both chart types. Numeric zero remains a valid sample. The preview still requires at least two valid points in total.
 
-For line charts, the current adapter passes missing y values as `null`, creating gaps. This is a known issue, preserved by the extraction. The TODO test specifies the intended fix: omit absent samples from each series so its valid neighbors can connect. It should become a regular passing test when that bug is fixed in a separate change.
+Line charts connect the remaining valid samples in x order. An absent sample in one series does not remove another series' value at that x position. The underlying renderer still supports explicit line breaks for direct callers; the editor does not insert a break for an absent sample.
 
 ## Integration changes
 
@@ -43,6 +43,6 @@ Record architecture decisions in ADRs and track bugs in issues, with a small inp
 
 Run `npm test`, `npm run lint`, and `npm run build`.
 
-The adapter tests cover series pairing, scatter filtering, settings, counts, precision, and source data preservation. The missing-sample line test is marked `{ todo: true }` and currently fails as expected; it is not a completed bug fix.
+The adapter tests cover series pairing, missing samples in both chart types, entirely missing series, settings, counts, precision, and source data preservation. The missing-sample line regression runs as a regular test, without a TODO flag.
 
 Check switching, hover, and labels in the browser when rendering or integration behavior changes. Every PR requires an approving review from someone other than its author before merging.
