@@ -6,6 +6,7 @@ import {
   checkParsed,
   describeIssue,
   findIssues,
+  isValidCellValue,
   isWarning,
   summarizeData,
 } from '../src/importFeedback.js'
@@ -56,6 +57,30 @@ test('finds cell issues in the ADR-0007 [type, data] shape, after parser issues'
 test('only checks plotted columns and counts the ignored ones', () => {
   const wide = [...columns, { key: 'c3', name: 'D' }, { key: 'c4', name: 'E' }]
   assert.deepEqual(findIssues({ columns: wide, rows: [[1, 2, 3, 4, 'text']] }), [['ignored-columns', 1]])
+})
+
+test('accepts #N/A in series while retaining invalid X and number warnings', () => {
+  const parsed = parseDelimited('X,A,B\n1,#N/A,0\n2, #N/A ,3\n#N/A,4,5\n4,n/a,bad\n5,,6')
+  const originalRows = structuredClone(parsed.rows)
+
+  assert.deepEqual(findIssues(parsed), [
+    ['invalid-x', [2]],
+    ['invalid-number', [[1, 3], [2, 3]]],
+    ['empty-cell', [[1, 4]]],
+  ])
+  assert.deepEqual(parsed.rows, originalRows)
+})
+
+test('table validation accepts the series marker but requires numeric X values', () => {
+  assert.equal(isValidCellValue('#N/A', 1), true)
+  assert.equal(isValidCellValue(' #N/A ', 2), true)
+  assert.equal(isValidCellValue('#N/A', 0), false)
+  assert.equal(isValidCellValue('n/a', 1), false)
+  assert.equal(isValidCellValue('bad', 1), false)
+  assert.equal(isValidCellValue(0, 0), true)
+  assert.equal(isValidCellValue(0, 1), true)
+  assert.equal(isValidCellValue(NaN, 1), false)
+  assert.equal(isValidCellValue(Infinity, 1), false)
 })
 
 test('the sample data has nothing to report', () => {
