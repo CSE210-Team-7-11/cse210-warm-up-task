@@ -22,6 +22,9 @@ const MAX_VALUE_CHARS = 20
 
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v)
 
+export const isValidCellValue = (value, columnIndex) =>
+  isNumber(value) || (columnIndex > 0 && typeof value === 'string' && value.trim() === '#N/A')
+
 /** Why a file can't be imported, or '' when it's worth reading. */
 export function checkFile({ name, size }) {
   if (/\.xlsx?$/i.test(name)) {
@@ -59,7 +62,7 @@ export function findIssues({ columns, rows, parseIssues = [] }) {
     for (let c = 1; c <= lastSeries; c++) {
       const v = row[c]
       if (v === '' || v === undefined) emptyCells.push([c, r])
-      else if (!isNumber(v)) invalidNumbers.push([c, r])
+      else if (!isValidCellValue(v, c)) invalidNumbers.push([c, r])
     }
   })
 
