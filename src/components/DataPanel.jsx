@@ -1,50 +1,57 @@
-import { useCallback, useRef, useState } from 'react'
-import { MAX_SERIES, allValuesValid, parseDelimited } from '../state.js'
+import { useCallback, useMemo, useRef, useState } from 'react'
+import { parseDelimited } from '../state.js'
+import {
+  checkFile,
+  checkParsed,
+  describeIssue,
+  findIssues,
+  isWarning,
+  summarizeData,
+} from '../importFeedback.js'
 import { AlertCircleIcon, CheckCircleIcon, UploadIcon } from './ui/Icons.jsx'
 import './DataPanel.css'
-
-const MAX_FILE_BYTES = 10 * 1024 * 1024
-const ACCEPTED_EXT = /\.(csv|tsv|txt)$/i
 
 /**
  * Step 02: load data from a file. The table is a read-only preview; the only
  * way to change the data is to drop/browse a new CSV or TSV file.
  */
 export default function DataPanel({ state, onImport }) {
-  const { rows, columns } = state
+  const { sourceName, rows, columns, parseIssues } = state
   const fileInputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
   const [fileError, setFileError] = useState('')
 
-  const valid = allValuesValid(rows)
-  const ignoredColumns = Math.max(0, columns.length - 1 - MAX_SERIES)
+  const summary = useMemo(
+    () => summarizeData({ sourceName, columns, rows }),
+    [sourceName, columns, rows],
+  )
+  const issues = useMemo(
+    () => findIssues({ columns, rows, parseIssues }),
+    [columns, rows, parseIssues],
+  )
+  const warnings = issues.filter(isWarning)
+  const notes = issues.filter((issue) => !isWarning(issue))
 
   const readFile = useCallback(
     (file) => {
       if (!file) return
-      if (!ACCEPTED_EXT.test(file.name)) {
-        setFileError(
-          /\.xlsx?$/i.test(file.name)
-            ? 'XLSX isn’t supported yet — export it as CSV first.'
-            : 'Please choose a CSV, TSV or TXT file.',
-        )
-        return
-      }
-      if (file.size > MAX_FILE_BYTES) {
-        setFileError('That file is over 10 MB.')
+      const fileProblem = checkFile(file)
+      if (fileProblem) {
+        setFileError(fileProblem)
         return
       }
       const reader = new FileReader()
       reader.onload = () => {
         const parsed = parseDelimited(String(reader.result ?? ''))
-        if (parsed && parsed.columns.length >= 2) {
-          onImport(parsed)
-          setFileError('')
-        } else {
-          setFileError('Need at least two columns: X values, then one or more series.')
+        const parseProblem = checkParsed(parsed, file.name)
+        if (parseProblem) {
+          setFileError(parseProblem)
+          return
         }
+        onImport({ ...parsed, sourceName: file.name })
+        setFileError('')
       }
-      reader.onerror = () => setFileError('Couldn’t read that file.')
+      reader.onerror = () => setFileError(`Couldn’t read ${file.name}. Try choosing it again.`)
       reader.readAsText(file)
     },
     [onImport],
@@ -115,12 +122,14 @@ export default function DataPanel({ state, onImport }) {
         </div>
         {fileError && (
           <p className="data-panel-error" role="alert">
-            {fileError}
+            {fileError} Your current data is unchanged.
           </p>
         )}
 
-        <p className="data-panel-caption">
-          {`${rows.length} ${rows.length === 1 ? 'row' : 'rows'} · ${columns.length} columns · first column is X`}
+        <p className="data-panel-caption data-panel-summary">
+          {`${summary.sourceName} · ${summary.rowCount} ${summary.rowCount === 1 ? 'row' : 'rows'} · ${summary.seriesCount} series`}
+          <br />
+          {`X: ${summary.xName}${formatRange(summary.xRange)}`}
         </p>
 
         {/* ---- read-only preview table ---- */}
@@ -165,19 +174,37 @@ export default function DataPanel({ state, onImport }) {
         </div>
 
         {/* ---- validation ---- */}
-        <p className={`data-panel-status${valid ? '' : ' is-invalid'}`} role="status">
-          <span className="data-panel-status-icon">
-            {valid ? <CheckCircleIcon size={14} /> : <AlertCircleIcon size={14} />}
-          </span>
-          {valid ? 'Looking good. All values are valid.' : 'Some cells aren’t numbers.'}
-        </p>
-        {ignoredColumns > 0 && (
-          <p className="data-panel-caption">
-            Only the first {MAX_SERIES} series are plotted ({ignoredColumns} column
-            {ignoredColumns === 1 ? '' : 's'} ignored).
-          </p>
-        )}
+        <div className="data-panel-feedback" role="status">
+          {warnings.length === 0 ? (
+            <p className="data-panel-status">
+              <span className="data-panel-status-icon">
+                <CheckCircleIcon size={14} />
+              </span>
+              Looking good. All values are valid.
+            </p>
+          ) : (
+            warnings.map((issue) => (
+              <p key={issue[0]} className="data-panel-status is-invalid">
+                <span className="data-panel-status-icon">
+                  <AlertCircleIcon size={14} />
+                </span>
+                {describeIssue(issue, { columns, rows })}
+              </p>
+            ))
+          )}
+          {notes.map((issue) => (
+            <p key={issue[0]} className="data-panel-caption">
+              {describeIssue(issue, { columns, rows })}
+            </p>
+          ))}
+        </div>
       </div>
     </section>
   )
+}
+
+function formatRange(range) {
+  if (!range) return ''
+  const [min, max] = range
+  return min === max ? `, ${min}` : `, ${min} to ${max}`
 }

@@ -43,6 +43,7 @@ The legend and the *Data series* list already draw these with `SeriesKey.jsx`. A
 src/
 ├── App.jsx            owns ALL state; passes it + a few handlers to the panels
 ├── state.js           sample data, series styles, defaults, CSV/TSV parser
+├── importFeedback.js  import errors, data issues and summary (no React)
 ├── index.css          design tokens (colors, radii, fonts) and shared classes
 └── components/
     ├── TopNav / TitleBar            header and title row
