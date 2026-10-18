@@ -4,7 +4,7 @@ Keep the existing demo working while the chart library evolves. The first change
 
 ## Current boundary
 
-`prepareChart(state)` returns `{ graphProps, pointCount }`. `ChartPreview` uses the count for its existing empty state and passes `graphProps` to `Graph`.
+`prepareChart(state)` returns `{ graphProps, pointCount }`. `ChartPreview` uses the count for its existing empty state and passes `graphProps` through `GraphView` to `createChart`.
 
 ```js
 {
@@ -27,13 +27,15 @@ Keep the existing demo working while the chart library evolves. The first change
 }
 ```
 
-This is the inherited interface. Data stays sorted by x, invalid x values are omitted, and input data is left unchanged. Missing y values are omitted from scatter points. The preview still requires at least two valid points in total.
+Data stays sorted by x, invalid x values are omitted, and input data is left unchanged. Numeric zero remains a valid sample. The preview still requires at least two valid points in total.
 
-For line charts, the current adapter passes missing y values as `null`, creating gaps. This is a known issue, preserved by the extraction. The TODO test specifies the intended fix: omit absent samples from each series so its valid neighbors can connect. It should become a regular passing test when that bug is fixed in a separate change.
+For line charts, empty Y cells become `+Infinity` and break the line. `#N/A` becomes `-Infinity`, which the renderer skips while connecting neighboring valid points. Other invalid Y values retain the existing `null` break behavior. Line strokes and area fills use the same segments. Markers, hover targets, and point counts include only finite values. Scatter input omits all nonfinite Y values.
+
+These markers follow ADR-0007 while retaining the current point-object interface; migration to typed columns remains separate. The importer still supplies raw cell values. Empty-cell choices in an import dialog and the data panel's validation messages remain separate work; the existing panel still flags `#N/A` as nonnumeric.
 
 ## Integration changes
 
-`ChartPreview` calls `prepareChart(state)` and passes its result to the existing `Graph`. Changes to the editor or renderer should use this boundary, retaining titles, subtitles, axis labels, series styles, and chart settings when the shared API changes.
+`ChartPreview` calls `prepareChart(state)` and passes its result through `GraphView` to the existing `createChart` API. Changes to the editor or renderer should use this boundary, retaining titles, subtitles, axis labels, series styles, and chart settings when the shared API changes.
 
 Pengwei coordinates frontend integration and agrees on shared API changes with Nathan. Parser, renderer, and adapter contributors should review changes together before callers are migrated. Keep bug fixes and renderer migration separate from this extraction.
 
@@ -43,6 +45,6 @@ Record architecture decisions in ADRs and track bugs in issues, with a small inp
 
 Run `npm test`, `npm run lint`, and `npm run build`.
 
-The adapter tests cover series pairing, scatter filtering, settings, counts, precision, and source data preservation. The missing-sample line test is marked `{ todo: true }` and currently fails as expected; it is not a completed bug fix.
+Tests cover CSV-to-chart empty-cell gaps and `#N/A` skips, line segmentation, scatter filtering, entirely missing series, series pairing, settings, counts, precision, and source data preservation.
 
 Check switching, hover, and labels in the browser when rendering or integration behavior changes. Every PR requires an approving review from someone other than its author before merging.
