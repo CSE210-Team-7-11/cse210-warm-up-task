@@ -5,6 +5,7 @@ import {
   checkParsed,
   describeIssue,
   findIssues,
+  isValidCellValue,
   isWarning,
   summarizeData,
 } from '../importFeedback.js'
@@ -160,7 +161,7 @@ export default function DataPanel({ state, onImport }) {
                     <span className="data-panel-row-num">{ri + 1}</span>
                   </td>
                   {row.map((v, ci) => {
-                    const invalid = v !== '' && typeof v !== 'number'
+                    const invalid = v !== '' && !isValidCellValue(v, ci)
                     return (
                       <td key={ci} className={`data-panel-td${invalid ? ' is-invalid' : ''}`}>
                         {v === '' ? '—' : String(v)}
