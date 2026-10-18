@@ -25,6 +25,12 @@ export function prepareChart(state) {
       type: state.chartType,
       showPoints: state.showPoints,
       showTrendLine: true,
+      colors: {
+        tooltipBackground: '#ffffff',
+        tooltipBorder: '#eaede3',
+        tooltipText: '#20382c',
+        tooltipMuted: '#8a968c',
+      },
       labels: {
         title: state.title,
         subtitle: state.showSubtitle ? state.subtitle : '',

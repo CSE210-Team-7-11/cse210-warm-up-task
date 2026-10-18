@@ -44,7 +44,7 @@ export function createChart(container, options) {
   // the hovered point, as { seriesNumber, pointNumber }
   let hovered = null
 
-  function update({ points, series, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true }) {
+  function update({ points, series, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true, colors = {} }) {
     hovered = null
 
     const { title, subtitle, x_axis_label, y_axis_label } = { ...DEFAULT_LABELS, ...labels }
@@ -211,7 +211,7 @@ export function createChart(container, options) {
     children.push(tooltipLayer)
 
     svg.replaceChildren(...children)
-    view = { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom }, markers, tooltipLayer }
+    view = { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom }, markers, tooltipLayer, colors }
   }
 
   function setHovered(next) {
@@ -235,7 +235,7 @@ export function createChart(container, options) {
   }
 
   function drawTooltip() {
-    const { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds, tooltipLayer } = view
+    const { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds, tooltipLayer, colors } = view
 
     // only show the series name when theres more than one
     let hoveredPoint = null
@@ -262,6 +262,7 @@ export function createChart(container, options) {
       toY,
       toRadius,
       bounds,
+      colors,
     })
     tooltipLayer.replaceChildren(...(box ? [box] : []))
   }

@@ -6,7 +6,9 @@ const BOX_TEXT_SIZE = 10
 const APPROX_CHAR_WIDTH = 5
 const HOVER_MARKER_RADIUS = 3
 
-export default function tooltip({ point, name, type, toX, toY, toRadius, bounds, color, marker, xLabel = 'X', showHoverMarker = type === 'line' }) {
+const boxStyle = (colors) => ({ fill: colors.tooltipBackground, stroke: colors.tooltipBorder })
+
+export default function tooltip({ point, name, type, toX, toY, toRadius, bounds, color, marker, xLabel = 'X', showHoverMarker = type === 'line', colors = {} }) {
   if (!point) return null
 
   if (type === 'line') {
@@ -38,10 +40,10 @@ export default function tooltip({ point, name, type, toX, toY, toRadius, bounds,
     const boxY = Math.max(bounds.top, Math.min(preferredY, (bounds.bottom ?? Infinity) - boxHeight))
 
     return el('g', { class: 'tooltip' }, [
-      el('rect', { x: boxX, y: boxY, width: boxWidth, height: boxHeight, rx: 3 }),
-      el('text', { x: boxX + padding, y: boxY + 13, style: { fontSize: '7.5px', fill: 'var(--text-muted, #8a968c)' }, text: xText }),
+      el('rect', { x: boxX, y: boxY, width: boxWidth, height: boxHeight, rx: 3, style: boxStyle(colors) }),
+      el('text', { class: 'muted', x: boxX + padding, y: boxY + 13, style: { fontSize: '7.5px', fill: colors.tooltipMuted }, text: xText }),
       markerShape({ shape: marker, color, cx: boxX + padding + 3, cy: boxY + 25, r: 3 }),
-      el('text', { x: boxX + padding + markerSpace, y: boxY + 28, style: { fontSize: `${fontSize}px` } }, [
+      el('text', { x: boxX + padding + markerSpace, y: boxY + 28, style: { fontSize: `${fontSize}px`, fill: colors.tooltipText } }, [
         document.createTextNode(`${seriesName}: `),
         el('tspan', { 'font-weight': '600', text: value }),
       ]),
@@ -64,7 +66,7 @@ export default function tooltip({ point, name, type, toX, toY, toRadius, bounds,
 
   return el('g', { class: 'tooltip' }, [
     showHoverMarker && el('circle', { class: 'point', cx: pointX, cy: pointY, r: HOVER_MARKER_RADIUS }),
-    el('rect', { x: clampedX, y: boxY, width: boxWidth, height: boxHeight, rx: 3 }),
-    el('text', { x: clampedX + boxWidth / 2, y: boxY + boxHeight - BOX_PADDING + 1, 'text-anchor': 'middle', text }),
+    el('rect', { x: clampedX, y: boxY, width: boxWidth, height: boxHeight, rx: 3, style: boxStyle(colors) }),
+    el('text', { x: clampedX + boxWidth / 2, y: boxY + boxHeight - BOX_PADDING + 1, 'text-anchor': 'middle', style: { fill: colors.tooltipText }, text }),
   ])
 }
