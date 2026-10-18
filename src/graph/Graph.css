@@ -65,13 +65,13 @@
     pointer-events: none;
 
     rect {
-      fill: var(--bg-surface);
-      stroke: var(--border);
+      fill: var(--bg-surface, #ffffff);
+      stroke: var(--border, #eaede3);
     }
 
     text {
       font-size: 8px;
-      fill: var(--text-strong);
+      fill: var(--text-strong, #20382c);
     }
   }
 }
