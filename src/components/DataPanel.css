@@ -83,6 +83,11 @@
   color: var(--text-muted);
 }
 
+/* uploaded file names can be one long unbroken word */
+.data-panel-summary {
+  overflow-wrap: anywhere;
+}
+
 /* ---------- table ---------- */
 .data-panel-table-wrap {
   margin-top: 10px;
@@ -149,16 +154,27 @@
 /* ---------- validation line ---------- */
 .data-panel-status {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 6px;
   margin-top: 14px;
   font-size: 11.5px;
   line-height: 16px;
   color: var(--text-muted);
+  overflow-wrap: anywhere;
+}
+
+.data-panel-status + .data-panel-status {
+  margin-top: 6px;
+}
+
+.data-panel-feedback .data-panel-caption {
+  margin-top: 8px;
 }
 
 .data-panel-status-icon {
   display: inline-flex;
+  flex-shrink: 0;
+  margin-top: 1px; /* centers the 14px icon on the first 16px line */
   line-height: 0;
   color: var(--green-600);
 }

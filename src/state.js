@@ -67,9 +67,12 @@ export const DEFAULT_SPECS = {
 export const initialState = {
   graphName: 'How Many Smitskis I Own',
   chartType: 'line', // 'line' | 'scatter'
+  sourceName: 'Sample data',
   columns: DEFAULT_COLUMNS,
   rows: DEFAULT_ROWS,
   series: seriesFromColumns(DEFAULT_COLUMNS),
+  // Issues only the parser can see (e.g. TooFewFields); cell issues are derived from rows.
+  parseIssues: [],
   ...DEFAULT_SPECS,
 }
 
@@ -80,12 +83,12 @@ export function parseCell(value) {
   return Number.isFinite(n) ? n : String(value)
 }
 
-/** True when every cell in every row is a finite number. */
-export function allValuesValid(rows) {
-  return rows.every((r) => r.every((v) => typeof v === 'number' && Number.isFinite(v)))
-}
-
-/** Parse uploaded delimited text (CSV, TSV) into { columns, rows }. */
+/**
+ * Parse uploaded delimited text (CSV, TSV) into { columns, rows, issues }.
+ * Rows are padded or cut to the header's width; `issues` lists the row
+ * indexes that changed, as [['TooFewFields', [..]], ['TooManyFields', [..]]].
+ * Dropping only empty trailing fields (e.g. "1,2,") is not reported.
+ */
 export function parseDelimited(text) {
   const lines = text
     .split(/\r?\n/)
@@ -100,10 +103,17 @@ export function parseDelimited(text) {
     ? first.map((name, i) => ({ key: `c${i}`, name }))
     : first.map((_, i) => ({ key: `c${i}`, name: `Column ${i + 1}` }))
   const body = headerIsText ? lines.slice(1) : lines
-  const rows = body.map((l) => {
+  const tooFew = []
+  const tooMany = []
+  const rows = body.map((l, r) => {
     const cells = split(l).map(parseCell)
+    if (cells.length < columns.length) tooFew.push(r)
+    if (cells.slice(columns.length).some((v) => v !== '')) tooMany.push(r)
     while (cells.length < columns.length) cells.push('')
     return cells.slice(0, columns.length)
   })
-  return { columns, rows }
+  const issues = []
+  if (tooFew.length) issues.push(['TooFewFields', tooFew])
+  if (tooMany.length) issues.push(['TooManyFields', tooMany])
+  return { columns, rows, issues }
 }

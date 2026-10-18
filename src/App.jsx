@@ -14,8 +14,15 @@ export default function App() {
   const update = useCallback((patch) => setState((s) => ({ ...s, ...patch })), [])
 
   /** Replace the whole dataset (file drop). Rebuilds series from the new columns. */
-  const importData = useCallback(({ columns, rows }) => {
-    setState((s) => ({ ...s, columns, rows, series: seriesFromColumns(columns) }))
+  const importData = useCallback(({ columns, rows, issues = [], sourceName }) => {
+    setState((s) => ({
+      ...s,
+      sourceName,
+      columns,
+      rows,
+      series: seriesFromColumns(columns),
+      parseIssues: issues,
+    }))
   }, [])
 
   const resetSpecs = useCallback(() => update({ ...DEFAULT_SPECS }), [update])
