@@ -1,4 +1,5 @@
-import Marker from './Marker.jsx'
+import { el } from './svg.js'
+import { marker } from './Marker.js'
 
 const LEGEND_CENTER_Y = 20
 const LABEL_BASELINE_OFFSET = 3
@@ -16,7 +17,7 @@ const roundToOneSignificantFigure = (value) => {
 
 const entryWidth = ({ r, label }) => 2 * r + LABEL_PADDING + label.length * APPROX_CHAR_WIDTH
 
-export default function Legend({ sizes, series, toRadius, right }) {
+export default function legend({ sizes, series, toRadius, right }) {
   let entries = []
   if (sizes.length > 0) {
     const smallestSize = Math.min(...sizes)
@@ -49,20 +50,15 @@ export default function Legend({ sizes, series, toRadius, right }) {
     placedEntries.push({ ...entry, x })
   }
 
-  return (
-    <g className="legend">
-      {placedEntries.map(({ r, label, color, shape, x }, i) => (
-        <g key={i}>
-          <Marker shape={shape} color={color} cx={x + r} cy={LEGEND_CENTER_Y} r={r} />
-          <text
-            className="label"
-            x={x + 2 * r + LABEL_PADDING}
-            y={LEGEND_CENTER_Y + LABEL_BASELINE_OFFSET}
-          >
-            {label}
-          </text>
-        </g>
-      ))}
-    </g>
-  )
+  return el('g', { class: 'legend' }, placedEntries.map(({ r, label, color, shape, x }) =>
+    el('g', {}, [
+      marker({ shape, color, cx: x + r, cy: LEGEND_CENTER_Y, r }),
+      el('text', {
+        class: 'label',
+        x: x + 2 * r + LABEL_PADDING,
+        y: LEGEND_CENTER_Y + LABEL_BASELINE_OFFSET,
+        text: label,
+      }),
+    ])
+  ))
 }

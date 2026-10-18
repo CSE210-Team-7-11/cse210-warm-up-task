@@ -1,8 +1,27 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { BarChartIcon } from './ui/Icons.jsx'
-import Graph from '../graph/Graph.jsx'
+import { createChart } from '../graph/Graph.js'
 import { prepareChart } from './charts/chartAdapter.js'
 import './ChartPreview.css'
+
+function GraphView({ graphProps }) {
+  const containerRef = useRef(null)
+  const chartRef = useRef(null)
+
+  useEffect(() => {
+    chartRef.current = createChart(containerRef.current)
+    return () => {
+      chartRef.current.destroy()
+      chartRef.current = null
+    }
+  }, [])
+
+  useEffect(() => {
+    chartRef.current.update(graphProps)
+  }, [graphProps])
+
+  return <div ref={containerRef} />
+}
 
 // the chart is drawn by the graph library in src/graph
 export default function ChartPreview({ state }) {
@@ -23,7 +42,7 @@ export default function ChartPreview({ state }) {
             Drop a file with at least two numeric rows and your graph will show up here.
           </div>
         ) : (
-          <Graph {...graphProps} />
+          <GraphView graphProps={graphProps} />
         )}
       </div>
 
