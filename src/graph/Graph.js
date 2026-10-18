@@ -4,6 +4,7 @@ import legend from './Legend.js'
 import { marker } from './Marker.js'
 import lineGraph from './LineGraph.js'
 import tooltip from './Tooltip.js'
+import { withSeriesColors } from './colors.js'
 import './Graph.css'
 
 const DEFAULT_LABELS = {
@@ -55,7 +56,7 @@ export function createChart(container, options) {
       allSeries = [{ name: labels.legend, points }]
     }
 
-    const shownSeries = allSeries
+    const shownSeries = withSeriesColors(allSeries)
 
     const shownPoints = []
     for (const oneSeries of shownSeries) {
