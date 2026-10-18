@@ -210,7 +210,12 @@ export function createChart(container, options) {
     const tooltipLayer = el('g')
     children.push(tooltipLayer)
 
-    svg.replaceChildren(...children)
+    // spreading every element into one call overflows the call stack on large data
+    const fragment = document.createDocumentFragment()
+    for (const child of children) {
+      fragment.append(child)
+    }
+    svg.replaceChildren(fragment)
     view = { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom }, markers, tooltipLayer, colors }
   }
 
