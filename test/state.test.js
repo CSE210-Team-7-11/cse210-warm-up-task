@@ -1,6 +1,40 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { parseDelimited } from '../src/state.js'
+import { parseDelimited, initialState, seriesFromColumns } from '../src/state.js'
+import { prepareChart } from '../src/components/charts/chartAdapter.js'
+import { findIssues } from '../src/importFeedback.js'
+
+test('keeps whitespace-only cells missing while preserving zero and nonblank text', () => {
+  for (const delimiter of [',', ';', '\t']) {
+    const text = [
+      ['X', 'A', 'B'],
+      ['1', '   ', '0'],
+      ['2', '" \t "', '" padded "'],
+      ['   ', '20', '30'],
+      ['3', ' 4 ', '#N/A'],
+    ].map(row => row.join(delimiter)).join('\n')
+    const parsed = parseDelimited(text)
+    assert.deepEqual(parsed.rows, [[1, '', 0], [2, '', ' padded '], ['', 20, 30], [3, 4, '#N/A']])
+    assert.deepEqual(parsed.issues, [])
+  }
+})
+
+test('whitespace CSV cells create gaps and missing-X warnings without zero points', () => {
+  const parsed = parseDelimited('X,A\n1,10\n2,   \n   ,20\n3,30\n4,0')
+  const state = {
+    ...initialState, ...parsed, parseIssues: parsed.issues,
+    series: seriesFromColumns(parsed.columns),
+  }
+  assert.deepEqual(findIssues(state), [['invalid-x', [2]], ['empty-cell', [[1, 1]]]])
+  const line = prepareChart(state)
+  assert.equal(line.pointCount, 3)
+  assert.deepEqual(line.graphProps.series[0].points, [
+    { x: 1, y: 10 }, { x: 2, y: Infinity }, { x: 3, y: 30 }, { x: 4, y: 0 },
+  ])
+  assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.series[0].points, [
+    { x: 1, y: 10 }, { x: 3, y: 30 }, { x: 4, y: 0 },
+  ])
+})
 
 test('keeps quoted commas in one field without shifting later values', () => {
   const parsed = parseDelimited('X,A,B\n2,"1,010",905')
