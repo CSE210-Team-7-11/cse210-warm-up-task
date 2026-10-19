@@ -4,7 +4,7 @@ import { computeLayout } from '../src/graph/scale.js'
 
 test('fromX(toX) returns value', () => {
     const { toX, fromX } = computeLayout({ xMin: 0, xMax: 100, yMin: 0, yMax: 100 })
-    const value = 42
+    const value = 27
     assert.ok(Math.abs(fromX(toX(value)) - value) < Number.EPSILON)
 })
 
