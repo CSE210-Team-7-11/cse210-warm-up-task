@@ -13,4 +13,4 @@ Decision records for Part 2, in the agreed [MADR](https://adr.github.io/madr/) f
 | [0007](0007-data-contract.md) | Shared data contract | accepted |
 | [0008](0008-remove-data-table.md) | Remove the full data table | accepted |
 | [0009](0009-point-styling.md) | Configurable point markers | accepted |
-| [0010](0010-react-independence.md) | Make the chart library independent of React | proposed |
+| [0010](0010-react-independence.md) | Make the chart library independent of React | accepted |

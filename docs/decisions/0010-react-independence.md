@@ -1,7 +1,7 @@
 ---
-status: proposed
-date: 2026-10-17
-decision-makers: Team poll (open; no decision-facing votes cast as of 13:40 2026/10/17)
+status: accepted
+date: 2026-10-18
+decision-makers: Team poll
 ---
 
 # ADR-0010: Make the chart library independent of React
@@ -15,8 +15,14 @@ The chart is a React component, so any application that wants to show it must al
 * Keep the chart as a React component
 * Make the library plain JavaScript, with React only in the demo
 
-## Proposed Outcome
+## Decision Outcome
 
 Remove React as a dependency of the charting library while keeping the existing app as a demo that loads it. A plain HTML example verifies that library users don't need React.
 
-Work that moves logic out of React in small pieces can proceed before this is decided, since plain functions are easier to test either way.
+### Consequences
+
+* Good: chart work uses familiar JavaScript, without requiring the team to learn React.
+* Good: chart interactions no longer incur React's component-update overhead.
+* Good: the library works in applications regardless of their framework. Users don't need to download or maintain React for the chart, or match its React version.
+* Bad: removing the framework takes a one-time effort to move existing component logic to native browser APIs and JavaScript.
+* Bad: React's default text escaping no longer protects the chart. CSV text must be drawn or inserted as text, never interpreted as HTML.
