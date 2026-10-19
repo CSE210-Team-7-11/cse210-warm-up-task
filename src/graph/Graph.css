@@ -61,6 +61,11 @@
     fill: transparent;
   }
 
+  &.dense > .point,
+  &.dense .line-graph [stroke='#fff'] {
+    stroke: none;
+  }
+
   .tooltip {
     pointer-events: none;
 

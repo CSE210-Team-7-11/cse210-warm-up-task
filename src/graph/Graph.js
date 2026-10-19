@@ -1,5 +1,5 @@
 import { el } from './svg.js'
-import { WIDTH, HEIGHT, PADDING, TEXT_SIZE, TITLE_TEXT_SIZE, TICK_SIZE, computeLayout, trendLine } from './scale.js'
+import { WIDTH, HEIGHT, PADDING, TEXT_SIZE, TITLE_TEXT_SIZE, TICK_SIZE, computeLayout, trendLine, minMax } from './scale.js'
 import legend from './Legend.js'
 import { marker } from './Marker.js'
 import lineGraph from './LineGraph.js'
@@ -54,18 +54,18 @@ export function createChart(container, options) {
 
     const shownPoints = []
     for (const oneSeries of shownSeries) {
-      shownPoints.push(...oneSeries.points.filter((point) => Number.isFinite(point.y)))
+      for (const point of oneSeries.points) {
+        if (Number.isFinite(point.y)) shownPoints.push(point)
+      }
     }
 
     const xs = shownPoints.map((p) => p.x)
     const ys = shownPoints.map((p) => p.y)
-    const xMin = Math.min(...xs)
-    const xMax = Math.max(...xs)
-    const yMin = Math.min(...ys)
-    const yMax = Math.max(...ys)
+    const { min: xMin, max: xMax } = minMax(xs)
+    const { min: yMin, max: yMax } = minMax(ys)
 
     const sizes = shownPoints.map((p) => p.z).filter(Number.isFinite)
-    const sizeMin = Math.min(...sizes)
+    const { min: sizeMin } = minMax(sizes)
 
     const toRadius = (size) => {
       if (!Number.isFinite(size) || size <= 0) return MIN_RADIUS
@@ -74,6 +74,9 @@ export function createChart(container, options) {
     }
 
     const { left, right, top, bottom, toX, toY, xTicks, yTicks, xGridlines, yGridlines } = computeLayout({ xMin, xMax, yMin, yMax })
+
+    // Overlapping white outlines can hide every series on dense plots.
+    svg.classList.toggle('dense', shownPoints.length > right - left)
 
     svg.setAttribute('aria-label', `${type} plot of ${shownPoints.length} points`)
 
@@ -132,8 +135,7 @@ export function createChart(container, options) {
       for (const oneSeries of shownSeries) {
         const trend = trendLine(oneSeries.points)
         if (!trend) continue
-        const firstX = Math.min(...oneSeries.points.map((point) => point.x))
-        const lastX = Math.max(...oneSeries.points.map((point) => point.x))
+        const { min: firstX, max: lastX } = minMax(oneSeries.points.map((point) => point.x))
         children.push(el('line', {
           class: 'trend',
           'clip-path': `url(#${plotAreaId})`,
