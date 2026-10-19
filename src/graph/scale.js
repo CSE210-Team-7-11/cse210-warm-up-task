@@ -1,3 +1,13 @@
+export function minMax(values) {
+  let min = Infinity
+  let max = -Infinity
+  for (const value of values) {
+    min = Math.min(min, value)
+    max = Math.max(max, value)
+  }
+  return { min, max }
+}
+
 // Returns a function that maps a value in [domainMin, domainMax]
 // to a pixel position in [rangeMin, rangeMax].
 export function scale(domainMin, domainMax, rangeMin, rangeMax) {

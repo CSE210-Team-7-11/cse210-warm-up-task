@@ -1,5 +1,6 @@
 import { el } from './svg.js'
 import { marker } from './Marker.js'
+import { minMax } from './scale.js'
 
 const LEGEND_CENTER_Y = 20
 const LABEL_BASELINE_OFFSET = 3
@@ -20,12 +21,12 @@ const entryWidth = ({ r, label }) => 2 * r + LABEL_PADDING + label.length * APPR
 export default function legend({ sizes, series, toRadius, right }) {
   let entries = []
   if (sizes.length > 0) {
-    const smallestSize = Math.min(...sizes)
+    const { min: smallestSize, max: largestSize } = minMax(sizes)
     const largestSizeThatFitsHeader =
       smallestSize * (MAX_RADIUS_THAT_FITS_HEADER / SMALLEST_DOT_RADIUS) ** 2
     const smallValue = roundToOneSignificantFigure(smallestSize)
     const largeValue = roundToOneSignificantFigure(
-      Math.min(Math.max(...sizes), largestSizeThatFitsHeader)
+      Math.min(largestSize, largestSizeThatFitsHeader)
     )
     const referenceValues = smallValue === largeValue ? [smallValue] : [smallValue, largeValue]
     entries = referenceValues.map((value) => ({ r: toRadius(value), label: String(value) }))
