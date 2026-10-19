@@ -82,6 +82,8 @@ export const initialState = {
 /** Parse a cell string into a number, or return '' for empty. */
 export function parseCell(value) {
   if (value === '' || value === null || value === undefined) return ''
+  // Papa preserves whitespace; blank cells must stay missing, not become zero.
+  if (typeof value === 'string' && value.trim() === '') return ''
   const n = Number(value)
   return Number.isFinite(n) ? n : String(value)
 }
