@@ -1,3 +1,11 @@
+export const WIDTH = 500
+export const HEIGHT = 300
+export const MARGIN = { top: 40, right: 5, bottom: 35, left: 45 }
+export const PADDING = 5
+export const TEXT_SIZE = 10
+export const TITLE_TEXT_SIZE = 15
+export const TICK_SIZE = 5
+
 // Returns a function that maps a value in [domainMin, domainMax]
 // to a pixel position in [rangeMin, rangeMax].
 export function scale(domainMin, domainMax, rangeMin, rangeMax) {
@@ -42,4 +50,35 @@ export function trendLine(points) {
 
   const slope = top / bottom
   return { slope, startHeight: averageY - slope * averageX }
+}
+
+export function invert(domainMin, domainMax, rangeMin, rangeMax) {
+  return (pixel) => {
+    if (domainMax === domainMin) return domainMin
+    if (rangeMax === rangeMin) return domainMin
+    const t = (pixel - rangeMin) / (rangeMax - rangeMin)
+    return domainMin + t * (domainMax - domainMin)
+  }
+}
+
+export function computeLayout({ xMin, xMax, yMin, yMax }) {
+  const left = MARGIN.left
+  const right = WIDTH - MARGIN.right
+  const top = MARGIN.top
+  const bottom = HEIGHT - MARGIN.bottom
+
+  return {
+    left,
+    right,
+    top,
+    bottom,
+    toX: scale(xMin, xMax, left, right),
+    toY: scale(yMin, yMax, bottom, top),
+    fromX: invert(xMin, xMax, left, right),
+    fromY: invert(yMin, yMax, bottom, top),
+    xTicks: ticks(xMin, xMax),
+    yTicks: ticks(yMin, yMax),
+    xGridlines: gridlines(xMin, xMax),
+    yGridlines: gridlines(yMin, yMax),
+  }
 }

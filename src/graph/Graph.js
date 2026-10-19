@@ -1,5 +1,5 @@
 import { el } from './svg.js'
-import { scale, ticks, gridlines, trendLine } from './scale.js'
+import { WIDTH, HEIGHT, PADDING, TEXT_SIZE, TITLE_TEXT_SIZE, TICK_SIZE, computeLayout, trendLine } from './scale.js'
 import legend from './Legend.js'
 import { marker } from './Marker.js'
 import lineGraph from './LineGraph.js'
@@ -14,13 +14,7 @@ const DEFAULT_LABELS = {
   y_axis_label: 'Your Y Axis Label',
 }
 
-const WIDTH = 500
-const HEIGHT = 300
-const MARGIN = { top: 40, right: 5, bottom: 35, left: 45 }
-const PADDING = 5
-const TEXT_SIZE = 10
-const TITLE_TEXT_SIZE = 15
-const TICK_SIZE = 5
+
 const MIN_RADIUS = 3
 const MAX_RADIUS = 100
 const MIN_HOVER_TARGET_RADIUS = 10
@@ -79,14 +73,7 @@ export function createChart(container, options) {
       return Math.min(MAX_RADIUS, r)
     }
 
-    const left = MARGIN.left
-    const right = WIDTH - MARGIN.right
-    const top = MARGIN.top
-    const bottom = HEIGHT - MARGIN.bottom
-
-    const toX = scale(xMin, xMax, left, right)
-    // SVG's y-axis points down, so larger values map to smaller pixel positions.
-    const toY = scale(yMin, yMax, bottom, top)
+    const { left, right, top, bottom, toX, toY, xTicks, yTicks, xGridlines, yGridlines } = computeLayout({ xMin, xMax, yMin, yMax })
 
     svg.setAttribute('aria-label', `${type} plot of ${shownPoints.length} points`)
 
@@ -103,21 +90,21 @@ export function createChart(container, options) {
       el('line', { class: 'axis', x1: left, y1: top, x2: left, y2: bottom }),
 
       // GRIDLINES
-      ...gridlines(xMin, xMax).map((v) =>
+      ...xGridlines.map((v) =>
         el('g', {}, [el('line', { class: 'gridline', x1: toX(v), y1: top, x2: toX(v), y2: bottom + TICK_SIZE })])
       ),
-      ...gridlines(yMin, yMax).map((v) =>
+      ...yGridlines.map((v) =>
         el('g', {}, [el('line', { class: 'gridline', x1: left - TICK_SIZE, y1: toY(v), x2: right, y2: toY(v) })])
       ),
 
       // TICKS
-      ...ticks(xMin, xMax).map((v) =>
+      ...xTicks.map((v) =>
         el('g', {}, [
           el('line', { class: 'ticks', x1: toX(v), y1: bottom, x2: toX(v), y2: bottom + TICK_SIZE }),
           el('text', { class: 'label', x: toX(v), y: bottom + TEXT_SIZE + PADDING + TICK_SIZE, 'text-anchor': 'middle', text: round(v) }),
         ])
       ),
-      ...ticks(yMin, yMax).map((v) =>
+      ...yTicks.map((v) =>
         el('g', {}, [
           el('line', { class: 'ticks', x1: left - TICK_SIZE, y1: toY(v), x2: left, y2: toY(v) }),
           el('text', { class: 'label', x: left - TICK_SIZE - PADDING, y: toY(v) + 4, 'text-anchor': 'end', text: round(v) }),
