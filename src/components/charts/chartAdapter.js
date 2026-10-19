@@ -24,6 +24,7 @@ export function prepareChart(state) {
       series: graphSeries,
       type: state.chartType,
       showPoints: state.showPoints,
+      pointSize: state.pointSize,
       showTrendLine: true,
       colors: {
         tooltipBackground: '#ffffff',
