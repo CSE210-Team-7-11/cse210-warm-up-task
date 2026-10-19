@@ -5,6 +5,8 @@
 // from a dropped CSV/TSV file. Column 0 is always the X axis; every other
 // column (up to MAX_SERIES) is plotted as a series.
 
+import Papa from 'papaparse'
+
 /**
  * Colorblind-safe series styles (validated for red-green colorblindness on a
  * white surface, all pairs, so they also work for scatter plots).
@@ -85,29 +87,31 @@ export function parseCell(value) {
 }
 
 /**
- * Parse uploaded delimited text (CSV, TSV) into { columns, rows, issues }.
- * Rows are padded or cut to the header's width; `issues` lists the row
- * indexes that changed, as [['TooFewFields', [..]], ['TooManyFields', [..]]].
+ * Parse uploaded delimited text (CSV, TSV, semicolon-separated).
+ * Returns { columns, rows, issues, delimiter }, or null for empty input.
+ * Issues are in the form [type, data] (ADR-0007), with Papa error codes for parse errors.
+ * Row positions always index the returned `rows` array (0-based).
+ * Errors outside the data rows, including header errors, carry a count instead.
+ * Rows are padded or cut to the header's width, reporting TooFewFields or TooManyFields.
  * Dropping only empty trailing fields (e.g. "1,2,") is not reported.
  */
 export function parseDelimited(text) {
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-  if (lines.length === 0) return null
-  const delim = lines[0].includes('\t') ? '\t' : ','
-  const split = (l) => l.split(delim).map((s) => s.trim().replace(/^"|"$/g, ''))
-  const first = split(lines[0])
+  const result = Papa.parse(text, {
+    header: false,
+    dynamicTyping: false,
+    skipEmptyLines: 'greedy',
+  })
+  if (result.data.length === 0) return null
+  const first = result.data[0]
   const headerIsText = first.some((v) => v !== '' && !Number.isFinite(Number(v)))
   const columns = headerIsText
     ? first.map((name, i) => ({ key: `c${i}`, name }))
     : first.map((_, i) => ({ key: `c${i}`, name: `Column ${i + 1}` }))
-  const body = headerIsText ? lines.slice(1) : lines
+  const body = headerIsText ? result.data.slice(1) : result.data
   const tooFew = []
   const tooMany = []
-  const rows = body.map((l, r) => {
-    const cells = split(l).map(parseCell)
+  const rows = body.map((row, r) => {
+    const cells = row.map(parseCell)
     if (cells.length < columns.length) tooFew.push(r)
     if (cells.slice(columns.length).some((v) => v !== '')) tooMany.push(r)
     while (cells.length < columns.length) cells.push('')
@@ -116,5 +120,33 @@ export function parseDelimited(text) {
   const issues = []
   if (tooFew.length) issues.push(['TooFewFields', tooFew])
   if (tooMany.length) issues.push(['TooManyFields', tooMany])
-  return { columns, rows, issues }
+  const errorRowIndexes = new Map()
+  if (result.errors.some(({ row }) => Number.isInteger(row))) {
+    // Papa removes blank records but leaves error indexes unchanged. Only
+    // malformed input needs this extra pass, retaining blanks to map indexes.
+    const records = Papa.parse(text, {
+      header: false,
+      dynamicTyping: false,
+      delimiter: result.meta.delimiter,
+      skipEmptyLines: false,
+    }).data
+    let dataRow = headerIsText ? -1 : 0
+    records.forEach((record, sourceRow) => {
+      if (record.join('').trim() === '') return
+      if (dataRow >= 0) errorRowIndexes.set(sourceRow, dataRow)
+      dataRow++
+    })
+  }
+  const parseErrors = new Map()
+  for (const { code, row } of result.errors) {
+    if (!parseErrors.has(code)) parseErrors.set(code, { rows: [], count: 0 })
+    const error = parseErrors.get(code)
+    error.count++
+    const dataRow = errorRowIndexes.get(row)
+    if (dataRow !== undefined) error.rows.push(dataRow)
+  }
+  for (const [code, { rows, count }] of parseErrors) {
+    issues.push([code, rows.length === count ? rows : count])
+  }
+  return { columns, rows, issues, delimiter: result.meta.delimiter }
 }

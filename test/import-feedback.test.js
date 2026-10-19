@@ -19,7 +19,7 @@ const columns = [
 ]
 
 test('reports rows the parser padded or cut, but not empty trailing fields', () => {
-  const parsed = parseDelimited('Month,Owned,Funds\n1,2\n2,"1,010",5\n3,4,5,\n4,5,6')
+  const parsed = parseDelimited('Month,Owned,Funds\n1,2\n2,3,4,5\n3,4,5,\n4,5,6')
 
   assert.deepEqual(parsed.issues, [['TooFewFields', [0]], ['TooManyFields', [1]]])
   assert.deepEqual(parsed.rows[0], [1, 2, ''])
@@ -36,7 +36,7 @@ test('explains why a file is rejected before reading it', () => {
 
 test('explains why parsed text is rejected', () => {
   assert.equal(checkParsed(parseDelimited(' \n\n'), 'a.csv'), 'a.csv is empty.')
-  assert.match(checkParsed(parseDelimited('x;y\n1;2'), 'a.csv'), /only one column\. Separate columns with commas or tabs/)
+  assert.match(checkParsed(parseDelimited('x\n1'), 'a.csv'), /only one column\. Separate columns with commas or tabs/)
   assert.equal(checkParsed(parseDelimited('x,y'), 'a.csv'), 'a.csv has a header row but no data rows.')
   assert.equal(checkParsed(parseDelimited('x,y\n1,2'), 'a.csv'), '')
 })
