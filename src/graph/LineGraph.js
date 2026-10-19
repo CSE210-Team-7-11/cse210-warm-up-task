@@ -2,7 +2,7 @@ import { el } from './svg.js'
 import { lineMarker } from './Marker.js'
 import { lineSegments } from './lineSegments.js'
 
-export default function lineGraph({ series, xPos, yPos, showPoints, clipPathId, gradientId, top, bottom }) {
+export default function lineGraph({ series, xPos, yPos, showPoints, pointSize = 7, clipPathId, gradientId, top, bottom }) {
   const markers = new Map()
   const paths = series.map((oneSeries) => {
     const segments = lineSegments(oneSeries.points)
@@ -46,7 +46,7 @@ export default function lineGraph({ series, xPos, yPos, showPoints, clipPathId, 
           shape: oneSeries.marker,
           cx: xPos(point.x),
           cy: yPos(point.y),
-          size: isHovered ? 10 : 7,
+          size: isHovered ? pointSize + 3 : pointSize,
           fill: oneSeries.color || '#256b47',
           stroke: '#fff',
           strokeWidth: 1.5,

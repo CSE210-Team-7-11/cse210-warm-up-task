@@ -45,7 +45,7 @@ export function createChart(container, options) {
   // the hovered point, as { seriesNumber, pointNumber }
   let hovered = null
 
-  function update({ points, series, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true, colors = {} }) {
+  function update({ points, series, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true, pointSize = 7, colors = {} }) {
     hovered = null
 
     const { title, subtitle, x_axis_label, y_axis_label } = { ...DEFAULT_LABELS, ...labels }
@@ -168,6 +168,7 @@ export function createChart(container, options) {
         xPos: toX,
         yPos: toY,
         showPoints,
+        pointSize,
         clipPathId: plotAreaId,
         gradientId,
         top,
