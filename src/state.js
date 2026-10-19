@@ -62,6 +62,7 @@ export const DEFAULT_SPECS = {
   xLabel: 'Time (months)',
   yLabel: 'Smitskis owned / Funds ($ x 10)',
   showPoints: true,
+  pointSize: 7,
 }
 
 export const initialState = {
