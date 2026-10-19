@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { prepareChart } from '../src/components/charts/chartAdapter.js'
-import { initialState, seriesFromColumns } from '../src/state.js'
+import { initialState, seriesFromColumns, parseDelimited } from '../src/state.js'
 
 function editorState(rows, overrides = {}) {
   const columns = [
@@ -28,26 +28,69 @@ test('keeps each series paired with its values and styles when sorting by x', ()
   }
 })
 
-test('omits absent samples from each line series so valid neighbors can connect', { todo: true }, () => {
-  const rows = [[1, 0, 10], [2, '', 20], [3, 3, 'bad'], ['bad', 99, 99]]
-  const line = prepareChart(editorState(rows, { chartType: 'line' }))
+test('preserves empty-cell gaps and #N/A skips independently in line series', () => {
+  const rows = [[1, 0, 10], [2, '', '#N/A'], [3, 3, 30], ['bad', 99, 99]]
+  const { graphProps, pointCount } = prepareChart(editorState(rows, { chartType: 'line' }))
 
-  assert.equal(line.pointCount, 4)
-  assert.deepEqual(line.graphProps.series.map((series) => series.points), [
-    [{ x: 1, y: 0 }, { x: 3, y: 3 }],
-    [{ x: 1, y: 10 }, { x: 2, y: 20 }],
+  assert.equal(pointCount, 4)
+  assert.deepEqual(graphProps.series.map((series) => series.points), [
+    [{ x: 1, y: 0 }, { x: 2, y: Infinity }, { x: 3, y: 3 }],
+    [{ x: 1, y: 10 }, { x: 2, y: -Infinity }, { x: 3, y: 30 }],
   ])
 })
 
-test('omits missing scatter samples without counting them as zero', () => {
-  const rows = [[1, 0, 10], [2, '', 20], [3, 3, 'bad'], ['bad', 99, 99]]
+test('omits gaps, skips, and invalid scatter samples without counting them as zero', () => {
+  const rows = [[1, 0, 10], [2, '', '#N/A'], [3, 3, 'bad'], ['bad', 99, 99]]
   const scatter = prepareChart(editorState(rows, { chartType: 'scatter' }))
 
-  assert.equal(scatter.pointCount, 4)
+  assert.equal(scatter.pointCount, 3)
   assert.deepEqual(scatter.graphProps.series.map((series) => series.points), [
     [{ x: 1, y: 0 }, { x: 3, y: 3 }],
+    [{ x: 1, y: 10 }],
+  ])
+})
+
+test('retains leading, trailing, and consecutive gaps and skips after sorting', () => {
+  const rows = [[5, '', 50], [2, null, 20], [3, undefined, 30], [1, '#N/A', 10], [4, 4, ' #N/A '], [6, '', 60]]
+  const { graphProps, pointCount } = prepareChart(editorState(rows, { chartType: 'line' }))
+
+  assert.equal(pointCount, 6)
+  assert.deepEqual(graphProps.series[0].points, [
+    { x: 1, y: -Infinity }, { x: 2, y: Infinity }, { x: 3, y: Infinity },
+    { x: 4, y: 4 }, { x: 5, y: Infinity }, { x: 6, y: Infinity },
+  ])
+  assert.equal(graphProps.series[1].points[3].y, -Infinity)
+})
+
+test('does not count an entirely missing series or remove another series values', () => {
+  const rows = [[1, '', 10], [2, '#N/A', 20]]
+  const { graphProps, pointCount } = prepareChart(editorState(rows, { chartType: 'line' }))
+
+  assert.equal(pointCount, 2)
+  assert.deepEqual(graphProps.series.map((series) => series.points), [
+    [{ x: 1, y: Infinity }, { x: 2, y: -Infinity }],
     [{ x: 1, y: 10 }, { x: 2, y: 20 }],
   ])
+  assert.equal(prepareChart(editorState([[1, '', '#N/A'], [2, '', '#N/A']])).pointCount, 0)
+})
+
+test('carries CSV empty cells and #N/A through the existing importer to the chart', () => {
+  const { columns, rows } = parseDelimited('X,A,B\n1,10,10\n2,,#N/A\n3,30,30')
+  const state = { ...initialState, columns, rows, series: seriesFromColumns(columns) }
+  const { graphProps, pointCount } = prepareChart(state)
+
+  assert.equal(pointCount, 4)
+  assert.equal(graphProps.series[0].points[1].y, Infinity)
+  assert.equal(graphProps.series[1].points[1].y, -Infinity)
+  assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.series.map(s => s.points.length), [2, 2])
+})
+
+test('keeps invalid values as breaks instead of treating them as #N/A or zero', () => {
+  const rows = [[1, 10, 10], [2, 'bad', 'Infinity'], [3, 30, 30], ['#N/A', 50, 50]]
+  const { graphProps, pointCount } = prepareChart(editorState(rows))
+
+  assert.equal(pointCount, 4)
+  assert.deepEqual(graphProps.series.map(s => s.points[1]), [{ x: 2, y: null }, { x: 2, y: null }])
 })
 
 test('passes chart settings and labels through, including hiding and restoring a subtitle', () => {

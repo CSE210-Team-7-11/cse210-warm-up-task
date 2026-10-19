@@ -1,22 +1,11 @@
 import { el } from './svg.js'
 import { lineMarker } from './Marker.js'
+import { lineSegments } from './lineSegments.js'
 
-// Line marks for Anna's graph library. Null values break a line into segments.
 export default function lineGraph({ series, xPos, yPos, showPoints, clipPathId, gradientId, top, bottom }) {
   const markers = new Map()
   const paths = series.map((oneSeries) => {
-    const segments = []
-    let segment = []
-    const sorted = [...oneSeries.points].sort((a, b) => a.x - b.x)
-    for (const point of sorted) {
-      if (!Number.isFinite(point.y)) {
-        if (segment.length) segments.push(segment)
-        segment = []
-      } else {
-        segment.push(point)
-      }
-    }
-    if (segment.length) segments.push(segment)
+    const segments = lineSegments(oneSeries.points)
 
     const line = segments.map((points) => points
       .map((point, i) => `${i === 0 ? 'M' : 'L'}${xPos(point.x)},${yPos(point.y)}`)
