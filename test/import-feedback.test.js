@@ -36,6 +36,7 @@ test('explains why a file is rejected before reading it', () => {
 
 test('explains why parsed text is rejected', () => {
   assert.equal(checkParsed(parseDelimited(' \n\n'), 'a.csv'), 'a.csv is empty.')
+  assert.equal(checkParsed(parseDelimited('"'), 'a.csv'), 'a.csv has a quoted field without a closing quote.')
   assert.match(checkParsed(parseDelimited('x\n1'), 'a.csv'), /only one column\. Separate columns with commas or tabs/)
   assert.equal(checkParsed(parseDelimited('x,y'), 'a.csv'), 'a.csv has a header row but no data rows.')
   assert.equal(checkParsed(parseDelimited('x,y\n1,2'), 'a.csv'), '')

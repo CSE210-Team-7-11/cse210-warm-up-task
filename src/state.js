@@ -103,8 +103,10 @@ export function parseDelimited(text) {
     dynamicTyping: false,
     skipEmptyLines: 'greedy',
   })
-  if (result.data.length === 0) return null
-  const first = result.data[0]
+  // Papa can discard an empty record while still reporting malformed quotes.
+  // An undetectable delimiter alone is expected for genuinely empty input.
+  if (result.data.length === 0 && result.errors.every(({ code }) => code === 'UndetectableDelimiter')) return null
+  const first = result.data[0] ?? []
   const headerIsText = first.some((v) => v !== '' && !Number.isFinite(Number(v)))
   const columns = headerIsText
     ? first.map((name, i) => ({ key: `c${i}`, name }))

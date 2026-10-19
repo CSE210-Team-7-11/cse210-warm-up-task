@@ -41,6 +41,12 @@ export function checkFile({ name, size }) {
 /** Why a parseDelimited() result can't be imported, or '' when it can. */
 export function checkParsed(parsed, name) {
   if (!parsed) return `${name} is empty.`
+  if (parsed.columns.length === 0) {
+    if (parsed.issues.some(([type]) => type === 'MissingQuotes')) {
+      return `${name} has a quoted field without a closing quote.`
+    }
+    return `${name} has no readable columns.`
+  }
   if (parsed.columns.length < 2) {
     return `${name} has only one column. Separate columns with commas or tabs: X first, then at least one series.`
   }
