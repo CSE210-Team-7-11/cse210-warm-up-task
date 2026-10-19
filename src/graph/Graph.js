@@ -84,6 +84,9 @@ export function createChart(container, options) {
     const top = MARGIN.top
     const bottom = HEIGHT - MARGIN.bottom
 
+    // Overlapping white outlines can hide every series on dense plots.
+    svg.classList.toggle('dense', shownPoints.length > right - left)
+
     const toX = scale(xMin, xMax, left, right)
     // SVG's y-axis points down, so larger values map to smaller pixel positions.
     const toY = scale(yMin, yMax, bottom, top)
