@@ -4,6 +4,7 @@ import legend from './Legend.js'
 import { marker } from './Marker.js'
 import lineGraph from './LineGraph.js'
 import tooltip from './Tooltip.js'
+import { withSeriesColors } from './colors.js'
 import './Graph.css'
 
 const DEFAULT_LABELS = {
@@ -44,7 +45,7 @@ export function createChart(container, options) {
   // the hovered point, as { seriesNumber, pointNumber }
   let hovered = null
 
-  function update({ points, series, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true }) {
+  function update({ points, series, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true, colors = {} }) {
     hovered = null
 
     const { title, subtitle, x_axis_label, y_axis_label } = { ...DEFAULT_LABELS, ...labels }
@@ -55,7 +56,7 @@ export function createChart(container, options) {
       allSeries = [{ name: labels.legend, points }]
     }
 
-    const shownSeries = allSeries
+    const shownSeries = withSeriesColors(allSeries)
 
     const shownPoints = []
     for (const oneSeries of shownSeries) {
@@ -210,8 +211,13 @@ export function createChart(container, options) {
     const tooltipLayer = el('g')
     children.push(tooltipLayer)
 
-    svg.replaceChildren(...children)
-    view = { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom }, markers, tooltipLayer }
+    // spreading every element into one call overflows the call stack on large data
+    const fragment = document.createDocumentFragment()
+    for (const child of children) {
+      fragment.append(child)
+    }
+    svg.replaceChildren(fragment)
+    view = { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom }, markers, tooltipLayer, colors }
   }
 
   function setHovered(next) {
@@ -235,7 +241,7 @@ export function createChart(container, options) {
   }
 
   function drawTooltip() {
-    const { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds, tooltipLayer } = view
+    const { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds, tooltipLayer, colors } = view
 
     // only show the series name when theres more than one
     let hoveredPoint = null
@@ -262,6 +268,7 @@ export function createChart(container, options) {
       toY,
       toRadius,
       bounds,
+      colors,
     })
     tooltipLayer.replaceChildren(...(box ? [box] : []))
   }

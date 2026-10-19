@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useLayoutEffect, useMemo, useRef } from 'react'
 import { BarChartIcon } from './ui/Icons.jsx'
 import { createChart } from '../graph/Graph.js'
 import { prepareChart } from './charts/chartAdapter.js'
@@ -8,7 +8,7 @@ function GraphView({ graphProps }) {
   const containerRef = useRef(null)
   const chartRef = useRef(null)
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     chartRef.current = createChart(containerRef.current)
     return () => {
       chartRef.current.destroy()
@@ -16,7 +16,7 @@ function GraphView({ graphProps }) {
     }
   }, [])
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     chartRef.current.update(graphProps)
   }, [graphProps])
 
