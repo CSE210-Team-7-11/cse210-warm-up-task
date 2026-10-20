@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "papaparse": "^5.7.0",
+    "prismjs": "^1.30.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8"
   },
