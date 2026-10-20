@@ -5,7 +5,6 @@ import {
   checkParsed,
   describeIssue,
   findIssues,
-  isValidCellValue,
   isWarning,
   summarizeData,
 } from '../importFeedback.js'
@@ -13,8 +12,8 @@ import { AlertCircleIcon, CheckCircleIcon, UploadIcon } from './ui/Icons.jsx'
 import './DataPanel.css'
 
 /**
- * Step 02: load data from a file. The table is a read-only preview; the only
- * way to change the data is to drop/browse a new CSV or TSV file.
+ * Step 02: load data from a file. The only way to change the data is to
+ * drop/browse a new CSV or TSV file.
  */
 export default function DataPanel({ state, onImport }) {
   const { sourceName, rows, columns, parseIssues } = state
@@ -132,47 +131,6 @@ export default function DataPanel({ state, onImport }) {
           <br />
           {`X: ${summary.xName}${formatRange(summary.xRange)}`}
         </p>
-
-        {/* ---- read-only preview table ---- */}
-        <div className="data-panel-table-wrap">
-          <table className="data-panel-table">
-            <colgroup>
-              <col className="data-panel-col-num" />
-              {columns.map((c) => (
-                <col key={c.key} />
-              ))}
-            </colgroup>
-            <thead>
-              <tr>
-                <th className="data-panel-th data-panel-th-num" scope="col">
-                  <span className="data-panel-sr-only">Row</span>
-                </th>
-                {columns.map((c) => (
-                  <th key={c.key} className="data-panel-th" scope="col" title={c.name}>
-                    {c.name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, ri) => (
-                <tr key={ri}>
-                  <td className="data-panel-td data-panel-td-num">
-                    <span className="data-panel-row-num">{ri + 1}</span>
-                  </td>
-                  {row.map((v, ci) => {
-                    const invalid = v !== '' && !isValidCellValue(v, ci)
-                    return (
-                      <td key={ci} className={`data-panel-td${invalid ? ' is-invalid' : ''}`}>
-                        {v === '' ? '—' : String(v)}
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
 
         {/* ---- validation ---- */}
         <div className="data-panel-feedback" role="status">
