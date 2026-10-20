@@ -20,7 +20,7 @@ test('axis overflow identifies the source column and both endpoints of the range
 })
 
 test('trend overflow identifies the source value and series column', () => {
-  assert.throws(() => trendLine([{ x: 0, y: 1e308 }, { x: 1, y: 1e308 }], 'Time', 'Trial A'), {
+  assert.throws(() => trendLine([0, 1], [1e308, 1e308], 2, 'Time', 'Trial A'), {
     name: 'Float64OverflowError',
     message: 'The trend line for 1e+308 in "Trial A" is too large for 64-bit precision.',
   })
@@ -57,7 +57,7 @@ test('reports all float32 overflows across X and every series without changing i
 test('collects independent axis and trend errors in one flat list', () => {
   assert.throws(() => collectOverflowErrors([
     () => computeLayout({ xMin: -1e308, xMax: 1e308, yMin: -1e308, yMax: 1e308, xColumnName: 'Time', yColumnName: 'Trial A' }),
-    () => trendLine([{ x: 0, y: 1e308 }, { x: 1, y: 1e308 }], 'Time', 'Trial B'),
+    () => trendLine([0, 1], [1e308, 1e308], 2, 'Time', 'Trial B'),
   ]), (error) => {
     assert.ok(error instanceof NumericOverflowErrors)
     assert.equal(error.errors.length, 3)

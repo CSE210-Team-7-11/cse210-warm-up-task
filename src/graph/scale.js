@@ -41,30 +41,60 @@ export function gridlines(min, max, count = 5, columnName = 'axis') {
   return ticks(min, max, count, columnName).slice(1, -1)
 }
 
-// least squares fit, the line is y = slope * x + startHeight
-export function trendLine(points, xColumnName = 'X', yColumnName = 'Y') {
-  if (points.length < 2) return null
+export function bounds(columns) {
+  let xMin = Infinity
+  let xMax = -Infinity
+  let yMin = Infinity
+  let yMax = -Infinity
+  let count = 0
+  for (let i = 0; i < columns.length; i++) {
+    let shown = false
+    for (const ys of columns.ys) {
+      const y = ys[i]
+      if (!Number.isFinite(y)) continue
+      shown = true
+      count++
+      if (y < yMin) yMin = y
+      if (y > yMax) yMax = y
+    }
+    if (!shown) continue
+    if (columns.x[i] < xMin) xMin = columns.x[i]
+    if (columns.x[i] > xMax) xMax = columns.x[i]
+  }
+  return { xMin, xMax, yMin, yMax, count }
+}
 
+// least squares fit, the line is y = slope * x + startHeight
+export function trendLine(x, y, length, xColumnName = 'X', yColumnName = 'Y') {
+  let count = 0
   let totalX = 0
   let totalY = 0
-  for (const point of points) {
-    totalX = finiteCalculation(totalX + point.x, xColumnName, point.x, 'trend line')
-    totalY = finiteCalculation(totalY + point.y, yColumnName, point.y, 'trend line')
+  let firstX = Infinity
+  let lastX = -Infinity
+  for (let i = 0; i < length; i++) {
+    if (!Number.isFinite(y[i])) continue
+    count++
+    totalX = finiteCalculation(totalX + x[i], xColumnName, x[i], 'trend line')
+    totalY = finiteCalculation(totalY + y[i], yColumnName, y[i], 'trend line')
+    if (x[i] < firstX) firstX = x[i]
+    if (x[i] > lastX) lastX = x[i]
   }
-  const averageX = totalX / points.length
-  const averageY = totalY / points.length
+  if (count < 2) return null
+  const averageX = totalX / count
+  const averageY = totalY / count
 
   let top = 0
   let bottom = 0
-  for (const point of points) {
-    top = finiteCalculation(top + (point.x - averageX) * (point.y - averageY), yColumnName, point.y, 'trend line')
-    bottom = finiteCalculation(bottom + (point.x - averageX) * (point.x - averageX), xColumnName, point.x, 'trend line')
+  for (let i = 0; i < length; i++) {
+    if (!Number.isFinite(y[i])) continue
+    top = finiteCalculation(top + (x[i] - averageX) * (y[i] - averageY), yColumnName, y[i], 'trend line')
+    bottom = finiteCalculation(bottom + (x[i] - averageX) * (x[i] - averageX), xColumnName, x[i], 'trend line')
   }
   // all points have the same x, cant fit a line (would divide by zero)
   if (bottom === 0) return null
 
   const slope = finiteCalculation(top / bottom, yColumnName, averageY, 'trend line')
-  return { slope, startHeight: finiteCalculation(averageY - slope * averageX, yColumnName, averageY, 'trend line') }
+  return { slope, startHeight: finiteCalculation(averageY - slope * averageX, yColumnName, averageY, 'trend line'), firstX, lastX }
 }
 
 export function invert(domainMin, domainMax, rangeMin, rangeMax, columnName = 'axis') {
