@@ -158,6 +158,63 @@
   height: 28px;
 }
 
+.specs-panel-series-warning {
+  display: inline-flex;
+  flex-shrink: 0;
+  justify-content: center;
+  width: 24px;
+  color: var(--danger-muted);
+}
+
+.specs-panel-series-warning.is-scatter {
+  width: 12px;
+}
+
+.specs-panel-series-shape {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.specs-panel-series-shape:has(select:focus-visible) {
+  outline: 2px solid var(--green-300);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.specs-panel-series-shape select {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.specs-panel-series-color {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.specs-panel-series-color input {
+  width: 24px;
+  height: 22px;
+  padding: 1px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.specs-panel-series-color button {
+  padding: 2px 6px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-surface);
+  color: var(--text-strong);
+  font-size: 11px;
+  cursor: pointer;
+}
+
 .specs-panel-series-name {
   flex: 1;
   min-width: 0;

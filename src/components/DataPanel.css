@@ -88,69 +88,6 @@
   overflow-wrap: anywhere;
 }
 
-/* ---------- table ---------- */
-.data-panel-table-wrap {
-  margin-top: 10px;
-  border: 1px solid var(--border-table);
-  border-radius: var(--radius-md);
-  overflow: auto;
-  max-height: 392px; /* ~12 rows; longer files scroll inside the panel */
-  background: var(--bg-surface);
-}
-
-.data-panel-table {
-  width: 100%;
-  table-layout: fixed;
-  border-collapse: separate;
-  border-spacing: 0;
-  font-size: 11.5px;
-}
-
-.data-panel-col-num {
-  width: 24px;
-}
-
-.data-panel-th {
-  height: 30px;
-  padding: 6px 4px;
-  background: var(--bg-tint);
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.2;
-  color: var(--green-600);
-  text-align: center;
-  vertical-align: middle;
-  /* long column names from uploaded files wrap instead of truncating */
-  overflow-wrap: anywhere;
-}
-
-.data-panel-td {
-  position: relative;
-  height: 30px;
-  padding: 0;
-  border-top: 1px solid var(--border-table);
-  text-align: center;
-  vertical-align: middle;
-  color: var(--text-strong);
-}
-
-/* zebra rows */
-.data-panel-table tbody tr:nth-child(even) .data-panel-td {
-  background: var(--bg-muted);
-}
-
-/* non-numeric cell from an uploaded file */
-.data-panel-td.is-invalid {
-  color: var(--danger);
-  background: var(--danger-bg);
-}
-
-/* row-number column */
-.data-panel-td-num {
-  font-size: 11px;
-  color: var(--text-faint);
-}
-
 /* ---------- validation line ---------- */
 .data-panel-status {
   display: flex;
@@ -184,21 +121,10 @@
   color: var(--danger-muted);
 }
 
-/* ---------- utilities ---------- */
-.data-panel-sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-.data-panel-th {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+.data-panel-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
 }

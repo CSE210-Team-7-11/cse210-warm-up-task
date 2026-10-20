@@ -1,0 +1,28 @@
+{
+  "delimiter": ",",
+  "numberFormat": ".",
+  "columns": [
+    "X",
+    "A"
+  ],
+  "issues": [
+    [
+      "invalid-x",
+      [
+        1,
+        2,
+        3
+      ]
+    ]
+  ],
+  "x": [
+    1,
+    5
+  ],
+  "ys": [
+    [
+      10,
+      14
+    ]
+  ]
+}

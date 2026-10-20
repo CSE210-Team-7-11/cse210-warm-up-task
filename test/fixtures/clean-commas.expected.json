@@ -1,0 +1,27 @@
+{
+  "delimiter": ",",
+  "numberFormat": ".",
+  "columns": [
+    "Month",
+    "Owned",
+    "Funds"
+  ],
+  "issues": [],
+  "x": [
+    1,
+    2,
+    3
+  ],
+  "ys": [
+    [
+      2,
+      5,
+      9
+    ],
+    [
+      30,
+      25,
+      40
+    ]
+  ]
+}

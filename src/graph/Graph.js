@@ -1,10 +1,8 @@
-import { el } from './svg.js'
-import { WIDTH, HEIGHT, PADDING, TEXT_SIZE, TITLE_TEXT_SIZE, TICK_SIZE, computeLayout, trendLine, minMax } from './scale.js'
-import legend from './Legend.js'
-import { marker } from './Marker.js'
-import lineGraph from './LineGraph.js'
-import tooltip from './Tooltip.js'
-import { withSeriesColors } from './colors.js'
+import { WIDTH, bounds, computeLayout, findNearest, trendLine } from './scale.js'
+import { drawFrame, drawLegend, drawLines, drawMarker, drawTooltip, drawTrendLines, measureLegend } from './canvas.js'
+import { prepareSeries } from './series.js'
+import { containsMarker } from './markerHit.js'
+import { collectOverflowErrors, finiteCalculation } from '../numericErrors.js'
 import './Graph.css'
 
 const DEFAULT_LABELS = {
@@ -15,256 +13,162 @@ const DEFAULT_LABELS = {
 }
 
 
-const MIN_RADIUS = 3
-const MAX_RADIUS = 100
-const MIN_HOVER_TARGET_RADIUS = 10
-const HOVER_EXTRA_RADIUS = 1.5
+const HOVER_DISTANCE = 10
+const HOVER_EXTRA_SIZE = 3
+const TOOLTIP_GAP = 9
 
-const round = (v) => Math.round(v * 10) / 10
-
-let nextChartId = 0
-
-// Draws `points` ([{ x, y }, ...]) as a scatter or line plot.
-// for more than one series pass series = [{ name, color, dash, marker, points }]
+// Draws columns ({ length, x, ys }) as a scatter or line plot.
+// series = [{ name, color, dash, marker }] has one entry per ys column
 // Returns { update(options), destroy() }.
 export function createChart(container, options) {
-  const chartId = nextChartId++
-  const plotAreaId = `plot-area-${chartId}`
-  const gradientId = `line-fill-${chartId}`
+  const canvas = document.createElement('canvas')
+  canvas.className = 'graph'
+  canvas.setAttribute('role', 'img')
+  const ctx = canvas.getContext('2d')
+  const saved = document.createElement('canvas')
 
-  const svg = el('svg', { class: 'graph', viewBox: `0 0 ${WIDTH} ${HEIGHT}`, role: 'img' })
-  container.append(svg)
+  const resizeObserver = new ResizeObserver(() => {
+    if (view) drawCanvas()
+  })
+  resizeObserver.observe(container)
 
   let view = null
-  // the hovered point, as { seriesNumber, pointNumber }
+  // the hovered point, as { seriesIndex, index }
   let hovered = null
 
-  function update({ points, series, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true, pointSize = 7, colors = {} }) {
+  function update({ series, columns, xColumnName, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true, pointSize = 7 }) {
     hovered = null
 
     const { title, subtitle, x_axis_label, y_axis_label } = { ...DEFAULT_LABELS, ...labels }
 
-    // a plain list of points counts as one series
-    let allSeries = series
-    if (!allSeries) {
-      allSeries = [{ name: labels.legend, points }]
-    }
+    const plotted = prepareSeries(series, columns, type)
+    const shownSeries = plotted.series
+    columns = plotted.columns
+    const xName = xColumnName ?? x_axis_label
+    const yName = shownSeries.map((oneSeries) => oneSeries.name || y_axis_label).join(', ')
 
-    const shownSeries = withSeriesColors(allSeries)
+    const { xMin, xMax, yMin, yMax, count: pointCount } = bounds(columns)
+    // scatter charts always show their points
+    const markerSize = type === 'scatter' || showPoints ? pointSize : 0
+    const markerRadius = (s) => shownSeries[s].marker === 'none' ? 0 : markerSize / 2
+    if (!canvas.isConnected) container.append(canvas)
+    const legend = measureLegend(ctx, shownSeries, { title, subtitle })
 
-    const shownPoints = []
-    for (const oneSeries of shownSeries) {
-      for (const point of oneSeries.points) {
-        if (Number.isFinite(point.y)) shownPoints.push(point)
-      }
-    }
-
-    const xs = shownPoints.map((p) => p.x)
-    const ys = shownPoints.map((p) => p.y)
-    const { min: xMin, max: xMax } = minMax(xs)
-    const { min: yMin, max: yMax } = minMax(ys)
-
-    const sizes = shownPoints.map((p) => p.z).filter(Number.isFinite)
-    const { min: sizeMin } = minMax(sizes)
-
-    const toRadius = (size) => {
-      if (!Number.isFinite(size) || size <= 0) return MIN_RADIUS
-      const r = MIN_RADIUS * Math.sqrt(size / sizeMin)
-      return Math.min(MAX_RADIUS, r)
-    }
-
-    const { left, right, top, bottom, toX, toY, xTicks, yTicks, xGridlines, yGridlines } = computeLayout({ xMin, xMax, yMin, yMax })
-
+    const [layout, trends] = collectOverflowErrors([
+      () => ({ ...computeLayout({ xMin, xMax, yMin, yMax, xColumnName: xName, yColumnName: yName, extraHeight: legend.extraHeight }), legend }),
+      () => showTrendLine && type === 'scatter' ? collectOverflowErrors(shownSeries.map((oneSeries, s) => () => {
+        const seriesName = oneSeries.name || y_axis_label
+        const trend = trendLine(columns.x, columns.ys[s], columns.length, xName, seriesName)
+        if (!trend) return null
+        const { firstX, lastX } = trend
+        const [firstY, lastY] = collectOverflowErrors([
+          () => finiteCalculation(trend.slope * firstX + trend.startHeight, seriesName, () => `${xName}=${firstX}`, 'trend line'),
+          () => finiteCalculation(trend.slope * lastX + trend.startHeight, seriesName, () => `${xName}=${lastX}`, 'trend line'),
+        ])
+        return { color: oneSeries.color, firstX, lastX, firstY, lastY }
+      })) : [],
+    ])
+    const { left, right, top, bottom, toX, toY } = layout
     // Overlapping white outlines can hide every series on dense plots.
-    svg.classList.toggle('dense', shownPoints.length > right - left)
-
-    svg.setAttribute('aria-label', `${type} plot of ${shownPoints.length} points`)
-
-    const children = [
-      // HEADER
-      el('text', { class: 'title', x: 0, y: TITLE_TEXT_SIZE, 'text-anchor': 'left', text: title }),
-      el('text', { class: 'subtitle', x: 0, y: TITLE_TEXT_SIZE + TEXT_SIZE + PADDING, 'text-anchor': 'left', text: subtitle }),
-
-      // LEGEND
-      legend({ sizes, series: shownSeries, toRadius, right }),
-
-      // AXES
-      el('line', { class: 'axis', x1: left, y1: bottom, x2: right, y2: bottom }),
-      el('line', { class: 'axis', x1: left, y1: top, x2: left, y2: bottom }),
-
-      // GRIDLINES
-      ...xGridlines.map((v) =>
-        el('g', {}, [el('line', { class: 'gridline', x1: toX(v), y1: top, x2: toX(v), y2: bottom + TICK_SIZE })])
-      ),
-      ...yGridlines.map((v) =>
-        el('g', {}, [el('line', { class: 'gridline', x1: left - TICK_SIZE, y1: toY(v), x2: right, y2: toY(v) })])
-      ),
-
-      // TICKS
-      ...xTicks.map((v) =>
-        el('g', {}, [
-          el('line', { class: 'ticks', x1: toX(v), y1: bottom, x2: toX(v), y2: bottom + TICK_SIZE }),
-          el('text', { class: 'label', x: toX(v), y: bottom + TEXT_SIZE + PADDING + TICK_SIZE, 'text-anchor': 'middle', text: round(v) }),
-        ])
-      ),
-      ...yTicks.map((v) =>
-        el('g', {}, [
-          el('line', { class: 'ticks', x1: left - TICK_SIZE, y1: toY(v), x2: left, y2: toY(v) }),
-          el('text', { class: 'label', x: left - TICK_SIZE - PADDING, y: toY(v) + 4, 'text-anchor': 'end', text: round(v) }),
-        ])
-      ),
-
-      // AXES LABELS
-      el('text', { class: 'label', x: (left + right) / 2, y: HEIGHT, 'text-anchor': 'middle', text: x_axis_label }),
-      el('text', {
-        class: 'label',
-        transform: `translate(${TEXT_SIZE}, ${(top + bottom) / 2}) rotate(-90)`,
-        'text-anchor': 'middle',
-        text: y_axis_label,
-      }),
-
-      // TREND LINES, clipped so they dont poke out of the plot
-      el('defs', {}, [
-        el('clipPath', { id: plotAreaId }, [
-          el('rect', { x: left, y: top, width: right - left, height: bottom - top }),
-        ]),
-      ]),
-    ]
-
-    if (showTrendLine && type === 'scatter') {
-      for (const oneSeries of shownSeries) {
-        const trend = trendLine(oneSeries.points)
-        if (!trend) continue
-        const { min: firstX, max: lastX } = minMax(oneSeries.points.map((point) => point.x))
-        children.push(el('line', {
-          class: 'trend',
-          'clip-path': `url(#${plotAreaId})`,
-          style: { stroke: oneSeries.color },
-          x1: toX(firstX),
-          y1: toY(trend.slope * firstX + trend.startHeight),
-          x2: toX(lastX),
-          y2: toY(trend.slope * lastX + trend.startHeight),
-        }))
-      }
+    const dense = pointCount > right - left
+    const maxHitRadius = markerSize / 2 + 0.5 + (dense ? 0 : 1.5)
+    const hitTest = (s, i, dx, dy) => {
+      if (view.markerRows && !(view.markerRows[s][i >> 3] & (1 << (i & 7)))) return false
+      return containsMarker(shownSeries[s].marker, -dx, -dy, markerSize / 2, dense ? 0 : 0.75)
     }
+    const isAbove = (s, i, otherSeries, otherIndex) => s < otherSeries || (s === otherSeries && i > otherIndex)
+    canvas.setAttribute('aria-label', `${type} plot of ${pointCount} points`)
 
-    // POINTS
-    // hovering only redraws the markers that changed
-    let markers
-    if (type === 'line') {
-      const drawn = lineGraph({
-        series: shownSeries,
-        xPos: toX,
-        yPos: toY,
-        showPoints,
-        pointSize,
-        clipPathId: plotAreaId,
-        gradientId,
-        top,
-        bottom,
-      })
-      markers = drawn.markers
-      children.push(drawn.group)
-    } else {
-      markers = new Map()
-      shownSeries.forEach((oneSeries, seriesNumber) => {
-        oneSeries.points.forEach((point, pointNumber) => {
-          const make = (isHovered) => {
-            let radius = toRadius(point.z)
-            if (isHovered) {
-              radius += HOVER_EXTRA_RADIUS
-            }
-            return marker({ shape: oneSeries.marker, color: oneSeries.color, cx: toX(point.x), cy: toY(point.y), r: radius })
-          }
-          const element = make(false)
-          markers.set(`${seriesNumber}-${pointNumber}`, { element, make })
-          children.push(element)
-        })
-      })
-    }
-
-    // HOVER TARGETS + TOOLTIP
-    shownSeries.forEach((oneSeries, seriesNumber) => {
-      oneSeries.points.forEach((point, pointNumber) => {
-        if (!Number.isFinite(point.y)) return
-        const target = el('circle', {
-          class: 'hit',
-          cx: toX(point.x),
-          cy: toY(point.y),
-          r: Math.max(toRadius(point.z), MIN_HOVER_TARGET_RADIUS),
-        })
-        target.addEventListener('mouseenter', () => setHovered({ seriesNumber, pointNumber }))
-        target.addEventListener('mouseleave', () => setHovered(null))
-        children.push(target)
-      })
-    })
-    const tooltipLayer = el('g')
-    children.push(tooltipLayer)
-
-    // spreading every element into one call overflows the call stack on large data
-    const fragment = document.createDocumentFragment()
-    for (const child of children) {
-      fragment.append(child)
-    }
-    svg.replaceChildren(fragment)
-    view = { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom }, markers, tooltipLayer, colors }
+    view = { columns, layout, markerRadius, maxRadius: markerSize / 2, hitTest: markerSize ? hitTest : undefined, maxHitRadius, isAbove,
+      shownSeries, type, x_axis_label, toX, toY, bounds: { left, right, top, bottom }, trends: trends.filter(Boolean),
+      labels: { title, subtitle, x_axis_label, y_axis_label }, markerSize, dense }
+    drawCanvas()
+    return { warnings: legend.warnings }
   }
+
+  function drawCanvas() {
+    const cssWidth = container.clientWidth
+    if (!cssWidth) return
+    const ratio = window.devicePixelRatio || 1
+    const width = Math.round(cssWidth * ratio)
+    const height = Math.round(cssWidth * view.layout.height / WIDTH * ratio)
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = saved.width = width
+      canvas.height = saved.height = height
+    }
+    ctx.setTransform(width / WIDTH, 0, 0, height / view.layout.height, 0, 0)
+    ctx.clearRect(0, 0, WIDTH, view.layout.height)
+    const { columns, layout, shownSeries, labels, type, trends, markerSize, dense } = view
+    drawFrame(ctx, layout, labels)
+    drawLegend(ctx, shownSeries, layout)
+    drawTrendLines(ctx, trends, layout)
+    view.markerRows = drawLines(ctx, columns, shownSeries, layout, { showLines: type === 'line', showPoints: markerSize > 0, pointSize: markerSize, dense })
+    const savedCtx = saved.getContext('2d')
+    savedCtx.clearRect(0, 0, width, height)
+    savedCtx.drawImage(canvas, 0, 0)
+    drawHover()
+  }
+
+  function drawHover() {
+    ctx.save()
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(saved, 0, 0)
+    ctx.restore()
+    if (!hovered) return
+    const { columns, shownSeries, markerSize, dense, x_axis_label, toX, toY, bounds } = view
+    const hoveredSeries = shownSeries[hovered.seriesIndex]
+    const point = { x: columns.x[hovered.index], y: columns.ys[hovered.seriesIndex][hovered.index] }
+    if (markerSize) {
+      drawMarker(ctx, hoveredSeries.marker, toX(point.x), toY(point.y), markerSize + HOVER_EXTRA_SIZE, hoveredSeries.color, { outline: !dense })
+    }
+    drawTooltip(ctx, {
+      point,
+      name: hoveredSeries.name,
+      color: hoveredSeries.color,
+      marker: hoveredSeries.marker,
+      xLabel: x_axis_label,
+      toX,
+      toY,
+      gap: TOOLTIP_GAP,
+      bounds,
+    })
+  }
+
+  function pointerMove(event) {
+    if (!view) return
+    const rect = event.currentTarget.getBoundingClientRect()
+    if (!rect.width || !rect.height) return
+    const px = (event.clientX - rect.left) * WIDTH / rect.width
+    const py = (event.clientY - rect.top) * view.layout.height / rect.height
+    const nearest = findNearest(view.columns, view.layout, px, py, HOVER_DISTANCE, {
+      radiusAt: view.markerRadius, maxRadius: view.maxRadius,
+      hitTest: view.hitTest, maxHitRadius: view.maxHitRadius, isAbove: view.isAbove,
+    })
+    setHovered(nearest)
+  }
+
+  function pointerLeave() {
+    setHovered(null)
+  }
+
+  canvas.addEventListener('pointermove', pointerMove)
+  canvas.addEventListener('pointerleave', pointerLeave)
 
   function setHovered(next) {
     const sameAsBefore = next && hovered &&
-      next.seriesNumber === hovered.seriesNumber && next.pointNumber === hovered.pointNumber
+      next.seriesIndex === hovered.seriesIndex && next.index === hovered.index
     if (sameAsBefore || next === hovered) return
-
-    redrawMarker(hovered, false)
     hovered = next
-    redrawMarker(hovered, true)
-    drawTooltip()
-  }
-
-  function redrawMarker(point, isHovered) {
-    if (!point) return
-    const drawn = view.markers.get(`${point.seriesNumber}-${point.pointNumber}`)
-    if (!drawn) return
-    const element = drawn.make(isHovered)
-    drawn.element.replaceWith(element)
-    drawn.element = element
-  }
-
-  function drawTooltip() {
-    const { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds, tooltipLayer, colors } = view
-
-    // only show the series name when theres more than one
-    let hoveredPoint = null
-    let hoveredName
-    let hoveredStyle
-    if (hovered && shownSeries[hovered.seriesNumber]) {
-      const hoveredSeries = shownSeries[hovered.seriesNumber]
-      hoveredPoint = hoveredSeries.points[hovered.pointNumber]
-      hoveredStyle = hoveredSeries
-      if (shownSeries.length > 1) {
-        hoveredName = hoveredSeries.name
-      }
-    }
-
-    const box = tooltip({
-      point: hoveredPoint,
-      name: type === 'line' ? hoveredStyle?.name : hoveredName,
-      color: hoveredStyle?.color,
-      marker: hoveredStyle?.marker,
-      xLabel: x_axis_label,
-      type,
-      showHoverMarker: false,
-      toX,
-      toY,
-      toRadius,
-      bounds,
-      colors,
-    })
-    tooltipLayer.replaceChildren(...(box ? [box] : []))
+    drawHover()
   }
 
   function destroy() {
-    svg.remove()
+    canvas.removeEventListener('pointermove', pointerMove)
+    canvas.removeEventListener('pointerleave', pointerLeave)
+    canvas.remove()
+    resizeObserver.disconnect()
+    hovered = null
     view = null
   }
 

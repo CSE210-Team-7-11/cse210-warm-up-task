@@ -1,49 +1,65 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { parseDelimited } from '../state.js'
+import { importFile } from '../state.js'
+import { isNumericOverflowError } from '../numericErrors.js'
+import NumericOverflowAlert from './NumericOverflowAlert.jsx'
+import PrecisionWarnings from './PrecisionWarnings.jsx'
+import { precisionWarning } from '../precision.js'
 import {
   checkFile,
   checkParsed,
   describeIssue,
   findIssues,
-  isValidCellValue,
   isWarning,
   summarizeData,
 } from '../importFeedback.js'
 import { AlertCircleIcon, CheckCircleIcon, UploadIcon } from './ui/Icons.jsx'
+import Select from './ui/Select.jsx'
 import './DataPanel.css'
 
+const EMPTY_CELL_OPTIONS = [
+  { value: 'gap', label: 'Gap' },
+  { value: 'zero', label: 'Zero' },
+  { value: 'connect', label: 'Connect' },
+]
+
 /**
- * Step 02: load data from a file. The table is a read-only preview; the only
- * way to change the data is to drop/browse a new CSV or TSV file.
+ * Step 02: load data from a file. The only way to change the data is to
+ * drop/browse a new CSV or TSV file.
  */
-export default function DataPanel({ state, onImport }) {
-  const { sourceName, rows, columns, parseIssues } = state
+export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
+  const { sourceName, rows, numericColumns, columns, parseIssues, series, emptyCells } = state
   const fileInputRef = useRef(null)
+  const readId = useRef(0)
   const [dragging, setDragging] = useState(false)
   const [fileError, setFileError] = useState('')
 
   const summary = useMemo(
-    () => summarizeData({ sourceName, columns, rows }),
-    [sourceName, columns, rows],
+    () => summarizeData({ sourceName, columns, rows, numericColumns }),
+    [sourceName, columns, rows, numericColumns],
   )
   const issues = useMemo(
-    () => findIssues({ columns, rows, parseIssues }),
-    [columns, rows, parseIssues],
+    () => findIssues({ parseIssues, series }),
+    [parseIssues, series],
   )
   const warnings = issues.filter(isWarning)
-  const notes = issues.filter((issue) => !isWarning(issue))
+  const notes = issues.filter((issue) => !isWarning(issue) && issue[0] !== 'precision-loss' && issue[0] !== 'precision-loss-truncated' &&
+    !(issue[0] === 'empty-cell' && emptyCells === 'zero'))
+  const precisionWarnings = issues.filter(([type]) => type === 'precision-loss')
+    .flatMap(([, cells]) => cells.map(([c, r, text, stored]) => precisionWarning(text, stored, columns[c].name, 64, r)))
+  const precisionCount = precisionWarnings.length + (issues.find(([type]) => type === 'precision-loss-truncated')?.[1] ?? 0)
 
   const readFile = useCallback(
-    (file) => {
+    async (file) => {
       if (!file) return
+      const id = ++readId.current
       const fileProblem = checkFile(file)
       if (fileProblem) {
         setFileError(fileProblem)
         return
       }
-      const reader = new FileReader()
-      reader.onload = () => {
-        const parsed = parseDelimited(String(reader.result ?? ''))
+      try {
+        const parsed = await importFile(file, { emptyCells: 'mark' })
+        if (id !== readId.current) return
         const parseProblem = checkParsed(parsed, file.name)
         if (parseProblem) {
           setFileError(parseProblem)
@@ -51,9 +67,9 @@ export default function DataPanel({ state, onImport }) {
         }
         onImport({ ...parsed, sourceName: file.name })
         setFileError('')
+      } catch (error) {
+        if (id === readId.current) setFileError(isNumericOverflowError(error) ? error : `Couldn’t read ${file.name}. Try choosing it again.`)
       }
-      reader.onerror = () => setFileError(`Couldn’t read ${file.name}. Try choosing it again.`)
-      reader.readAsText(file)
     },
     [onImport],
   )
@@ -108,7 +124,7 @@ export default function DataPanel({ state, onImport }) {
             <UploadIcon size={18} />
           </span>
           <span className="data-panel-dropzone-title">Drop a file or browse</span>
-          <span className="data-panel-dropzone-hint">CSV or TSV · up to 10 MB</span>
+          <span className="data-panel-dropzone-hint">CSV or TSV</span>
           <input
             ref={fileInputRef}
             type="file"
@@ -121,11 +137,19 @@ export default function DataPanel({ state, onImport }) {
             }}
           />
         </div>
-        {fileError && (
+        <div className="data-panel-option">
+          <span className="field-label" aria-hidden="true">Empty cells</span>
+          <Select variant="compact" value={emptyCells} options={EMPTY_CELL_OPTIONS} onChange={onEmptyCellsChange} ariaLabel="Empty cells" />
+        </div>
+        {fileError && (typeof fileError === 'string' ? (
           <p className="data-panel-error" role="alert">
             {fileError} Your current data is unchanged.
           </p>
-        )}
+        ) : (
+          <NumericOverflowAlert error={fileError} className="data-panel-error">
+            The file was not imported. Your current data is unchanged.
+          </NumericOverflowAlert>
+        ))}
 
         <p className="data-panel-caption data-panel-summary">
           {`${summary.sourceName} · ${summary.rowCount} ${summary.rowCount === 1 ? 'row' : 'rows'} · ${summary.seriesCount} series`}
@@ -133,50 +157,9 @@ export default function DataPanel({ state, onImport }) {
           {`X: ${summary.xName}${formatRange(summary.xRange)}`}
         </p>
 
-        {/* ---- read-only preview table ---- */}
-        <div className="data-panel-table-wrap">
-          <table className="data-panel-table">
-            <colgroup>
-              <col className="data-panel-col-num" />
-              {columns.map((c) => (
-                <col key={c.key} />
-              ))}
-            </colgroup>
-            <thead>
-              <tr>
-                <th className="data-panel-th data-panel-th-num" scope="col">
-                  <span className="data-panel-sr-only">Row</span>
-                </th>
-                {columns.map((c) => (
-                  <th key={c.key} className="data-panel-th" scope="col" title={c.name}>
-                    {c.name}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((row, ri) => (
-                <tr key={ri}>
-                  <td className="data-panel-td data-panel-td-num">
-                    <span className="data-panel-row-num">{ri + 1}</span>
-                  </td>
-                  {row.map((v, ci) => {
-                    const invalid = v !== '' && !isValidCellValue(v, ci)
-                    return (
-                      <td key={ci} className={`data-panel-td${invalid ? ' is-invalid' : ''}`}>
-                        {v === '' ? '—' : String(v)}
-                      </td>
-                    )
-                  })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
         {/* ---- validation ---- */}
         <div className="data-panel-feedback" role="status">
-          {warnings.length === 0 ? (
+          {warnings.length === 0 && precisionWarnings.length === 0 ? (
             <p className="data-panel-status">
               <span className="data-panel-status-icon">
                 <CheckCircleIcon size={14} />
@@ -189,15 +172,16 @@ export default function DataPanel({ state, onImport }) {
                 <span className="data-panel-status-icon">
                   <AlertCircleIcon size={14} />
                 </span>
-                {describeIssue(issue, { columns, rows })}
+                {describeIssue(issue, { columns })}
               </p>
             ))
           )}
           {notes.map((issue) => (
             <p key={issue[0]} className="data-panel-caption">
-              {describeIssue(issue, { columns, rows })}
+              {describeIssue(issue, { columns })}
             </p>
           ))}
+          <PrecisionWarnings warnings={precisionWarnings} count={precisionCount} />
         </div>
       </div>
     </section>
