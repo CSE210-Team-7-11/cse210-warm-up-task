@@ -208,16 +208,19 @@ test('point-object conversion handles empty series and excludes nonfinite X rows
   assert.deepEqual(empty.hoverPoints, [])
 })
 
-function drawnSegments({ columns, series }) {
+function drawnSegments({ columns, series }, includeY = false) {
   const { min: xMin, max: xMax } = minMax(columns.x)
   const layout = computeLayout({ xMin, xMax, yMin: 0, yMax: 60 })
   return series.map((oneSeries, s) => {
     const ctx = recorder()
     drawLines(ctx, { ...columns, ys: [columns.ys[s]] }, [oneSeries], layout, { showPoints: false })
     const segments = []
-    for (const [call, x] of ctx.calls) {
+    for (const [call, x, y] of ctx.calls) {
       if (call === 'moveTo') segments.push([])
-      if (call === 'moveTo' || call === 'lineTo') segments.at(-1).push(Math.round(layout.fromX(x)))
+      if (call === 'moveTo' || call === 'lineTo') {
+        const value = Math.round(layout.fromX(x))
+        segments.at(-1).push(includeY ? [value, Math.round(layout.fromY(y))] : value)
+      }
     }
     return segments
   })
@@ -234,6 +237,21 @@ test('Canvas breaks at CSV empty cells and connects across #N/A independently pe
     [[1, 2], [4, 5]],
     [[1, 2, 4, 5]],
   ])
+})
+
+test('changing the empty cell setting changes Canvas lines without reimporting the data', () => {
+  const parsed = parseDelimited('X,A,B\n1,10,\n2,,20\n3,30,\n4,0,40', { emptyCells: 'mark' })
+  const state = { ...initialState, ...parsed, series: seriesFromColumns(parsed.columns), chartType: 'line' }
+  const original = structuredClone(parsed.rows)
+  for (const [emptyCells, expected] of [
+    ['gap', [[[[1, 10]], [[3, 30], [4, 0]]], [[[2, 20]], [[4, 40]]]]],
+    ['connect', [[[[1, 10], [3, 30], [4, 0]]], [[[2, 20], [4, 40]]]]],
+    ['zero', [[[[1, 10], [2, 0], [3, 30], [4, 0]]], [[[1, 0], [2, 20], [3, 0], [4, 40]]]]],
+    ['gap', [[[[1, 10]], [[3, 30], [4, 0]]], [[[2, 20]], [[4, 40]]]]],
+  ]) {
+    assert.deepEqual(drawnSegments(prepareChart({ ...state, emptyCells }).graphProps, true), expected, emptyCells)
+    assert.deepEqual(parsed.rows, original)
+  }
 })
 
 test('Canvas skips do not erase a break or create segments at missing-only edges', () => {

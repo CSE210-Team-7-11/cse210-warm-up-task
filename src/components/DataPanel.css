@@ -120,3 +120,11 @@
 .data-panel-status.is-invalid .data-panel-status-icon {
   color: var(--danger-muted);
 }
+
+.data-panel-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+}
