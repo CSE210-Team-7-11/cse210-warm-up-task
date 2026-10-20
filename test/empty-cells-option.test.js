@@ -88,3 +88,11 @@ test('unknown emptyCells values throw', () => {
     assert.throws(() => parseDelimited('X,A\n1,2', { emptyCells }), TypeError, String(emptyCells))
   }
 })
+
+test('mark leaves empty cells as NaN and still reports them', () => {
+  assert.ok(Number.isNaN(parseCell('', '.', { emptyCells: 'mark' })))
+  assert.equal(parseCell('#N/A', '.', { emptyCells: 'mark' }), -Infinity)
+  const parsed = parseDelimited('X,A,B\n1,,#N/A\n2,5,', { emptyCells: 'mark' })
+  assert.deepEqual(parsed.rows, [[1, NaN, -Infinity], [2, 5, NaN]])
+  assert.deepEqual(parsed.issues, [['empty-cell', [[1, 0], [2, 1]]]])
+})

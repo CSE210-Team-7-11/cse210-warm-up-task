@@ -1,5 +1,5 @@
 import { el } from './svg.js'
-import { WIDTH, HEIGHT, PADDING, TEXT_SIZE, TITLE_TEXT_SIZE, TICK_SIZE, computeLayout, findNearest, trendLine, minMax } from './scale.js'
+import { WIDTH, HEIGHT, PADDING, TEXT_SIZE, TITLE_TEXT_SIZE, TICK_SIZE, bounds, computeLayout, findNearest, trendLine, minMax } from './scale.js'
 import legend from './Legend.js'
 import { marker } from './Marker.js'
 import tooltip from './Tooltip.js'
@@ -77,37 +77,15 @@ export function createChart(container, options) {
     const xName = xColumnName ?? x_axis_label
     const yName = shownSeries.map((oneSeries) => oneSeries.name || y_axis_label).join(', ')
 
+    const { xMin, xMax, yMin, yMax, count: pointCount } = bounds(columns)
     // TODO: remove points when scatter plots move to Canvas
     const shownPoints = []
-    let pointCount = 0
-    let xMin = Infinity
-    let xMax = -Infinity
-    let yMin = Infinity
-    let yMax = -Infinity
-    if (type === 'line') {
-      for (let i = 0; i < columns.length; i++) {
-        let shown = false
-        for (const ys of columns.ys) {
-          const y = ys[i]
-          if (!Number.isFinite(y)) continue
-          shown = true
-          pointCount++
-          if (y < yMin) yMin = y
-          if (y > yMax) yMax = y
-        }
-        if (!shown) continue
-        if (columns.x[i] < xMin) xMin = columns.x[i]
-        if (columns.x[i] > xMax) xMax = columns.x[i]
-      }
-    } else {
+    if (type === 'scatter') {
       for (const oneSeries of shownSeries) {
         for (const point of oneSeries.points) {
           if (Number.isFinite(point.y)) shownPoints.push(point)
         }
       }
-      pointCount = shownPoints.length
-      ;({ min: xMin, max: xMax } = minMax(shownPoints.map((p) => p.x)))
-      ;({ min: yMin, max: yMax } = minMax(shownPoints.map((p) => p.y)))
     }
 
     const sizes = shownPoints.map((p) => p.z).filter((size) => Number.isFinite(size) && size > 0)
@@ -133,12 +111,11 @@ export function createChart(container, options) {
 
     const [layout, trends] = collectOverflowErrors([
       () => computeLayout({ xMin, xMax, yMin, yMax, xColumnName: xName, yColumnName: yName }),
-      () => showTrendLine && type === 'scatter' ? collectOverflowErrors(shownSeries.map((oneSeries) => () => {
+      () => showTrendLine && type === 'scatter' ? collectOverflowErrors(shownSeries.map((oneSeries, s) => () => {
         const seriesName = oneSeries.name || y_axis_label
-        const finitePoints = oneSeries.points.filter((point) => Number.isFinite(point.y))
-        const trend = trendLine(finitePoints, xName, seriesName)
+        const trend = trendLine(columns.x, columns.ys[s], columns.length, xName, seriesName)
         if (!trend) return null
-        const { min: firstX, max: lastX } = minMax(finitePoints.map((point) => point.x))
+        const { firstX, lastX } = trend
         const [firstY, lastY] = collectOverflowErrors([
           () => finiteCalculation(trend.slope * firstX + trend.startHeight, seriesName, () => `${xName}=${firstX}`, 'trend line'),
           () => finiteCalculation(trend.slope * lastX + trend.startHeight, seriesName, () => `${xName}=${lastX}`, 'trend line'),

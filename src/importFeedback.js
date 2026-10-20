@@ -24,7 +24,7 @@ const MAX_VALUE_CHARS = 20
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v)
 
 export const isValidCellValue = (value, columnIndex) =>
-  isNumber(value) || (columnIndex > 0 && (value === Infinity || value === -Infinity ||
+  isNumber(value) || (columnIndex > 0 && (value === Infinity || value === -Infinity || Number.isNaN(value) ||
     (typeof value === 'string' && value.trim() === '#N/A')))
 
 /** Why a file can't be imported, or '' when it's worth reading. */

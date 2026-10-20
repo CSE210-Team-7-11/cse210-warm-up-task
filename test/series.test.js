@@ -3,6 +3,7 @@ import test from 'node:test'
 import { prepareSeries } from '../src/graph/series.js'
 import { columnsFromPoints } from '../src/graph/pointColumns.js'
 import { buildChartData } from '../src/components/charts/chartUtils.js'
+import { prepareChart } from '../src/components/charts/chartAdapter.js'
 import { initialState, parseDelimited, seriesFromColumns } from '../src/state.js'
 import { MAX_AUTO_COLORS } from '../src/graph/colors.js'
 
@@ -56,4 +57,33 @@ test('disabled point-object series are excluded from columns and hover mapping',
   assert.equal(columns.x.at(-1), 10)
   assert.ok(hoverPoints.every(p => p.seriesNumber < 11))
   assert.equal(hoverPoints.some(p => p.point === series[11].points[0]), false)
+})
+
+test('manual colors and empty cell settings preserve series values without reimporting', () => {
+  const header = ['X', ...Array.from({ length: 13 }, (_, i) => `S${i + 1}`)].join(',')
+  const text = [header, [1, ...Array(11).fill(1), '', '#N/A'].join(','), [2, ...Array(11).fill(2), 5, 9].join(',')].join('\n')
+  const parsed = parseDelimited(text, { emptyCells: 'mark' })
+  const series = seriesFromColumns(parsed.columns)
+  series[12].color = '#000000'
+  const state = { ...initialState, ...parsed, series }
+  const original = structuredClone(state)
+  for (const precision of ['float32', 'float64']) {
+    for (const chartType of ['line', 'scatter']) {
+      for (const [emptyCells, empty] of [['gap', Infinity], ['connect', -Infinity], ['zero', 0]]) {
+        const disabled = prepareChart({ ...state, chartType, emptyCells }, { precision })
+        assert.equal(disabled.pointCount, 23)
+        assert.equal(disabled.graphProps.series[11].name, 'S13')
+        assert.deepEqual([...disabled.graphProps.columns.ys[11]], [-Infinity, 9])
+        const enabled = prepareChart({
+          ...state, chartType, emptyCells,
+          series: series.map((s, i) => i === 11 ? { ...s, color: '#123456' } : s),
+        }, { precision })
+        assert.equal(enabled.pointCount, emptyCells === 'zero' ? 25 : 24)
+        assert.deepEqual([...enabled.graphProps.columns.ys[11]], [empty, 5])
+        assert.deepEqual([...enabled.graphProps.columns.ys[12]], [-Infinity, 9])
+        assert.ok(enabled.graphProps.columns.ys.every(y => y.every(value => !Number.isNaN(value))))
+      }
+    }
+  }
+  assert.deepEqual(state, original)
 })

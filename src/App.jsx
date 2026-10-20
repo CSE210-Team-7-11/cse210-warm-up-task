@@ -43,7 +43,7 @@ export default function App() {
               value={state.chartType}
               onChange={(chartType) => update({ chartType })}
             />
-            <DataPanel state={state} onImport={importData} />
+            <DataPanel state={state} onImport={importData} onEmptyCellsChange={(emptyCells) => update({ emptyCells })} />
           </aside>
 
           <section className="column column-center">

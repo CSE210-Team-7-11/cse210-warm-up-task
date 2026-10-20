@@ -27,18 +27,21 @@ export function isNumericOverflow(value, decimalSeparator) {
   return number === Infinity || number === -Infinity
 }
 
+export function emptyCellValue(emptyCells) {
+  if (emptyCells === 'zero') return 0
+  if (emptyCells === 'connect') return -Infinity
+  return emptyCells === 'mark' ? NaN : Infinity
+}
+
 // Parse a number or missing-value marker. Returns null if invalid.
 export function parseCell(value, decimalSeparator = '.', { emptyCells = 'gap' } = {}) {
   if (decimalSeparator !== '.' && decimalSeparator !== ',') {
     throw new TypeError('The decimal separator must be "." or ",".')
   }
-  if (!['gap', 'zero', 'connect'].includes(emptyCells)) {
-    throw new TypeError('emptyCells must be "gap", "zero", or "connect".')
+  if (!['gap', 'zero', 'connect', 'mark'].includes(emptyCells)) {
+    throw new TypeError('emptyCells must be "gap", "zero", "connect", or "mark".')
   }
-  if (isEmptyCell(value)) {
-    if (emptyCells === 'zero') return 0
-    return emptyCells === 'connect' ? -Infinity : Infinity
-  }
+  if (isEmptyCell(value)) return emptyCellValue(emptyCells)
   const text = String(value).trim()
   if (text === '#N/A') return -Infinity
   const number = numericValue(text, decimalSeparator)

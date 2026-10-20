@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { computeLayout, findNearest, invert, minMax, scale, ticks, trendLine } from '../src/graph/scale.js'
+import { bounds, computeLayout, findNearest, invert, minMax, scale, ticks, trendLine } from '../src/graph/scale.js'
 import { buildChartData } from '../src/components/charts/chartUtils.js'
 import { initialState, parseDelimited, seriesFromColumns } from '../src/state.js'
 import { Float64OverflowError } from '../src/numericErrors.js'
@@ -66,13 +66,49 @@ test('large finite ranges avoid avoidable tick overflow and keep coordinate endp
 })
 
 test('trend calculation overflow throws rather than producing a nonfinite fit', () => {
-  for (const points of [
-    [{ x: 1e308, y: 1 }, { x: 1.1e308, y: 2 }],
-    [{ x: -1e200, y: -1e200 }, { x: 1e200, y: 1e200 }],
+  for (const [x, y] of [
+    [[1e308, 1.1e308], [1, 2]],
+    [[-1e200, 1e200], [-1e200, 1e200]],
   ]) {
-    assert.throws(() => trendLine(points), Float64OverflowError)
+    assert.throws(() => trendLine(x, y, 2), Float64OverflowError)
   }
-  assert.deepEqual(trendLine([{ x: 1, y: 3 }, { x: 2, y: 5 }, { x: 3, y: 7 }]), { slope: 2, startHeight: 1 })
+  assert.deepEqual(trendLine([1, 2, 3], [3, 5, 7], 3), { slope: 2, startHeight: 1, firstX: 1, lastX: 3 })
+})
+
+const columnsOf = (x, ...ys) => ({ length: x.length, x: Float64Array.from(x), ys: ys.map((y) => Float64Array.from(y)) })
+
+test('bounds cover every finite value across series', () => {
+  const columns = columnsOf([1, 2, 3, 4], [5, -2, 8, 1], [0, 3, 12, -4])
+  assert.deepEqual(bounds(columns), { xMin: 1, xMax: 4, yMin: -4, yMax: 12, count: 8 })
+})
+
+test('bounds ignore +Infinity and -Infinity, and x where no series has a value', () => {
+  const columns = columnsOf([0, 1, 2, 3, 9], [Infinity, 4, -Infinity, 6, Infinity], [-Infinity, -Infinity, 2, Infinity, -Infinity])
+  assert.deepEqual(bounds(columns), { xMin: 1, xMax: 3, yMin: 2, yMax: 6, count: 3 })
+  const withMissingSeries = columnsOf([0, 1, 2, 3, 9], columns.ys[0], columns.ys[1], [Infinity, -Infinity, Infinity, -Infinity, Infinity])
+  assert.deepEqual(bounds(withMissingSeries), bounds(columns))
+  assert.deepEqual(bounds(columnsOf([1, 2], [Infinity, -Infinity])), { xMin: Infinity, xMax: -Infinity, yMin: Infinity, yMax: -Infinity, count: 0 })
+})
+
+// The point-object version that trendLine replaced, kept to compare results.
+function previousTrendLine(points) {
+  const averageX = points.reduce((sum, p) => sum + p.x, 0) / points.length
+  const averageY = points.reduce((sum, p) => sum + p.y, 0) / points.length
+  const top = points.reduce((sum, p) => sum + (p.x - averageX) * (p.y - averageY), 0)
+  const bottom = points.reduce((sum, p) => sum + (p.x - averageX) ** 2, 0)
+  const slope = top / bottom
+  return { slope, startHeight: averageY - slope * averageX }
+}
+
+test('trendLine fits the same line as before and skips missing values', () => {
+  const x = [1, 2, 3, 4, 5, 6, 7, 8]
+  const y = [2.5, 3.1, -Infinity, 6.8, Infinity, 9.9, 13.2, 14.1]
+  const points = x.map((v, i) => ({ x: v, y: y[i] })).filter((p) => Number.isFinite(p.y))
+  const { slope, startHeight, firstX, lastX } = trendLine(x, y, x.length)
+  assert.deepEqual({ slope, startHeight }, previousTrendLine(points))
+  assert.deepEqual([firstX, lastX], [1, 8])
+  assert.equal(trendLine([2, 2, 2], [1, 5, 9], 3), null)
+  assert.equal(trendLine([1, 2, 3], [4, Infinity, -Infinity], 3), null)
 })
 
 test('large negative axis ranges produce a bounded set of finite ticks', () => {

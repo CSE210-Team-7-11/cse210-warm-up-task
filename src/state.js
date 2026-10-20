@@ -83,6 +83,7 @@ export const initialState = {
   columns: DEFAULT_COLUMNS,
   rows: DEFAULT_ROWS,
   series: seriesFromColumns(DEFAULT_COLUMNS),
+  emptyCells: 'gap',
   // Import issues.
   parseIssues: [],
   ...DEFAULT_SPECS,
@@ -90,14 +91,14 @@ export const initialState = {
 
 // Parse delimited text into numeric rows and import issues. Returns null if empty.
 // numberFormat is 'auto', '.' or ','; the result includes the resolved separator.
-// emptyCells is 'gap', 'zero' or 'connect' and only applies to Y cells.
+// emptyCells only applies to Y cells.
 // Issue positions refer to source data records, excluding headers and blanks.
 export function parseDelimited(text, { numberFormat: requestedFormat = 'auto', emptyCells: emptyCellMode = 'gap' } = {}) {
   if (!['auto', '.', ','].includes(requestedFormat)) {
     throw new TypeError('numberFormat must be "auto", ".", or ",".')
   }
-  if (!['gap', 'zero', 'connect'].includes(emptyCellMode)) {
-    throw new TypeError('emptyCells must be "gap", "zero", or "connect".')
+  if (!['gap', 'zero', 'connect', 'mark'].includes(emptyCellMode)) {
+    throw new TypeError('emptyCells must be "gap", "zero", "connect", or "mark".')
   }
   const result = Papa.parse(text, {
     header: false,

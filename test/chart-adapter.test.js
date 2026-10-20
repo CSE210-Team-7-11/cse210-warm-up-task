@@ -167,15 +167,41 @@ test('detects decimal commas before preparing chart points', () => {
 })
 
 function sparseState(emptyCells) {
-  const parsed = parseDelimited('X,A,B\n1,10,\n2,,20\n3,30,\n4,0,40', { emptyCells })
+  const parsed = parseDelimited('X,A,B\n1,10,\n2,,20\n3,30,\n4,0,40', { emptyCells: 'mark' })
   return { ...initialState, ...parsed, parseIssues: parsed.issues, series: seriesFromColumns(parsed.columns), emptyCells }
 }
 
-test('empty cell settings reach the prepared columns unchanged', () => {
-  for (const [emptyCells, missing] of [['gap', Infinity], ['connect', -Infinity], ['zero', 0]]) {
-    const { graphProps } = prepareChart(sparseState(emptyCells))
-    assert.deepEqual([...graphProps.columns.ys[0]], [10, missing, 30, 0])
-    assert.deepEqual([...graphProps.columns.ys[1]], [missing, 20, missing, 40])
+test('the empty cell setting resolves marked cells before passing columns to the renderer', () => {
+  for (const precision of ['float32', 'float64']) {
+    for (const chartType of ['line', 'scatter']) {
+      for (const [emptyCells, empty] of [['gap', Infinity], ['connect', -Infinity], ['zero', 0]]) {
+        const state = { ...sparseState(emptyCells), chartType }
+        const original = structuredClone(state.rows)
+        const { graphProps } = prepareChart(state, { precision })
+        assert.deepEqual(Array.from(graphProps.columns.ys[0]), [10, empty, 30, 0])
+        assert.deepEqual(Array.from(graphProps.columns.ys[1]), [empty, 20, empty, 40])
+        assert.ok(graphProps.columns.x.every(Number.isFinite))
+        assert.ok(graphProps.columns.ys.every(ys => ys.every(value => !Number.isNaN(value))))
+        assert.deepEqual(state.rows, original)
+      }
+    }
+  }
+})
+
+test('chart preparation rejects parser-only and invalid empty cell settings before converting data', () => {
+  const sparse = sparseState('gap')
+  const numeric = editorState([[1, 10, 20], [2, 30, 40]])
+  const invalid = ['mark', 'Gap', 'skip', '', null, 0, false, NaN, Infinity, 'toString', 'constructor', [], {}, { toString: () => 'gap' }]
+  for (const precision of ['float32', 'float64']) {
+    for (const state of [sparse, numeric, { ...numeric, rows: [] }]) {
+      const original = structuredClone(state.rows)
+      for (const emptyCells of invalid) {
+        assert.throws(() => prepareChart({ ...state, emptyCells }, { precision }), {
+          name: 'TypeError', message: 'emptyCells must be "gap", "zero", or "connect".',
+        })
+      }
+      assert.deepEqual(state.rows, original)
+    }
   }
 })
 
@@ -186,7 +212,7 @@ test('a real zero is drawn as zero under every empty cell setting', () => {
   }
 })
 
-test('empty cells count as points only when set to zero', () => {
+test('marked empty cells count as points only when set to zero', () => {
   assert.equal(prepareChart(sparseState('gap')).pointCount, 5)
   assert.equal(prepareChart(sparseState('connect')).pointCount, 5)
   assert.equal(prepareChart(sparseState('zero')).pointCount, 8)
