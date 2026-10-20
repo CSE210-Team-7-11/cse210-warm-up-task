@@ -21,19 +21,15 @@ test('1M points survive CSV conversion and both chart adapters', (t) => {
   assert.deepEqual(findIssues(state), [])
   for (const chartType of ['line', 'scatter']) {
     const chart = prepareChart({ ...state, chartType })
-    const points = chart.graphProps.series[0].points
     const columns = chart.graphProps.columns
     assert.equal(chart.pointCount, length)
-    assert.equal(points.length, length)
     assert.equal(columns.length, length)
     assert.ok(columns.x instanceof Float64Array)
     assert.ok(columns.ys[0] instanceof Float64Array)
     assert.equal(columns.x.byteLength + columns.ys[0].byteLength, length * 16)
     for (let i = 0; i < length; i++) {
-      assert.equal(points[i].x, i + 1)
-      assert.equal(points[i].y, length - i - 0.5)
-      assert.equal(columns.x[i], points[i].x)
-      assert.equal(columns.ys[0][i], points[i].y)
+      assert.equal(columns.x[i], i + 1)
+      assert.equal(columns.ys[0][i], length - i - 0.5)
     }
     const layout = computeLayout({ xMin: 1, xMax: length, yMin: 0.5, yMax: length - 0.5 })
     for (const index of [0, Math.floor(length / 2), length - 1]) {

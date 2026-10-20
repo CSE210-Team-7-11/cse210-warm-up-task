@@ -73,7 +73,7 @@ export function drawFrame(ctx, layout, { title, subtitle, x_axis_label, y_axis_l
 }
 
 export function drawLegend(ctx, series, layout) {
-  for (const { r, label, color, shape, x } of legendEntries({ sizes: [], series, right: layout.right })) {
+  for (const { r, label, color, shape, x } of legendEntries({ series, right: layout.right })) {
     drawDot(ctx, shape, x + r, LEGEND_CENTER_Y, r, color)
     text(ctx, label, x + 2 * r + LABEL_PADDING, LEGEND_CENTER_Y + LABEL_BASELINE_OFFSET)
   }
@@ -166,7 +166,7 @@ function strokeLine(ctx, columns, ys, toX, toY, scale) {
   if (lines) stroke()
 }
 
-export function drawLines(ctx, columns, series, layout, { showPoints = true, pointSize = 7, dense = false } = {}) {
+export function drawLines(ctx, columns, series, layout, { showLines = true, showPoints = true, pointSize = 7, dense = false } = {}) {
   const toX = pixelMap(layout.xMin, layout.xMax, layout.left, layout.right)
   const toY = pixelMap(layout.yMin, layout.yMax, layout.bottom, layout.top)
   const scale = ctx.getTransform?.().a ?? 1
@@ -176,13 +176,15 @@ export function drawLines(ctx, columns, series, layout, { showPoints = true, poi
     const oneSeries = series[seriesIndex]
     const color = oneSeries.color || DEFAULT_COLOR
     const ys = columns.ys[seriesIndex]
-    ctx.save()
-    ctx.strokeStyle = color
-    ctx.lineWidth = 2
-    ctx.lineJoin = 'bevel'
-    ctx.setLineDash(dashPattern(oneSeries.dash))
-    strokeLine(ctx, columns, ys, toX, toY, scale)
-    ctx.restore()
+    if (showLines) {
+      ctx.save()
+      ctx.strokeStyle = color
+      ctx.lineWidth = 2
+      ctx.lineJoin = 'bevel'
+      ctx.setLineDash(dashPattern(oneSeries.dash))
+      strokeLine(ctx, columns, ys, toX, toY, scale)
+      ctx.restore()
+    }
 
     if (!showPoints) continue
     if (dense) {
@@ -214,6 +216,24 @@ export function drawLines(ctx, columns, series, layout, { showPoints = true, poi
     }
   }
   return markerRows
+}
+
+// trends are [{ color, firstX, firstY, lastX, lastY }]
+export function drawTrendLines(ctx, trends, layout) {
+  const { left, right, top, bottom, toX, toY } = layout
+  ctx.save()
+  try {
+    ctx.beginPath()
+    ctx.rect(left, top, right - left, bottom - top)
+    ctx.clip()
+    ctx.globalAlpha = 0.5
+    ctx.setLineDash([4, 3])
+    for (const { color, firstX, firstY, lastX, lastY } of trends) {
+      line(ctx, toX(firstX), toY(firstY), toX(lastX), toY(lastY), color || DEFAULT_COLOR)
+    }
+  } finally {
+    ctx.restore()
+  }
 }
 
 function markerPath(ctx, shape, x, y, size) {

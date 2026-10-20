@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { computeLayout, findNearest, minMax } from '../src/graph/scale.js'
-import { dashPattern, drawFrame, drawLegend, drawLines, drawTooltip, formatTicks } from '../src/graph/canvas.js'
-import { columnsFromPoints } from '../src/graph/pointColumns.js'
+import { bounds, computeLayout, findNearest, minMax, trendLine } from '../src/graph/scale.js'
+import { dashPattern, drawFrame, drawLegend, drawLines, drawTooltip, drawTrendLines, formatTicks } from '../src/graph/canvas.js'
 import { initialState, parseDelimited, seriesFromColumns } from '../src/state.js'
 import { prepareChart } from '../src/components/charts/chartAdapter.js'
 
@@ -139,75 +138,6 @@ test('labels and series names are drawn as plain text', () => {
   assert.equal(texts(frame)[0], name)
 })
 
-function pointSeries() {
-  const { rows } = parseDelimited('X,A,B\n1,10,50\n2,,40\n3,30,#N/A\n4,#N/A,20\n5,50,10')
-  return [0, 1].map((s) => ({
-    name: ['A', 'B'][s],
-    color: ['#a00', '#00a'][s],
-    points: rows.map((row) => ({ x: row[0], y: row[s + 1] })).reverse(),
-  }))
-}
-
-test('point-object series retain separate values, gaps and connections when drawn', () => {
-  const series = pointSeries()
-  const original = structuredClone(series)
-  const { columns } = columnsFromPoints(series)
-  const ctx = recorder()
-  drawLines(ctx, columns, series, layout, { showPoints: false })
-  assert.deepEqual(strokes(ctx).map((path) => path.map(([name, x]) => [name, Math.round(x)])), [
-    [['moveTo', 1], ['lineTo', 2], ['lineTo', 4], ['lineTo', 5]],
-    [['moveTo', 1], ['moveTo', 3], ['lineTo', 5]],
-  ])
-  assert.deepEqual(series, original)
-})
-
-test('point-object hover maps sorted rows back to each original series and point', () => {
-  const series = pointSeries()
-  const { columns, hoverPoints } = columnsFromPoints(series)
-  for (const [seriesNumber, oneSeries] of series.entries()) {
-    for (const [pointNumber, point] of oneSeries.points.entries()) {
-      if (!Number.isFinite(point.y)) continue
-      const nearest = findNearest(columns, layout, layout.toX(point.x), layout.toY(point.y), 0)
-      assert.equal(nearest.seriesIndex, seriesNumber)
-      const mapped = hoverPoints[nearest.index]
-      assert.equal(mapped.seriesNumber, seriesNumber)
-      assert.equal(mapped.pointNumber, pointNumber)
-      assert.equal(mapped.point, point)
-    }
-  }
-})
-
-test('point-object conversion preserves duplicate X rows and independent series lengths', () => {
-  const series = pointSeries()
-  series[0].points.push({ x: 3, y: 35 })
-  series[1].points = [series[1].points[0], series[1].points[4]]
-  series.push({ name: 'empty', points: [] })
-  const original = structuredClone(series)
-  const { columns, hoverPoints } = columnsFromPoints(series)
-  for (const [s, oneSeries] of series.entries()) {
-    const expected = oneSeries.points.toSorted((a, b) => a.x - b.x)
-    const actual = []
-    for (let i = 0; i < columns.length; i++) {
-      if (hoverPoints[i].seriesNumber === s) actual.push({ x: columns.x[i], y: columns.ys[s][i] })
-      else assert.equal(columns.ys[s][i], -Infinity)
-    }
-    assert.deepEqual(actual, expected)
-  }
-  assert.deepEqual(series, original)
-})
-
-test('point-object conversion handles empty series and excludes nonfinite X rows', () => {
-  const series = [{ points: [{ x: NaN, y: 1 }, { x: Infinity, y: 2 }, { x: 1, y: Infinity }] }]
-  const { columns, hoverPoints } = columnsFromPoints(series)
-  assert.deepEqual(Array.from(columns.x), [1])
-  assert.deepEqual(Array.from(columns.ys[0]), [Infinity])
-  assert.equal(hoverPoints[0].pointNumber, 2)
-  const empty = columnsFromPoints([])
-  assert.equal(empty.columns.length, 0)
-  assert.deepEqual(empty.columns.ys, [])
-  assert.deepEqual(empty.hoverPoints, [])
-})
-
 function drawnSegments({ columns, series }, includeY = false) {
   const { min: xMin, max: xMax } = minMax(columns.x)
   const layout = computeLayout({ xMin, xMax, yMin: 0, yMax: 60 })
@@ -273,18 +203,6 @@ test('Canvas skips do not erase a break or create segments at missing-only edges
   assert.deepEqual(drawnSegments(importedChart('X,A\n1,\n2,#N/A')), [[]])
 })
 
-test('Canvas preserves legacy invalid-value breaks and sorts without mutating point objects', () => {
-  const points = Object.freeze([
-    { x: 5, y: 50 }, { x: 3, y: 30 }, { x: 2, y: null }, { x: 4, y: NaN }, { x: 1, y: 10 },
-  ].map(Object.freeze))
-  const series = [{ points, color: '#a00' }]
-  const { columns } = columnsFromPoints(series)
-  assert.deepEqual(drawnSegments({ columns, series }), [[[1], [3], [5]]])
-  assert.deepEqual(points.map(p => p.x), [5, 3, 2, 4, 1])
-  assert.equal(points[2].y, null)
-  assert.ok(Number.isNaN(points[3].y))
-})
-
 test('Canvas draws quoted empty fields as breaks, #N/A as a connection, and zero as a point', () => {
   const graph = importedChart('X,A\n1,10\n2,""\n3,30\n4," #N/A "\n5,50\n6," \t "\n7,0')
   assert.deepEqual(drawnSegments(graph), [[[1], [3, 5], [7]]])
@@ -303,4 +221,121 @@ test('dense Canvas drawing records only markers that survived pixel deduplicatio
   assert.equal(rows[0][0], 0b1001)
   assert.equal(drawLines(recorder(), data, [{ color: '#a00' }], layout, { dense: false }), null)
   assert.equal(drawLines(recorder(), data, [{ color: '#a00' }], layout, { dense: true, showPoints: false }), null)
+})
+
+// the shape, color and center of each marker drawn at size 7
+function drawnMarkers(ctx) {
+  const markers = []
+  let fill
+  for (const [name, ...args] of ctx.calls) {
+    const last = markers.at(-1)
+    if (name === 'fillStyle=') fill = args[0]
+    if (name === 'fill') for (const marker of markers) marker.color ??= fill
+    if (name === 'arc') markers.push({ shape: 'circle', x: args[0], y: args[1] })
+    if (name === 'moveTo') markers.push({ x: args[0], y: args[1] })
+    if (name === 'arcTo' && !last.shape) Object.assign(last, { shape: 'square', x: last.x + 2.5, y: last.y + 3.5 })
+    if (name === 'closePath' && !last.shape) Object.assign(last, { shape: 'triangle', y: last.y + 4.35 })
+  }
+  return markers.filter((marker) => marker.shape)
+}
+
+test('scatter markers for the sample data keep their positions, shapes and colors', () => {
+  const { graphProps } = prepareChart({ ...initialState, chartType: 'scatter' })
+  const { columns, series } = graphProps
+  const layout = computeLayout(bounds(columns))
+  const ctx = recorder()
+  drawLines(ctx, columns, series, layout, { showLines: false })
+  const expected = []
+  series.toReversed().forEach((oneSeries, r) => {
+    const s = series.length - 1 - r
+    for (let i = 0; i < columns.length; i++) {
+      const y = columns.ys[s][i]
+      if (Number.isFinite(y)) expected.push({ shape: oneSeries.marker, color: oneSeries.color, x: layout.toX(columns.x[i]), y: layout.toY(y) })
+    }
+  })
+  const markers = drawnMarkers(ctx)
+  assert.equal(markers.length, expected.length)
+  assert.deepEqual(new Set(markers.map((marker) => marker.shape)), new Set(series.map((oneSeries) => oneSeries.marker)))
+  markers.forEach((marker, i) => {
+    assert.equal(marker.shape, expected[i].shape)
+    assert.equal(marker.color, expected[i].color)
+    assert.ok(Math.abs(marker.x - expected[i].x) < 1e-9 && Math.abs(marker.y - expected[i].y) < 1e-9)
+  })
+  assert.equal(ctx.calls.filter(([name]) => name === 'setLineDash').length, 0)
+})
+
+test('a 100,000-point scatter draws in batches and its points can be hovered', () => {
+  const length = 100_000
+  const x = Float64Array.from({ length }, (_, i) => i)
+  const y = Float64Array.from({ length }, (_, i) => Math.sin(i / 1000) * 50 + (i % 7))
+  const data = { length, x, ys: [y] }
+  const layout = computeLayout(bounds(data))
+  const ctx = recorder()
+  const rows = drawLines(ctx, data, [{ color: '#a00', marker: 'square' }], layout, { showLines: false, dense: true })
+  const fills = ctx.calls.filter(([name]) => name === 'fill').length
+  const drawn = rows[0].reduce((sum, byte) => sum + byte.toString(2).replaceAll('0', '').length, 0)
+  assert.ok(drawn > 0 && drawn < length)
+  assert.equal(fills, Math.floor(drawn / 256) + 1)
+  const nearest = findNearest(data, layout, layout.toX(x[500]), layout.toY(y[500]), 10)
+  assert.equal(nearest.seriesIndex, 0)
+  assert.ok(Math.abs(nearest.index - 500) < 100)
+})
+
+test('trend lines are dashed, faded and clipped to the plot area', () => {
+  const ctx = recorder()
+  drawTrendLines(ctx, [{ color: '#a00', firstX: 1, firstY: 0, lastX: 5, lastY: 60 }, { firstX: 1, firstY: 10, lastX: 5, lastY: 10 }], layout)
+  const { left, right, top, bottom } = layout
+  const round = (value) => Math.round(value * 1e6) / 1e6
+  const calls = ctx.calls.map(([name, ...args]) => [name, ...args.map((value) => typeof value === 'number' ? round(value) : value)])
+  assert.deepEqual(calls.slice(0, 5), [['save'], ['beginPath'], ['rect', left, top, right - left, bottom - top], ['clip'], ['globalAlpha=', 0.5]])
+  assert.deepEqual(calls.find(([name]) => name === 'setLineDash'), ['setLineDash', [4, 3]])
+  assert.deepEqual(calls.filter(([name]) => ['moveTo', 'lineTo', 'strokeStyle='].includes(name)), [
+    ['moveTo', round(layout.toX(1)), round(layout.toY(0))], ['lineTo', round(layout.toX(5)), round(layout.toY(60))], ['strokeStyle=', '#a00'],
+    ['moveTo', round(layout.toX(1)), round(layout.toY(10))], ['lineTo', round(layout.toX(5)), round(layout.toY(10))], ['strokeStyle=', '#256b47'],
+  ])
+  assert.deepEqual(calls.at(-1), ['restore'])
+})
+
+test('series with one point or a single X value have no trend line', () => {
+  assert.equal(trendLine([1, 2], [5, -Infinity], 2), null)
+  assert.equal(trendLine([2, 2, 2], [1, 5, 9], 3), null)
+})
+
+test('finite trend lines can extend beyond the data bounds and remain clipped', () => {
+  const graph = importedChart('X,A\n-0.55,-8.2\n-0.275,-8.2\n0.275,8.2\n0.55,8.2')
+  const layout = computeLayout(bounds(graph.columns))
+  const fit = trendLine(graph.columns.x, graph.columns.ys[0], graph.columns.length)
+  const trend = { ...fit, firstY: fit.slope * fit.firstX + fit.startHeight, lastY: fit.slope * fit.lastX + fit.startHeight }
+  const ctx = recorder()
+  drawTrendLines(ctx, [trend], layout)
+  const move = ctx.calls.find(([name]) => name === 'moveTo')
+  const line = ctx.calls.find(([name]) => name === 'lineTo')
+  assert.deepEqual(move, ['moveTo', layout.toX(trend.firstX), layout.toY(trend.firstY)])
+  assert.deepEqual(line, ['lineTo', layout.toX(trend.lastX), layout.toY(trend.lastY)])
+  assert.ok(move[2] > layout.bottom)
+  assert.ok(line[2] < layout.top)
+  assert.ok(ctx.calls.some(([name]) => name === 'clip'))
+})
+
+test('trend projection overflow reports the source column and restores Canvas state', () => {
+  for (const values of [
+    ['-8.2e307', '-8.2e307', '8.2e307', '8.2e307'],
+    ['8.2e307', '8.2e307', '-8.2e307', '-8.2e307'],
+  ]) {
+    const text = 'Time,Trial A\n' + ['-0.55', '-0.275', '0.275', '0.55'].map((x, i) => `${x},${values[i]}`).join('\n')
+    const graph = importedChart(text)
+    const layout = computeLayout({ ...bounds(graph.columns), xColumnName: 'Time', yColumnName: 'Trial A' })
+    const fit = trendLine(graph.columns.x, graph.columns.ys[0], graph.columns.length)
+    const trend = { ...fit, firstY: fit.slope * fit.firstX + fit.startHeight, lastY: fit.slope * fit.lastX + fit.startHeight }
+    assert.ok(Object.values(fit).every(Number.isFinite))
+    assert.ok(Number.isFinite(trend.firstY) && Number.isFinite(trend.lastY))
+    const ctx = recorder()
+    assert.throws(() => drawTrendLines(ctx, [trend], layout), {
+      name: 'Float64OverflowError',
+      message: 'The chart position for 9.84e+307 in "Trial A" is too large for 64-bit precision.',
+    })
+    assert.ok(ctx.calls.every(call => call.every(value => typeof value !== 'number' || Number.isFinite(value))))
+    assert.equal(ctx.calls.some(([name]) => name === 'moveTo' || name === 'lineTo'), false)
+    assert.deepEqual(ctx.calls.at(-1), ['restore'])
+  }
 })

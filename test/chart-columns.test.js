@@ -123,7 +123,7 @@ test('empty data and no series still produce consistent column lengths', () => {
   assert.deepEqual(noSeries, { length: 1, x: new Float64Array([1]), ys: [] })
 })
 
-test('passes one shared x column to both chart modes and builds matching legacy points', () => {
+test('passes one shared x column to both chart modes without point objects', () => {
   const state = importedState('X,A,B\n2,,#N/A\n1,1.1,10\n3,3.3,30')
   for (const chartType of ['line', 'scatter']) {
     const { graphProps, pointCount } = prepareChart({ ...state, chartType }, { precision: 'float32' })
@@ -134,8 +134,7 @@ test('passes one shared x column to both chart modes and builds matching legacy 
     assert.equal(pointCount, 4)
     for (let s = 0; s < series.length; s++) {
       assert.equal(columns.ys[s].length, columns.x.length)
-      const expected = Array.from(columns.x, (x, i) => ({ x, y: columns.ys[s][i] }))
-      assert.deepEqual(series[s].points, expected)
+      assert.equal(Object.hasOwn(series[s], 'points'), false)
       assert.equal(Object.hasOwn(series[s], 'x'), false)
     }
   }

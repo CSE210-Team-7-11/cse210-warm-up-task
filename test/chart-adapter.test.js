@@ -3,6 +3,9 @@ import test from 'node:test'
 import { prepareChart } from '../src/components/charts/chartAdapter.js'
 import { initialState, seriesFromColumns, parseDelimited } from '../src/state.js'
 
+// each series' values as { x, y } pairs
+const seriesPoints = ({ columns }) => columns.ys.map((ys) => Array.from(columns.x, (x, i) => ({ x, y: ys[i] })))
+
 function editorState(rows, overrides = {}) {
   const text = [['Time', 'Trial A', 'Trial B'], ...rows]
     .map((row) => row.map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))
@@ -22,14 +25,13 @@ test('keeps each series paired with its values and styles when sorting by x', ()
   const { graphProps, pointCount } = prepareChart(state)
 
   assert.equal(pointCount, 4)
-  assert.deepEqual(graphProps.series.map((series) => series.points), [
+  assert.deepEqual(seriesPoints(graphProps), [
     [{ x: 1, y: 10 }, { x: 2, y: 20 }],
     [{ x: 1, y: 100 }, { x: 2, y: 200 }],
   ])
   for (const [index, series] of graphProps.series.entries()) {
     const { name, color, marker, dash } = state.series[index]
-    assert.deepEqual({ name: series.name, color: series.color, marker: series.marker, dash: series.dash },
-      { name, color, marker, dash })
+    assert.deepEqual(series, { name, color, marker, dash })
   }
 })
 
@@ -38,28 +40,21 @@ test('preserves empty-cell gaps and #N/A skips independently in line series', ()
   const { graphProps, pointCount } = prepareChart(editorState(rows, { chartType: 'line' }))
 
   assert.equal(pointCount, 4)
-  assert.deepEqual(graphProps.series.map((series) => series.points), [
+  assert.deepEqual(seriesPoints(graphProps), [
     [{ x: 1, y: 0 }, { x: 2, y: Infinity }, { x: 3, y: 3 }],
     [{ x: 1, y: 10 }, { x: 2, y: -Infinity }, { x: 3, y: 30 }],
   ])
 })
 
-test('keeps scatter indexes aligned with columns without counting missing values as points', () => {
+test('scatter keeps missing values in its columns without counting them as points', () => {
   const rows = [[1, 0, 10], [2, '', '#N/A'], [3, 3, 'bad'], ['bad', 99, 99]]
   const scatter = prepareChart(editorState(rows, { chartType: 'scatter' }))
 
   assert.equal(scatter.pointCount, 3)
-  assert.deepEqual(scatter.graphProps.series.map((series) => series.points), [
+  assert.deepEqual(seriesPoints(scatter.graphProps), [
     [{ x: 1, y: 0 }, { x: 2, y: Infinity }, { x: 3, y: 3 }],
     [{ x: 1, y: 10 }, { x: 2, y: -Infinity }, { x: 3, y: Infinity }],
   ])
-  for (const [s, series] of scatter.graphProps.series.entries()) {
-    assert.equal(series.points.length, scatter.graphProps.columns.length)
-    for (const [i, point] of series.points.entries()) {
-      assert.equal(point.x, scatter.graphProps.columns.x[i])
-      assert.equal(point.y, scatter.graphProps.columns.ys[s][i])
-    }
-  }
 })
 
 test('retains leading, trailing, and consecutive gaps and skips after sorting', () => {
@@ -67,11 +62,11 @@ test('retains leading, trailing, and consecutive gaps and skips after sorting', 
   const { graphProps, pointCount } = prepareChart(editorState(rows, { chartType: 'line' }))
 
   assert.equal(pointCount, 6)
-  assert.deepEqual(graphProps.series[0].points, [
+  assert.deepEqual(seriesPoints(graphProps)[0], [
     { x: 1, y: -Infinity }, { x: 2, y: Infinity }, { x: 3, y: Infinity },
     { x: 4, y: 4 }, { x: 5, y: Infinity }, { x: 6, y: Infinity },
   ])
-  assert.equal(graphProps.series[1].points[3].y, -Infinity)
+  assert.equal(seriesPoints(graphProps)[1][3].y, -Infinity)
 })
 
 test('does not count an entirely missing series or remove another series values', () => {
@@ -79,7 +74,7 @@ test('does not count an entirely missing series or remove another series values'
   const { graphProps, pointCount } = prepareChart(editorState(rows, { chartType: 'line' }))
 
   assert.equal(pointCount, 2)
-  assert.deepEqual(graphProps.series.map((series) => series.points), [
+  assert.deepEqual(seriesPoints(graphProps), [
     [{ x: 1, y: Infinity }, { x: 2, y: -Infinity }],
     [{ x: 1, y: 10 }, { x: 2, y: 20 }],
   ])
@@ -92,9 +87,9 @@ test('carries CSV empty cells and #N/A through the existing importer to the char
   const { graphProps, pointCount } = prepareChart(state)
 
   assert.equal(pointCount, 4)
-  assert.equal(graphProps.series[0].points[1].y, Infinity)
-  assert.equal(graphProps.series[1].points[1].y, -Infinity)
-  assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.series.map(s => s.points.length), [3, 3])
+  assert.equal(seriesPoints(graphProps)[0][1].y, Infinity)
+  assert.equal(seriesPoints(graphProps)[1][1].y, -Infinity)
+  assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.columns.ys.map(ys => ys.length), [3, 3])
 })
 
 test('keeps invalid values as breaks instead of treating them as #N/A or zero', () => {
@@ -102,7 +97,7 @@ test('keeps invalid values as breaks instead of treating them as #N/A or zero', 
   const { graphProps, pointCount } = prepareChart(editorState(rows))
 
   assert.equal(pointCount, 4)
-  assert.deepEqual(graphProps.series.map(s => s.points[1]), [{ x: 2, y: Infinity }, { x: 2, y: Infinity }])
+  assert.deepEqual(seriesPoints(graphProps).map(points => points[1]), [{ x: 2, y: Infinity }, { x: 2, y: Infinity }])
 })
 
 test('passes chart settings and labels through, including hiding and restoring a subtitle', () => {
@@ -131,9 +126,9 @@ test('does not mutate source data or round numeric values', () => {
   for (const series of state.series) Object.freeze(series)
 
   const { graphProps } = prepareChart(state)
-  assert.equal(graphProps.series[0].points[1].y, 0.1000000001)
+  assert.equal(seriesPoints(graphProps)[0][1].y, 0.1000000001)
   assert.deepEqual(state, before)
-  graphProps.series[0].points[0].y = 42
+  graphProps.columns.ys[0][0] = 42
   assert.deepEqual(state, before)
 })
 
@@ -147,7 +142,7 @@ test('converts numeric text before sorting and retains import diagnostics', () =
   const { graphProps, pointCount } = prepareChart(state)
 
   assert.equal(pointCount, 4)
-  assert.deepEqual(graphProps.series.map((series) => series.points), [
+  assert.deepEqual(seriesPoints(graphProps), [
     [{ x: 1, y: 16 }, { x: 2, y: 1010 }],
     [{ x: 1, y: 100 }, { x: 2, y: 0 }],
   ])
@@ -159,7 +154,7 @@ test('detects decimal commas before preparing chart points', () => {
   const { graphProps, pointCount } = prepareChart(state)
 
   assert.equal(pointCount, 3)
-  assert.deepEqual(graphProps.series.map((series) => series.points), [
+  assert.deepEqual(seriesPoints(graphProps), [
     [{ x: 1, y: 1010.5 }, { x: 2, y: 1500 }],
     [{ x: 1, y: -Infinity }, { x: 2, y: 0 }],
   ])
@@ -208,7 +203,7 @@ test('chart preparation rejects parser-only and invalid empty cell settings befo
 test('a real zero is drawn as zero under every empty cell setting', () => {
   for (const emptyCells of ['gap', 'zero', 'connect']) {
     const { graphProps } = prepareChart(sparseState(emptyCells))
-    assert.deepEqual(graphProps.series[0].points[3], { x: 4, y: 0 }, emptyCells)
+    assert.deepEqual(seriesPoints(graphProps)[0][3], { x: 4, y: 0 }, emptyCells)
   }
 })
 
@@ -216,6 +211,6 @@ test('marked empty cells count as points only when set to zero', () => {
   assert.equal(prepareChart(sparseState('gap')).pointCount, 5)
   assert.equal(prepareChart(sparseState('connect')).pointCount, 5)
   assert.equal(prepareChart(sparseState('zero')).pointCount, 8)
-  assert.ok(prepareChart({ ...sparseState('gap'), emptyCells: undefined }).graphProps.series[1].points
+  assert.ok(seriesPoints(prepareChart({ ...sparseState('gap'), emptyCells: undefined }).graphProps)[1]
     .some(({ y }) => y === Infinity))
 })

@@ -177,7 +177,7 @@ export default function SpecsPanel({ state, update, onReset }) {
           checked={state.showPoints}
           onChange={(showPoints) => update({ showPoints })}
         />
-        {state.chartType === 'line' && state.showPoints && (
+        {(state.chartType === 'scatter' || state.showPoints) && (
           <div className="specs-panel-field">
             <label className="field-label specs-panel-field-label" htmlFor="specs-panel-point-size">
               Point size: {state.pointSize}
