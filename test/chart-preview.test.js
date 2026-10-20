@@ -156,3 +156,14 @@ test('series that are not plotted show a warning instead of a key', () => {
     assert.doesNotMatch(html, /aria-label="Plot S11"/)
   }
 })
+
+test('clicking a series key offers its shapes, with None only on line charts', () => {
+  const series = initialState.series.map((oneSeries, i) => i === 0 ? { ...oneSeries, marker: 'none' } : oneSeries)
+  const render = (chartType) => renderToStaticMarkup(createElement(SpecsPanel, { state: { ...initialState, chartType, series }, update() {}, onReset() {} }))
+  const line = render('line')
+  assert.match(line, /<select aria-label="Marker shape for Smitskis owned"[^>]*>(?:(?!<\/select>).)*<option value="none" selected="">None<\/option>/)
+  assert.equal((line.match(/<option value="none"/g) ?? []).length, initialState.series.length)
+  const scatter = render('scatter')
+  assert.doesNotMatch(scatter, /value="none"/)
+  assert.match(scatter, /<select aria-label="Marker shape for Smitskis owned"[^>]*><option value="circle" selected="">Circle<\/option>/)
+})

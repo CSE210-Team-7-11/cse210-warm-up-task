@@ -1,12 +1,15 @@
 import { withSeriesColors } from './colors.js'
 
-export function prepareSeries(series, columns) {
+export const shownMarker = (marker, type) => type === 'scatter' && marker === 'none' ? 'circle' : marker
+
+export function prepareSeries(series, columns, type) {
   const colored = withSeriesColors(series)
   const shown = []
   const ys = []
   for (let i = 0; i < colored.length; i++) {
     if (!colored[i].color) continue
-    shown.push(colored[i])
+    const marker = shownMarker(colored[i].marker, type)
+    shown.push(marker === colored[i].marker ? colored[i] : { ...colored[i], marker })
     ys.push(columns.ys[i])
   }
   return {

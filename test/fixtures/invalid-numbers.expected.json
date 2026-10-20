@@ -1,0 +1,56 @@
+{
+  "delimiter": ",",
+  "numberFormat": ".",
+  "columns": [
+    "X",
+    "A",
+    "B"
+  ],
+  "issues": [
+    [
+      "invalid-number",
+      [
+        [
+          2,
+          0,
+          "abc"
+        ],
+        [
+          1,
+          1,
+          "12kg"
+        ],
+        [
+          1,
+          2,
+          "Infinity"
+        ],
+        [
+          2,
+          2,
+          "NaN"
+        ]
+      ]
+    ]
+  ],
+  "x": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "ys": [
+    [
+      10,
+      "Infinity",
+      "Infinity",
+      13
+    ],
+    [
+      "Infinity",
+      21,
+      "Infinity",
+      23
+    ]
+  ]
+}

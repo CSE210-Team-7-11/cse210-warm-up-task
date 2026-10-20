@@ -41,7 +41,7 @@ export function createChart(container, options) {
 
     const { title, subtitle, x_axis_label, y_axis_label } = { ...DEFAULT_LABELS, ...labels }
 
-    const plotted = prepareSeries(series, columns)
+    const plotted = prepareSeries(series, columns, type)
     const shownSeries = plotted.series
     columns = plotted.columns
     const xName = xColumnName ?? x_axis_label
@@ -50,7 +50,7 @@ export function createChart(container, options) {
     const { xMin, xMax, yMin, yMax, count: pointCount } = bounds(columns)
     // scatter charts always show their points
     const markerSize = type === 'scatter' || showPoints ? pointSize : 0
-    const markerRadius = () => markerSize / 2
+    const markerRadius = (s) => shownSeries[s].marker === 'none' ? 0 : markerSize / 2
     if (!canvas.isConnected) container.append(canvas)
     const legend = measureLegend(ctx, shownSeries, { title, subtitle })
 

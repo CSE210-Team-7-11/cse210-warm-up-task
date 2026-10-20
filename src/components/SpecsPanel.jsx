@@ -3,6 +3,7 @@ import Select from './ui/Select.jsx'
 import Toggle from './ui/Toggle.jsx'
 import { AlertCircleIcon, ChevronDownIcon, ChevronUpIcon, ResetIcon } from './ui/Icons.jsx'
 import SeriesKey from './charts/SeriesKey.jsx'
+import { shownMarker } from '../graph/series.js'
 import './SpecsPanel.css'
 
 // Which text field the "Titles & labels" pill select edits.
@@ -67,6 +68,27 @@ function SeriesColor({ series, onChange }) {
           Plot
         </button>
       )}
+    </span>
+  )
+}
+
+function SeriesShape({ series, chartType, onChange }) {
+  const shapes = ['circle', 'square', 'triangle', ...(chartType === 'line' ? ['none'] : [])]
+  return (
+    <span className="specs-panel-series-shape">
+      <SeriesKey series={series} chartType={chartType} />
+      <select
+        value={shownMarker(series.marker, chartType)}
+        aria-label={`Marker shape for ${series.name}`}
+        title="Marker shape"
+        onChange={(e) => onChange(e.target.value)}
+      >
+        {shapes.map((shape) => (
+          <option key={shape} value={shape}>
+            {shape[0].toUpperCase() + shape.slice(1)}
+          </option>
+        ))}
+      </select>
     </span>
   )
 }
@@ -152,7 +174,11 @@ export default function SpecsPanel({ state, update, onReset }) {
         {state.series.map((s) => (
           <div className="specs-panel-series-row" key={s.id}>
             {s.color ? (
-              <SeriesKey series={s} chartType={state.chartType} />
+              <SeriesShape
+                series={s}
+                chartType={state.chartType}
+                onChange={(marker) => update({ series: state.series.map((oneSeries) => oneSeries.id === s.id ? { ...oneSeries, marker } : oneSeries) })}
+              />
             ) : (
               <span
                 className={`specs-panel-series-warning${state.chartType === 'scatter' ? ' is-scatter' : ''}`}
