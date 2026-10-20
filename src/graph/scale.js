@@ -82,7 +82,8 @@ export function findNearest(columns, layout, px, py, maxDistance, { radiusAt, ma
     !Number.isFinite(maxDistance) || maxDistance < 0 ||
     !Number.isFinite(maxRadius) || maxRadius < 0) return null
 
-  const x = layout.fromX(Math.max(layout.left, Math.min(px, layout.right)))
+  const inverseX = layout.fromX(Math.max(layout.left, Math.min(px, layout.right)))
+  const x = Math.max(layout.xMin, Math.min(inverseX, layout.xMax))
   let low = 0
   let high = columns.length
   while (low < high) {

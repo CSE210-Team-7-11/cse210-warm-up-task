@@ -235,3 +235,17 @@ test('findNearest does not project extreme missing-only rows outside the plotted
   const layout = computeLayout({ xMin: -1e308, xMax: 0, yMin: 0, yMax: 1 })
   assert.deepEqual(findNearest(columns, layout, layout.toX(0), layout.toY(1), 10), { seriesIndex: 0, index: 1 })
 })
+
+test('findNearest retains endpoint hover when inverse rounding crosses a missing-only row', () => {
+  for (const [xMin, xMax, missingX] of [
+    [-1e16, 3, 3.5],
+    [-0.3, 0.1, 0.10000000000000002],
+  ]) {
+    const columns = hoverColumns(`X,A\n${xMin},0\n${xMax},1\n${missingX},`)
+    const layout = computeLayout({ xMin, xMax, yMin: 0, yMax: 1 })
+    for (const dx of [-2, 0, 2, 10]) {
+      assert.deepEqual(findNearest(columns, layout, layout.toX(xMax) + dx, layout.toY(1), 10), { seriesIndex: 0, index: 1 })
+    }
+    assert.equal(findNearest(columns, layout, layout.toX(xMax) + 10.01, layout.toY(1), 10), null)
+  }
+})
