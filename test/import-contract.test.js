@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { initialState, parseDelimited, seriesFromColumns } from '../src/state.js'
 import { prepareChart } from '../src/components/charts/chartAdapter.js'
-import { lineSegments } from '../src/graph/lineSegments.js'
 import { describeIssue, findIssues } from '../src/importFeedback.js'
 
 function imported(text) {
@@ -15,7 +14,6 @@ test('quoted empty/formula-empty fields break lines, #N/A connects, and actual z
   const line = prepareChart(state)
   assert.equal(line.pointCount, 4)
   assert.deepEqual(line.graphProps.series[0].points.map(p => p.y), [10, Infinity, 30, -Infinity, 50, Infinity, 0])
-  assert.deepEqual(lineSegments(line.graphProps.series[0].points).map(segment => segment.map(p => p.x)), [[1], [3, 5], [7]])
   const scatter = prepareChart({ ...state, chartType: 'scatter' })
   assert.deepEqual(scatter.graphProps.series[0].points.filter(p => Number.isFinite(p.y)), [{ x: 1, y: 10 }, { x: 3, y: 30 }, { x: 5, y: 50 }, { x: 7, y: 0 }])
   assert.deepEqual(findIssues(state), [['empty-cell', [[1, 1], [1, 5]]]])
@@ -42,7 +40,6 @@ test('invalid Y text produces cell diagnostics and gaps rather than zero or #N/A
   const line = prepareChart(state)
   assert.equal(line.pointCount, 2)
   assert.deepEqual(line.graphProps.series[0].points.slice(1, -1).map(p => p.y), invalid.map(() => Infinity))
-  assert.deepEqual(lineSegments(line.graphProps.series[0].points).map(segment => segment.map(p => p.x)), [[1], [11]])
   assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.series[0].points.filter(p => Number.isFinite(p.y)), [{ x: 1, y: 10 }, { x: 11, y: 20 }])
 })
 

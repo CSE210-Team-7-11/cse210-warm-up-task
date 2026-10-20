@@ -3,9 +3,8 @@ import { el } from './svg.js'
 const BOX_PADDING = 5
 const BOX_TEXT_SIZE = 10
 const APPROX_CHAR_WIDTH = 5
-const HOVER_MARKER_RADIUS = 3
 
-export default function tooltip({ point, name, toX, toY, toRadius, bounds, showHoverMarker = false }) {
+export default function tooltip({ point, name, toX, toY, toRadius, bounds }) {
   if (!point) return null
 
   const values = [point.x, point.y, point.z].filter(Number.isFinite).join(', ')
@@ -23,7 +22,6 @@ export default function tooltip({ point, name, toX, toY, toRadius, bounds, showH
   const boxY = yAbovePoint < bounds.top ? yBelowPoint : yAbovePoint
 
   return el('g', { class: 'tooltip' }, [
-    showHoverMarker && el('circle', { class: 'point', cx: pointX, cy: pointY, r: HOVER_MARKER_RADIUS }),
     el('rect', { x: clampedX, y: boxY, width: boxWidth, height: boxHeight, rx: 3 }),
     el('text', { x: clampedX + boxWidth / 2, y: boxY + boxHeight - BOX_PADDING + 1, 'text-anchor': 'middle', text }),
   ])

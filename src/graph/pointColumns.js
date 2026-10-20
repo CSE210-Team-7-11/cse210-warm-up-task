@@ -12,7 +12,7 @@ export function columnsFromPoints(series) {
   const ys = series.map(() => new Float64Array(length).fill(-Infinity))
   hoverPoints.forEach(({ point, seriesNumber }, i) => {
     x[i] = point.x
-    ys[seriesNumber][i] = point.y
+    ys[seriesNumber][i] = point.y === -Infinity || Number.isFinite(point.y) ? point.y : Infinity
   })
   return { columns: { length, x, ys }, hoverPoints }
 }

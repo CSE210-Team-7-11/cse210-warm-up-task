@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { computeLayout, findNearest } from '../src/graph/scale.js'
+import { computeLayout, findNearest, minMax } from '../src/graph/scale.js'
 import { dashPattern, drawFrame, drawLegend, drawLines, drawTooltip, formatTicks } from '../src/graph/canvas.js'
 import { columnsFromPoints } from '../src/graph/pointColumns.js'
-import { parseDelimited } from '../src/state.js'
+import { initialState, parseDelimited, seriesFromColumns } from '../src/state.js'
+import { prepareChart } from '../src/components/charts/chartAdapter.js'
 
 function recorder() {
   const calls = []
@@ -205,4 +206,61 @@ test('point-object conversion handles empty series and excludes nonfinite X rows
   assert.equal(empty.columns.length, 0)
   assert.deepEqual(empty.columns.ys, [])
   assert.deepEqual(empty.hoverPoints, [])
+})
+
+function drawnSegments({ columns, series }) {
+  const { min: xMin, max: xMax } = minMax(columns.x)
+  const layout = computeLayout({ xMin, xMax, yMin: 0, yMax: 60 })
+  return series.map((oneSeries, s) => {
+    const ctx = recorder()
+    drawLines(ctx, { ...columns, ys: [columns.ys[s]] }, [oneSeries], layout, { showPoints: false })
+    const segments = []
+    for (const [call, x] of ctx.calls) {
+      if (call === 'moveTo') segments.push([])
+      if (call === 'moveTo' || call === 'lineTo') segments.at(-1).push(Math.round(layout.fromX(x)))
+    }
+    return segments
+  })
+}
+
+function importedChart(text) {
+  const parsed = parseDelimited(text)
+  return prepareChart({ ...initialState, ...parsed, series: seriesFromColumns(parsed.columns), chartType: 'line' }).graphProps
+}
+
+test('Canvas breaks at CSV empty cells and connects across #N/A independently per series', () => {
+  const graph = importedChart('X,A,B\n1,10,15\n2,20,25\n3,,#N/A\n4,40,45\n5,50,55')
+  assert.deepEqual(drawnSegments(graph), [
+    [[1, 2], [4, 5]],
+    [[1, 2, 4, 5]],
+  ])
+})
+
+test('Canvas skips do not erase a break or create segments at missing-only edges', () => {
+  const graph = importedChart('X,A\n0,#N/A\n1,\n2,0\n3,#N/A\n4,\n5,#N/A\n6,\n7,8\n8,9\n9,#N/A\n10,')
+  assert.deepEqual(drawnSegments(graph), [[[2], [7, 8]]])
+  assert.deepEqual(drawnSegments(importedChart('X,A\n1,\n2,#N/A')), [[]])
+})
+
+test('Canvas preserves legacy invalid-value breaks and sorts without mutating point objects', () => {
+  const points = Object.freeze([
+    { x: 5, y: 50 }, { x: 3, y: 30 }, { x: 2, y: null }, { x: 4, y: NaN }, { x: 1, y: 10 },
+  ].map(Object.freeze))
+  const series = [{ points, color: '#a00' }]
+  const { columns } = columnsFromPoints(series)
+  assert.deepEqual(drawnSegments({ columns, series }), [[[1], [3], [5]]])
+  assert.deepEqual(points.map(p => p.x), [5, 3, 2, 4, 1])
+  assert.equal(points[2].y, null)
+  assert.ok(Number.isNaN(points[3].y))
+})
+
+test('Canvas draws quoted empty fields as breaks, #N/A as a connection, and zero as a point', () => {
+  const graph = importedChart('X,A\n1,10\n2,""\n3,30\n4," #N/A "\n5,50\n6," \t "\n7,0')
+  assert.deepEqual(drawnSegments(graph), [[[1], [3, 5], [7]]])
+})
+
+test('Canvas breaks at diagnosed invalid Y text rather than connecting or plotting zero', () => {
+  const invalid = ['Infinity', '-Infinity', 'NaN', '12kg', 'true', 'false', 'n/a', '#n/a']
+  const graph = importedChart('X,A\n1,10\n' + invalid.map((y, i) => `${i + 2},${y}`).join('\n') + '\n11,20')
+  assert.deepEqual(drawnSegments(graph), [[[1], [11]]])
 })

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { computeLayout, findNearest, invert, minMax, scale, ticks, trendLine } from '../src/graph/scale.js'
-import { buildChartData, computeScales, linear } from '../src/components/charts/chartUtils.js'
+import { buildChartData } from '../src/components/charts/chartUtils.js'
 import { initialState, parseDelimited, seriesFromColumns } from '../src/state.js'
 import { Float64OverflowError } from '../src/numericErrors.js'
 
@@ -48,8 +48,6 @@ test('overflowing float64 axis calculations throw instead of returning nonfinite
     () => ticks(-max, max),
     () => computeLayout({ xMin: -max, xMax: max, yMin: 0, yMax: 1 }),
     () => computeLayout({ xMin: 0, xMax: 1, yMin: -max, yMax: max }),
-    () => linear([-max, max], [0, 100]),
-    () => computeScales(buildChartData({ ...initialState, rows: [[-max, 0, 0], [max, 1, 1]] }).columns),
   ]) {
     assert.throws(calculate, Float64OverflowError)
   }
@@ -77,11 +75,13 @@ test('trend calculation overflow throws rather than producing a nonfinite fit', 
   assert.deepEqual(trendLine([{ x: 1, y: 3 }, { x: 2, y: 5 }, { x: 3, y: 7 }]), { slope: 2, startHeight: 1 })
 })
 
-test('large negative nice-axis ranges produce a bounded set of finite ticks', () => {
-  const { columns } = buildChartData({ ...initialState, rows: [[1, -1e100, 0], [2, -2e100, 0]] })
-  const scales = computeScales(columns)
-  assert.ok(scales.y.ticks.length < 20)
-  assert.ok(scales.y.ticks.every(Number.isFinite))
+test('large negative axis ranges produce a bounded set of finite ticks', () => {
+  const columns = hoverColumns('X,A\n1,-1e100\n2,-2e100')
+  const layout = computeLayout({ xMin: columns.x[0], xMax: columns.x[1], yMin: columns.ys[0][1], yMax: columns.ys[0][0] })
+  assert.ok(layout.yTicks.length < 20)
+  assert.ok(layout.yTicks.every(Number.isFinite))
+  assert.equal(layout.toY(columns.ys[0][1]), layout.bottom)
+  assert.equal(layout.toY(columns.ys[0][0]), layout.top)
 })
 
 function hoverColumns(text, precision = 'float64') {

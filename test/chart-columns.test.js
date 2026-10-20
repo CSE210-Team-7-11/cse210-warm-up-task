@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { buildChartData, computeScales } from '../src/components/charts/chartUtils.js'
+import { buildChartData } from '../src/components/charts/chartUtils.js'
+import { computeLayout, minMax } from '../src/graph/scale.js'
 import { prepareChart } from '../src/components/charts/chartAdapter.js'
 import { initialState, parseDelimited, seriesFromColumns } from '../src/state.js'
 
@@ -26,10 +27,6 @@ test('keeps gaps, skips, invalid-number breaks, and zero aligned after import an
 
   assert.deepEqual(columns.x, new Float64Array([1, 2, 3]))
   assert.deepEqual(columns.ys, [new Float64Array([Infinity, 0, -Infinity]), new Float64Array([Infinity, -Infinity, 0])])
-  assert.deepEqual(computeScales(columns), {
-    x: { domain: [1, 3], ticks: [1, 1.5, 2, 2.5, 3] },
-    y: { domain: [0, 0.2], ticks: [0, 0.2] },
-  })
 })
 
 test('skips nonfinite x values without losing pairing in the remaining rows', () => {
@@ -122,10 +119,8 @@ test('empty data and no series still produce consistent column lengths', () => {
   const state = importedState('X,A\n1,2')
   const empty = buildChartData({ ...state, rows: [] }).columns
   assert.deepEqual(empty, { length: 0, x: new Float64Array(), ys: [new Float64Array()] })
-  assert.equal(computeScales(empty), null)
   const noSeries = buildChartData({ ...state, series: [] }).columns
   assert.deepEqual(noSeries, { length: 1, x: new Float64Array([1]), ys: [] })
-  assert.equal(computeScales(noSeries), null)
 })
 
 test('passes one shared x column to both chart modes and builds matching legacy points', () => {
@@ -148,7 +143,14 @@ test('passes one shared x column to both chart modes and builds matching legacy 
 
 test('column bounds ignore missing values and retain negative ranges', () => {
   const state = importedState('X,A,B\n-2,-10,#N/A\n2,,5')
-  const scales = computeScales(buildChartData(state).columns)
-  assert.deepEqual(scales.x.domain, [-2, 2])
-  assert.deepEqual(scales.y.domain, [-10, 5])
+  const { columns } = buildChartData(state)
+  const { min: xMin, max: xMax } = minMax(columns.x)
+  const bounds = columns.ys.map(y => minMax(y.filter(Number.isFinite)))
+  const yMin = minMax(bounds.map(bound => bound.min)).min
+  const yMax = minMax(bounds.map(bound => bound.max)).max
+  const layout = computeLayout({ xMin, xMax, yMin, yMax })
+  assert.deepEqual([layout.xMin, layout.xMax], [-2, 2])
+  assert.deepEqual([layout.yMin, layout.yMax], [-10, 5])
+  assert.equal(layout.toY(-10), layout.bottom)
+  assert.equal(layout.toY(5), layout.top)
 })
