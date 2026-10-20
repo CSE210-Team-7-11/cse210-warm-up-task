@@ -87,10 +87,14 @@ export const initialState = {
 
 // Parse delimited text into numeric rows and import issues. Returns null if empty.
 // numberFormat is 'auto', '.' or ','; the result includes the resolved separator.
+// emptyCells is 'gap', 'zero' or 'connect' and only applies to Y cells.
 // Issue positions refer to source data records, excluding headers and blanks.
-export function parseDelimited(text, { numberFormat: requestedFormat = 'auto' } = {}) {
+export function parseDelimited(text, { numberFormat: requestedFormat = 'auto', emptyCells: emptyCellMode = 'gap' } = {}) {
   if (!['auto', '.', ','].includes(requestedFormat)) {
     throw new TypeError('numberFormat must be "auto", ".", or ",".')
+  }
+  if (!['gap', 'zero', 'connect'].includes(emptyCellMode)) {
+    throw new TypeError('emptyCells must be "gap", "zero", or "connect".')
   }
   const result = Papa.parse(text, {
     header: false,
@@ -117,11 +121,11 @@ export function parseDelimited(text, { numberFormat: requestedFormat = 'auto' } 
   const overflowErrors = createDiagnostics()
   const precisionChanges = createDiagnostics()
   function importedCell(value, c, r, recordPrecision = true) {
-    const parsed = parseCell(value, numberFormat)
+    const parsed = parseCell(value, numberFormat, { emptyCells: c === 0 ? 'gap' : emptyCellMode })
     if (parsed === null && isNumericOverflow(value, numberFormat)) {
       addDiagnostic(overflowErrors, () => new Float64OverflowError(String(value).trim(), columns[c].name, { sourceRow: r }))
     }
-    if (recordPrecision && Number.isFinite(parsed) && losesFloat64Precision(value, parsed, numberFormat)) {
+    if (recordPrecision && !isEmptyCell(value) && Number.isFinite(parsed) && losesFloat64Precision(value, parsed, numberFormat)) {
       addDiagnostic(precisionChanges, () => [c, r, value, parsed])
     }
     return parsed
@@ -148,7 +152,7 @@ export function parseDelimited(text, { numberFormat: requestedFormat = 'auto' } 
       const value = row[c]
       const parsed = importedCell(value, c, r)
       if (parsed === null) invalidNumbers.push([c, r, value])
-      else if (isEmptyCell(value)) emptyCells.push([c, r])
+      else if (isEmptyCell(value) && emptyCellMode !== 'zero') emptyCells.push([c, r])
       cells.push(parsed === null ? Infinity : parsed)
     }
     rows.push(cells)
