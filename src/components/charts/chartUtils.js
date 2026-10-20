@@ -1,124 +1,119 @@
-import { Float32OverflowError, throwOverflowErrors } from '../../numericErrors.js'
+// Plain-JS helpers shared by every chart type. No charting library: we draw
+// SVG ourselves, so all the math (data shaping, scales, ticks) lives here.
 
-import { precisionWarning } from '../../precision.js'
-import { addDiagnostic, createDiagnostics } from '../../diagnostics.js'
-import { emptyCellValue } from '../../numberFormat.js'
-import { createRowParser } from '../../importRows.js'
+export const CHART_HEIGHT = 420
 
-// Build sorted numeric columns. Series metadata follows the same order as ys.
-export function buildChartData(state, { precision = 'float64' } = {}) {
-  if (precision !== 'float64' && precision !== 'float32') {
-    throw new TypeError('precision must be "float64" or "float32".')
-  }
-  const { emptyCells = 'gap' } = state
-  if (!['gap', 'zero', 'connect'].includes(emptyCells)) {
-    throw new TypeError('emptyCells must be "gap", "zero", or "connect".')
-  }
-  const Column = precision === 'float32' ? Float32Array : Float64Array
-  const empty = emptyCellValue(emptyCells)
-  if (state.numericColumns) return convertColumns(state.numericColumns, state.columns, state.series, precision, empty)
-  const indexes = []
-  for (let i = 0; i < state.rows.length; i++) {
-    if (Number.isFinite(state.rows[i][0])) indexes.push(i)
-  }
-  indexes.sort((a, b) => state.rows[a][0] - state.rows[b][0])
+/** Space around the plot area for tick labels and axis titles (px). */
+export const MARGIN = { top: 12, right: 16, bottom: 44, left: 52 }
 
-  const length = indexes.length
-  const x = new Column(length)
-  const ys = state.series.map(() => new Column(length))
-  const errors = createDiagnostics()
-  const warnings = createDiagnostics()
-  for (let i = 0; i < length; i++) {
-    const row = state.rows[indexes[i]]
-    x[i] = row[0]
-    if (precision === 'float32' && !Number.isFinite(x[i])) {
-      addDiagnostic(errors, () => new Float32OverflowError(row[0], state.columns[0]?.name ?? 'X'))
-    } else if (!Object.is(row[0], x[i])) {
-      addDiagnostic(warnings, () => precisionWarning(row[0], x[i], state.columns[0]?.name ?? 'X', 32))
-    }
-    for (let s = 0; s < state.series.length; s++) {
-      const columnIndex = state.series[s].columnIndex
-      const value = Number.isNaN(row[columnIndex]) ? empty : row[columnIndex]
-      ys[s][i] = value
-      if (precision === 'float32' && Number.isFinite(value) && !Number.isFinite(ys[s][i])) {
-        addDiagnostic(errors, () => new Float32OverflowError(value, state.columns[columnIndex]?.name ?? `Column ${columnIndex + 1}`))
-      } else if (Number.isFinite(value) && !Object.is(value, ys[s][i])) {
-        addDiagnostic(warnings, () => precisionWarning(value, ys[s][i], state.columns[columnIndex]?.name ?? `Column ${columnIndex + 1}`, 32))
-      }
-    }
-  }
-  throwOverflowErrors(errors)
-  return { columns: { length, x, ys }, series: state.series, warnings: warnings.items, warningCount: warnings.count }
+// SVG attributes can't read CSS var(), and the exported SVG must stand on its
+// own, so chart colors are literals. Keep in sync with src/index.css.
+export const CHART_THEME = {
+  grid: '#eff2ec', // --border-soft
+  tick: '#a8afaa', // --text-faint
+  label: '#8a968c', // --text-muted
+  surface: '#ffffff', // --bg-surface
+  fontSize: 11,
 }
 
-function convertColumns(source, names, series, precision, empty) {
-  const Column = precision === 'float32' ? Float32Array : Float64Array
-  const errors = createDiagnostics()
-  const warnings = createDiagnostics()
-  const selected = [0, ...series.map(s => s.columnIndex)]
-  const originals = selected.map(c => c === 0 ? source.x : source.ys[c - 1])
-  const buffers = originals.map(values => values instanceof Column && (Number.isNaN(empty) || !values.some(Number.isNaN)) ? values : new Column(source.length))
-  if (buffers.every((buffer, c) => buffer === originals[c])) {
-    return { columns: { length: source.length, x: buffers[0], ys: buffers.slice(1) }, series, warnings: [], warningCount: 0 }
-  }
-  for (let i = 0; i < source.length; i++) {
-    for (let c = 0; c < buffers.length; c++) {
-      if (buffers[c] === originals[c]) continue
-      const value = Number.isNaN(originals[c][i]) ? empty : originals[c][i]
-      buffers[c][i] = value
-      const stored = buffers[c][i]
-      const columnName = names[selected[c]].name
-      if (Number.isFinite(value) && !Number.isFinite(stored)) {
-        addDiagnostic(errors, () => new Float32OverflowError(value, columnName))
-      } else if (Number.isFinite(value) && !Object.is(value, stored)) {
-        addDiagnostic(warnings, () => precisionWarning(value, stored, columnName, 32))
-      }
-    }
-  }
-  const [x, ...ys] = buffers
-  throwOverflowErrors(errors)
-  return { columns: { length: source.length, x, ys }, series, warnings: warnings.items, warningCount: warnings.count }
+/** Parse a table cell into a finite number, or NaN. Empty cells are not zero. */
+export function num(v) {
+  if (v === '' || v === null || v === undefined) return NaN
+  const n = typeof v === 'number' ? v : Number(v)
+  return Number.isFinite(n) ? n : NaN
 }
 
-export function createColumnBuilder(seriesCount, { columns = Array.from({ length: seriesCount + 1 }, (_, i) => ({ key: `c${i}`, name: `Column ${i + 1}` })), numberFormat = '.', emptyCells = 'gap', precision = 'float64', headerIsText = false } = {}) {
-  if (!Number.isSafeInteger(seriesCount) || seriesCount < 0) throw new TypeError('seriesCount must be a nonnegative integer.')
-  if (!['float32', 'float64'].includes(precision)) throw new TypeError('precision must be "float64" or "float32".')
-  if (!['gap', 'zero', 'connect', 'mark'].includes(emptyCells)) throw new TypeError('Invalid emptyCells option.')
-  if (!['.', ','].includes(numberFormat)) throw new TypeError('The decimal separator must be "." or ",".')
-  let capacity = 1024
-  let length = 0
-  let sorted = true
-  let buffers = Array.from({ length: seriesCount + 1 }, () => new Float64Array(capacity))
-  const parser = createRowParser(columns, { numberFormat, emptyCells, headerIsText, reuseRows: true, onRow(row) {
-    if (length === capacity) {
-      capacity *= 2
-      buffers = buffers.map(buffer => {
-        const grown = new Float64Array(capacity)
-        grown.set(buffer)
-        return grown
-      })
+/**
+ * Turn the editor state into chart-ready data. Column 0 is always X.
+ * Returns:
+ *   data    [{ x, s1: number|null, s2: number|null, ... }] sorted by x
+ *           +Infinity marks an empty-cell gap; -Infinity marks a #N/A skip.
+ *   series  the series to draw (from state.series)
+ */
+export function buildChartData(state) {
+  const data = []
+  for (const row of state.rows) {
+    const x = num(row[0])
+    if (!Number.isFinite(x)) continue
+    const point = { x }
+    for (const s of state.series) {
+      const cell = row[s.columnIndex]
+      const value = typeof cell === 'string' ? cell.trim() : cell
+      if (value === '#N/A') {
+        point[s.id] = -Infinity
+      } else if (value === '' || value === null || value === undefined) {
+        point[s.id] = Infinity
+      } else {
+        const v = num(value)
+        point[s.id] = Number.isFinite(v) ? v : null
+      }
     }
-    if (length && row[0] < buffers[0][length - 1]) sorted = false
-    for (let c = 0; c < buffers.length; c++) buffers[c][length] = row[c]
-    length++
-  } })
-  function finish(options) {
-    const issues = parser.finish(options)
-    if (sorted) buffers = buffers.map(b => b.length === length ? b : b.slice(0, length))
-    else {
-      const indexes = Array.from({ length }, (_, i) => i)
-      indexes.sort((a, b) => buffers[0][a] - buffers[0][b])
-      buffers = buffers.map(b => {
-        const ordered = new Float64Array(length)
-        for (let i = 0; i < length; i++) ordered[i] = b[indexes[i]]
-        return ordered
-      })
-    }
-    const source = { length, x: buffers[0], ys: buffers.slice(1) }
-    const series = Array.from({ length: seriesCount }, (_, i) => ({ columnIndex: i + 1 }))
-    const result = precision === 'float64' ? { columns: source, warnings: [], warningCount: 0 } :
-      convertColumns(source, columns, series, precision, emptyCellValue(emptyCells))
-    return { columns: result.columns, issues, warnings: result.warnings, warningCount: result.warningCount }
+    data.push(point)
   }
-  return { addRows: parser.addRows, finish }
+  data.sort((a, b) => a.x - b.x)
+  return { data, series: state.series }
+}
+
+/** Snap a rough interval to 1 / 2 / 5 x 10^n. */
+function niceStep(rough) {
+  if (!Number.isFinite(rough) || rough <= 0) return 1
+  const pow = 10 ** Math.floor(Math.log10(rough))
+  const frac = rough / pow
+  const base = frac < 1.5 ? 1 : frac < 3 ? 2 : frac < 7 ? 5 : 10
+  return base * pow
+}
+
+function range(from, to, step) {
+  const out = []
+  const eps = step * 1e-6
+  for (let i = 0; from + i * step <= to + eps; i++) out.push(Number((from + i * step).toFixed(10)))
+  return out
+}
+
+/**
+ * Domains + tick values for both axes.
+ * X: data range widened to a nice step (1..12 -> 0,2,...,12).
+ * Y: 0..niceMax (35 -> 40, ticks every 10); extends below 0 for negative data.
+ * Returns null when there is nothing to plot.
+ */
+export function computeScales(data, series) {
+  if (data.length === 0 || series.length === 0) return null
+  let xMin = Infinity
+  let xMax = -Infinity
+  let yMin = Infinity
+  let yMax = -Infinity
+  for (const p of data) {
+    xMin = Math.min(xMin, p.x)
+    xMax = Math.max(xMax, p.x)
+    for (const s of series) {
+      const v = p[s.id]
+      if (!Number.isFinite(v)) continue
+      yMin = Math.min(yMin, v)
+      yMax = Math.max(yMax, v)
+    }
+  }
+  if (!Number.isFinite(yMin)) yMin = yMax = 0
+
+  let x
+  if (xMin === xMax) {
+    x = { domain: [xMin - 1, xMax + 1], ticks: [xMin] }
+  } else {
+    const step = niceStep((xMax - xMin) / 6)
+    const lo = Math.floor(xMin / step + 1e-9) * step
+    const hi = Math.ceil(xMax / step - 1e-9) * step
+    x = { domain: [lo, hi], ticks: range(lo, hi, step) }
+  }
+
+  const yStep = niceStep((Math.max(yMax, 0) || 1) / 4)
+  const yTop = Math.max(Math.ceil(Math.max(yMax, 0) / yStep - 1e-9) * yStep, yStep)
+  const yBottom = yMin < 0 ? -Math.ceil(-yMin / yStep - 1e-9) * yStep : 0
+  const y = { domain: [yBottom, yTop], ticks: range(yBottom, yTop, yStep) }
+
+  return { x, y }
+}
+
+/** Linear map from a [d0, d1] domain to a [r0, r1] pixel range. */
+export function linear([d0, d1], [r0, r1]) {
+  const span = d1 - d0 || 1
+  return (v) => r0 + ((v - d0) / span) * (r1 - r0)
 }

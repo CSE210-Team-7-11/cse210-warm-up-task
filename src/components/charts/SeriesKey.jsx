@@ -1,5 +1,4 @@
 import Marker from './Marker.jsx'
-import { shownMarker } from '../../graph/series.js'
 
 /**
  * Small legend glyph for a series: a line sample with its dash pattern plus
@@ -22,7 +21,7 @@ export default function SeriesKey({ series, chartType }) {
           strokeLinecap="round"
         />
       )}
-      <Marker shape={shownMarker(series.marker, chartType)} cx={width / 2} cy={6} size={7} fill={series.color} />
+      <Marker shape={series.marker} cx={width / 2} cy={6} size={7} fill={series.color} />
     </svg>
   )
 }

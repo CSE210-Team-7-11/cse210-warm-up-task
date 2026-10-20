@@ -4,7 +4,6 @@
  * Centered on (cx, cy); `size` is roughly the diameter in px.
  */
 export default function Marker({ shape = 'circle', cx, cy, size = 7, fill, stroke = 'none', strokeWidth = 0 }) {
-  if (shape === 'none') return null
   const r = size / 2
   const common = { fill, stroke, strokeWidth }
   if (shape === 'square') {

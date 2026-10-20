@@ -4,7 +4,7 @@ import { parseCell } from '../src/state.js'
 
 test('empty and whitespace-only cells stay missing instead of becoming zero', () => {
   for (const value of ['', ' ', '   ', '\t', '\r\n', ' \t \r\n ', '\u00a0', '\ufeff', null, undefined]) {
-    assert.equal(parseCell(value), Infinity, `empty cell: ${JSON.stringify(value)}`)
+    assert.equal(parseCell(value), '', `empty cell: ${JSON.stringify(value)}`)
   }
 })
 
@@ -22,16 +22,15 @@ test('finite Number-compatible input includes signs, exponents, bases and surrou
   }
 })
 
-test('non-finite and invalid numeric text returns null, never a parsed prefix', () => {
+test('non-finite and invalid numeric text is retained for diagnostics, never parsed as a prefix', () => {
   for (const value of ['Infinity', '+Infinity', '-Infinity', 'NaN', '1e309', '-1e309',
     '0x', '-0x10', '12kg', '12abc', '1.2.3', 'true', 'false', 'null', '2026-10-19', ' bad ']) {
-    assert.equal(parseCell(value), null, value)
+    assert.equal(parseCell(value), value, value)
   }
 })
 
-test('#N/A becomes a skip marker, while other text is invalid', () => {
-  for (const value of ['#N/A', ' #N/A ']) assert.equal(parseCell(value), -Infinity)
-  for (const value of ['n/a', '#n/a', ' padded ', 'first\nsecond', 'say "hi"']) {
-    assert.equal(parseCell(value), null)
+test('#N/A and nonblank text retain their original spelling and whitespace', () => {
+  for (const value of ['#N/A', ' #N/A ', 'n/a', '#n/a', ' padded ', 'first\nsecond', 'say "hi"']) {
+    assert.equal(parseCell(value), value)
   }
 })

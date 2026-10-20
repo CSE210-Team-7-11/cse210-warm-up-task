@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import Select from './ui/Select.jsx'
 import Toggle from './ui/Toggle.jsx'
-import { AlertCircleIcon, ChevronDownIcon, ChevronUpIcon, ResetIcon } from './ui/Icons.jsx'
+import { ChevronDownIcon, ChevronUpIcon, ResetIcon } from './ui/Icons.jsx'
 import SeriesKey from './charts/SeriesKey.jsx'
-import { shownMarker } from '../graph/series.js'
 import './SpecsPanel.css'
 
 // Which text field the "Titles & labels" pill select edits.
@@ -50,46 +49,6 @@ function ToggleRow({ label, checked, onChange }) {
       <span className="specs-panel-row-label">{label}</span>
       <Toggle checked={checked} onChange={onChange} label={label} />
     </div>
-  )
-}
-
-function SeriesColor({ series, onChange }) {
-  const [color, setColor] = useState('#000000')
-  return (
-    <span className="specs-panel-series-color">
-      <input
-        type="color"
-        value={series.color || color}
-        aria-label={`Color for ${series.name}`}
-        onChange={(e) => series.color ? onChange(e.target.value) : setColor(e.target.value)}
-      />
-      {!series.color && (
-        <button type="button" aria-label={`Plot ${series.name}`} onClick={() => onChange(color)}>
-          Plot
-        </button>
-      )}
-    </span>
-  )
-}
-
-function SeriesShape({ series, chartType, onChange }) {
-  const shapes = ['circle', 'square', 'triangle', ...(chartType === 'line' ? ['none'] : [])]
-  return (
-    <span className="specs-panel-series-shape">
-      <SeriesKey series={series} chartType={chartType} />
-      <select
-        value={shownMarker(series.marker, chartType)}
-        aria-label={`Marker shape for ${series.name}`}
-        title="Marker shape"
-        onChange={(e) => onChange(e.target.value)}
-      >
-        {shapes.map((shape) => (
-          <option key={shape} value={shape}>
-            {shape[0].toUpperCase() + shape.slice(1)}
-          </option>
-        ))}
-      </select>
-    </span>
   )
 }
 
@@ -170,32 +129,14 @@ export default function SpecsPanel({ state, update, onReset }) {
         </div>
       </Section>
 
+      {/* Read-only key: colors + line/marker styles are fixed (colorblind-safe), see SERIES_STYLES. */}
       <Section id="series" title="Data series" open={open.series} onToggle={() => toggleSection('series')}>
         {state.series.map((s) => (
           <div className="specs-panel-series-row" key={s.id}>
-            {s.color ? (
-              <SeriesShape
-                series={s}
-                chartType={state.chartType}
-                onChange={(marker) => update({ series: state.series.map((oneSeries) => oneSeries.id === s.id ? { ...oneSeries, marker } : oneSeries) })}
-              />
-            ) : (
-              <span
-                className={`specs-panel-series-warning${state.chartType === 'scatter' ? ' is-scatter' : ''}`}
-                role="img"
-                aria-label="Not plotted: needs an explicit color"
-                title="Not plotted: needs an explicit color"
-              >
-                <AlertCircleIcon size={12} />
-              </span>
-            )}
+            <SeriesKey series={s} chartType={state.chartType} />
             <span className="specs-panel-series-name" title={s.name}>
               {s.name}
             </span>
-            <SeriesColor
-              series={s}
-              onChange={(color) => update({ series: state.series.map((oneSeries) => oneSeries.id === s.id ? { ...oneSeries, color } : oneSeries) })}
-            />
           </div>
         ))}
         <ToggleRow
@@ -203,7 +144,7 @@ export default function SpecsPanel({ state, update, onReset }) {
           checked={state.showPoints}
           onChange={(showPoints) => update({ showPoints })}
         />
-        {(state.chartType === 'scatter' || state.showPoints) && (
+        {state.chartType === 'line' && state.showPoints && (
           <div className="specs-panel-field">
             <label className="field-label specs-panel-field-label" htmlFor="specs-panel-point-size">
               Point size: {state.pointSize}

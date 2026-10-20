@@ -1,4 +1,86 @@
+/* graph styles, moved from the test page's App.css */
 .graph {
   width: 100%;
   height: auto;
+
+  .title {
+    font-size: 16px;
+    font-weight: 600;
+    fill: #1c1f1a;
+    letter-spacing: -0.01em;
+  }
+
+  .subtitle {
+    font-size: 9px;
+    font-weight: 400;
+    fill: #8a8f85;
+  }
+
+  .axis {
+    stroke: #c9cdc4;
+    stroke-width: 1;
+  }
+
+  .gridline {
+    stroke: #e8eae4;
+    stroke-width: 1;
+  }
+
+  .ticks {
+    stroke: #c9cdc4;
+    stroke-width: 1;
+  }
+
+  .label {
+    font-size: 8px;
+    fill: #6f746a;
+  }
+
+  .line {
+    fill: none;
+    stroke: #256b47;
+    stroke-width: 2;
+    stroke-linejoin: round;
+    stroke-linecap: round;
+  }
+
+  .trend {
+    stroke: #256b47;
+    stroke-width: 1;
+    stroke-opacity: 0.5;
+    stroke-dasharray: 4 3;
+  }
+
+  .point {
+    fill: #256b47;
+    stroke: #fff;
+    stroke-width: 1;
+  }
+
+  .hit {
+    fill: transparent;
+  }
+
+  &.dense > .point,
+  &.dense .line-graph [stroke='#fff'] {
+    stroke: none;
+  }
+
+  .tooltip {
+    pointer-events: none;
+
+    rect {
+      fill: #ffffff;
+      stroke: #eaede3;
+    }
+
+    text {
+      font-size: 8px;
+      fill: #20382c;
+    }
+
+    text.muted {
+      fill: #8a968c;
+    }
+  }
 }

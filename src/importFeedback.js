@@ -3,55 +3,81 @@
 // import UI can share the same checks and wording.
 //
 // Issues use the ADR-0007 import-result shape, a list of [type, data]:
-  //   'TooFewFields'     row indexes           row padded with empty cells
-  //   'TooManyFields'    row indexes           non-empty extra values dropped
-  //   'invalid-x'        row indexes           X invalid; row skipped
-  //   'invalid-number'   [column, row, text]s  invalid series value; not plotted
-  //   'empty-cell'       [column, row]s        series value is empty; not plotted
-  //   'duplicate-header' column indexes        repeated header names
-  //   'number-format'    [column, row, text]s  separators don't agree
-  //   'needs-color'      count                 series without a color; not plotted
-// Row indexes refer to source data records, excluding headers and blanks.
-// Messages show row numbers starting from 1.
+//   'TooFewFields'    row indexes      row padded with empty cells (parser)
+//   'TooManyFields'   row indexes      non-empty extra values dropped (parser)
+//   'invalid-x'       row indexes      X missing or not a number; row skipped
+//   'invalid-number'  [column, row]s   series value isn't a number; not plotted
+//   'empty-cell'      [column, row]s   series value is empty; not plotted
+//   'ignored-columns' count            columns past MAX_SERIES; not plotted
+// Rows are 0-based indexes into `rows` (the header isn't a row) and column 0
+// is X. Messages number rows from 1, matching the data table.
 
-import { MAX_AUTO_COLORS } from './graph/colors.js'
+import { MAX_SERIES } from './state.js'
 
+export const MAX_FILE_BYTES = 10 * 1024 * 1024
 const ACCEPTED_EXT = /\.(csv|tsv|txt)$/i
-const INFO_TYPES = new Set(['empty-cell', 'precision-loss', 'precision-loss-truncated'])
+const INFO_TYPES = new Set(['empty-cell', 'ignored-columns'])
 const MAX_LISTED = 3
 const MAX_VALUE_CHARS = 20
 
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v)
 
+export const isValidCellValue = (value, columnIndex) =>
+  isNumber(value) || (columnIndex > 0 && typeof value === 'string' && value.trim() === '#N/A')
+
 /** Why a file can't be imported, or '' when it's worth reading. */
-export function checkFile({ name }) {
+export function checkFile({ name, size }) {
   if (/\.xlsx?$/i.test(name)) {
     return `${name} is an Excel file. Save it as CSV, then drop the CSV here.`
   }
   if (!ACCEPTED_EXT.test(name)) return `${name} isn’t a CSV, TSV or TXT file.`
+  if (size > MAX_FILE_BYTES) {
+    const mb = Math.ceil((size / 1024 / 1024) * 10) / 10
+    return `${name} is ${mb} MB; the limit is 10 MB.`
+  }
   return ''
 }
 
 /** Why a parseDelimited() result can't be imported, or '' when it can. */
 export function checkParsed(parsed, name) {
   if (!parsed) return `${name} is empty.`
-  if (parsed.issues.some(([type]) => type === 'MissingQuotes')) return `${name} has a quoted field without a closing quote.`
-  if (parsed.columns.length === 0) return `${name} has no readable columns.`
+  if (parsed.columns.length === 0) {
+    if (parsed.issues.some(([type]) => type === 'MissingQuotes')) {
+      return `${name} has a quoted field without a closing quote.`
+    }
+    return `${name} has no readable columns.`
+  }
   if (parsed.columns.length < 2) {
     return `${name} has only one column. Separate columns with commas or tabs: X first, then at least one series.`
   }
-  if ((parsed.numericColumns?.length ?? parsed.rows.length) === 0) {
-    if (parsed.issues.some(([type]) => type === 'invalid-x')) return `${name} has no valid X values.`
-    return `${name} has a header row but no data rows.`
-  }
+  if (parsed.rows.length === 0) return `${name} has a header row but no data rows.`
   return ''
 }
 
-/** Every issue with the current data: what the parser found, then series colors. */
-export function findIssues({ parseIssues = [], series = [] }) {
+/** Every issue with the current data: parser issues first, then cell checks. */
+export function findIssues({ columns, rows, parseIssues = [] }) {
+  const invalidX = []
+  const invalidNumbers = []
+  const emptyCells = []
+  const lastSeries = Math.min(columns.length - 1, MAX_SERIES)
+  rows.forEach((row, r) => {
+    if (!isNumber(row[0])) {
+      invalidX.push(r)
+      return
+    }
+    for (let c = 1; c <= lastSeries; c++) {
+      const v = row[c]
+      if (v === '' || v === undefined) emptyCells.push([c, r])
+      else if (!isValidCellValue(v, c)) invalidNumbers.push([c, r])
+    }
+  })
+
   const issues = [...parseIssues]
-  const uncolored = series.filter((oneSeries) => !oneSeries.color).length
-  if (uncolored) issues.push(['needs-color', uncolored])
+  if (invalidX.length) issues.push(['invalid-x', invalidX])
+  if (invalidNumbers.length) issues.push(['invalid-number', invalidNumbers])
+  if (emptyCells.length) issues.push(['empty-cell', emptyCells])
+  const ignored = columns.length - 1 - MAX_SERIES
+  if (ignored > 0) issues.push(['ignored-columns', ignored])
   return issues
 }
 
@@ -70,74 +96,54 @@ function rowList(rowIndexes) {
   return `${rowIndexes.length} rows (${listed.join(', ')}${more(rowIndexes)})`
 }
 
-const quoteLocations = (data) => Array.isArray(data)
-  ? rowList([...new Set(data)])
-  : count(data, 'field')
-
 function shortValue(v) {
   const s = String(v)
   return s.length > MAX_VALUE_CHARS ? `${s.slice(0, MAX_VALUE_CHARS - 1)}…` : s
 }
 
-function cellList(cells, columns) {
-  const listed = cells.slice(0, MAX_LISTED).map(([c, r, text]) => {
+function cellList(cells, columns, rows) {
+  const listed = cells.slice(0, MAX_LISTED).map(([c, r]) => {
     const where = `row ${r + 1} (${columns[c]?.name ?? `column ${c + 1}`})`
-    return text !== undefined ? `"${shortValue(text)}" in ${where}` : where
+    return rows ? `“${shortValue(rows[r][c])}” in ${where}` : where
   })
   return listed.join(', ') + more(cells)
 }
 
-/** Compact data problem, location, and correction where needed. */
-export function describeIssue([type, data], { columns }) {
+/** One plain-language sentence for an issue from findIssues(). */
+export function describeIssue([type, data], { columns, rows }) {
   const plural = Array.isArray(data) && data.length !== 1
   const xName = columns[0]?.name || 'X'
   switch (type) {
     case 'TooFewFields':
-      return `${rowList(data)} ${plural ? 'have' : 'has'} fewer values than there are columns.`
+      return `${rowList(data)} ${plural ? 'have' : 'has'} fewer values than there are columns; the missing ones are left empty.`
     case 'TooManyFields':
-      return `${rowList(data)} ${plural ? 'have' : 'has'} more values than there are columns`
+      return `${rowList(data)} ${plural ? 'have' : 'has'} more values than there are columns, so the extras were dropped. A comma inside a value (like 1,000) can cause this.`
     case 'invalid-x':
-      return `${rowList(data)}: ${xName} must be a number.`
+      return `${rowList(data)} ${plural ? 'were' : 'was'} skipped because ${plural ? 'their' : 'its'} ${xName} value is missing or isn’t a number.`
     case 'invalid-number':
-      return `${count(data.length, 'nonnumeric value')}: ${cellList(data, columns)}. Replace with numbers.`
+      return `${count(data.length, 'value isn’t a number', 'values aren’t numbers')} and won’t be plotted: ${cellList(data, columns, rows)}.`
     case 'empty-cell':
-      return `${count(data.length, 'empty cell')}: ${cellList(data, columns)}.`
-    case 'precision-loss':
-      return `Rounded for 64-bit precision: ${cellList(data, columns)}.`
-    case 'precision-loss-truncated':
-      return `${count(data, 'more precision warning')}.`
-    case 'duplicate-header':
-      return `Duplicate column names: ${data.map((c) => `"${columns[c].name}" (column ${c + 1})`).join(', ')}. Use unique names.`
-    case 'number-format':
-      return `Invalid or mixed number formats: ${cellList(data, columns)}. Use 1,234.56.`
-    case 'needs-color':
-      return `Series after the first ${MAX_AUTO_COLORS} need an explicit color: ${count(data, 'series', 'series')} not plotted.`
-    case 'UndetectableDelimiter':
-      return 'Column separator not detected. Use commas or tabs.'
-    case 'MissingQuotes':
-      return `Missing closing quote: ${quoteLocations(data)}.`
-    case 'InvalidQuotes':
-      return `Invalid quotes: ${quoteLocations(data)}. Escape quotes inside fields as "".`
+      return `${count(data.length, 'empty cell')} won’t be plotted: ${cellList(data, columns)}.`
+    case 'ignored-columns':
+      return `Only the first ${MAX_SERIES} series are plotted (${count(data, 'column')} ignored).`
     default:
       return `${type}: ${Array.isArray(data) ? count(data.length, 'place') : data}.`
   }
 }
 
 /** Compact facts about the loaded data, for a one- or two-line summary. */
-export function summarizeData({ sourceName, columns, rows, numericColumns }) {
+export function summarizeData({ sourceName, columns, rows }) {
   let xMin = Infinity
   let xMax = -Infinity
-  const length = numericColumns?.length ?? rows.length
-  for (let i = 0; i < length; i++) {
-    const x = numericColumns ? numericColumns.x[i] : rows[i][0]
-    if (!isNumber(x)) continue
-    if (x < xMin) xMin = x
-    if (x > xMax) xMax = x
+  for (const row of rows) {
+    if (!isNumber(row[0])) continue
+    if (row[0] < xMin) xMin = row[0]
+    if (row[0] > xMax) xMax = row[0]
   }
   return {
     sourceName,
-    rowCount: numericColumns?.length ?? rows.length,
-    seriesCount: Math.max(0, columns.length - 1),
+    rowCount: rows.length,
+    seriesCount: Math.max(0, Math.min(columns.length - 1, MAX_SERIES)),
     xName: columns[0]?.name ?? '',
     xRange: xMin <= xMax ? [xMin, xMax] : null,
   }

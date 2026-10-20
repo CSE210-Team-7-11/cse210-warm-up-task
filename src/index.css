@@ -121,7 +121,7 @@ p {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: var(--font-md-lg);
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-strong);
 }
