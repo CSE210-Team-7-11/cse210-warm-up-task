@@ -65,6 +65,14 @@
   text-align: center;
 }
 
+.chart-preview-error {
+  padding: 16px;
+  border-radius: var(--radius-md);
+  background: var(--danger-bg);
+  color: var(--danger);
+  overflow-wrap: anywhere;
+}
+
 .chart-preview-legend {
   list-style: none;
   margin: 18px 0 0;

@@ -6,7 +6,10 @@
 // column (up to MAX_SERIES) is plotted as a series.
 
 import Papa from 'papaparse'
-import { isEmptyCell, parseCell, resolveNumberFormat } from './numberFormat.js'
+import { isEmptyCell, isNumericOverflow, parseCell, resolveNumberFormat } from './numberFormat.js'
+import { Float64OverflowError, throwOverflowErrors } from './numericErrors.js'
+import { losesFloat64Precision } from './precision.js'
+import { addDiagnostic, createDiagnostics } from './diagnostics.js'
 
 export { parseCell } from './numberFormat.js'
 
@@ -98,7 +101,8 @@ export function parseDelimited(text, { numberFormat: requestedFormat = 'auto' } 
   if (result.data.length === 0 && result.errors.every(({ code }) => code === 'UndetectableDelimiter')) return null
   const first = result.data[0] ?? []
   // Check both number formats when detecting a header.
-  const headerIsText = first.some((v) => parseCell(v, '.') === null && parseCell(v, ',') === null)
+  const headerIsText = first.some((v) => parseCell(v, '.') === null && parseCell(v, ',') === null &&
+    !isNumericOverflow(v, '.') && !isNumericOverflow(v, ','))
   const columns = headerIsText
     ? first.map((name, i) => ({ key: `c${i}`, name }))
     : first.map((_, i) => ({ key: `c${i}`, name: `Column ${i + 1}` }))
@@ -110,24 +114,46 @@ export function parseDelimited(text, { numberFormat: requestedFormat = 'auto' } 
   const invalidNumbers = []
   const emptyCells = []
   const rows = []
+  const overflowErrors = createDiagnostics()
+  const precisionChanges = createDiagnostics()
+  function importedCell(value, c, r, recordPrecision = true) {
+    const parsed = parseCell(value, numberFormat)
+    if (parsed === null && isNumericOverflow(value, numberFormat)) {
+      addDiagnostic(overflowErrors, () => new Float64OverflowError(String(value).trim(), columns[c].name, { sourceRow: r }))
+    }
+    if (recordPrecision && Number.isFinite(parsed) && losesFloat64Precision(value, parsed, numberFormat)) {
+      addDiagnostic(precisionChanges, () => [c, r, value, parsed])
+    }
+    return parsed
+  }
   body.forEach((row, r) => {
+    if (overflowErrors.count) {
+      for (let c = 0; c < columns.length; c++) {
+        if (isNumericOverflow(row[c], numberFormat)) {
+          addDiagnostic(overflowErrors, () => new Float64OverflowError(String(row[c]).trim(), columns[c].name, { sourceRow: r }))
+        }
+      }
+      return
+    }
     if (row.length < columns.length) tooFew.push(r)
     if (row.slice(columns.length).some((v) => !isEmptyCell(v))) tooMany.push(r)
-    const x = parseCell(row[0], numberFormat)
+    const x = importedCell(row[0], 0, r)
     if (!Number.isFinite(x)) {
+      for (let c = 1; c < columns.length; c++) importedCell(row[c], c, r, false)
       invalidX.push(r)
       return
     }
     const cells = [x]
     for (let c = 1; c < columns.length; c++) {
       const value = row[c]
-      const parsed = parseCell(value, numberFormat)
+      const parsed = importedCell(value, c, r)
       if (parsed === null) invalidNumbers.push([c, r, value])
       else if (isEmptyCell(value)) emptyCells.push([c, r])
       cells.push(parsed === null ? Infinity : parsed)
     }
     rows.push(cells)
   })
+  throwOverflowErrors(overflowErrors)
   const issues = []
   if (tooFew.length) issues.push(['TooFewFields', tooFew])
   if (tooMany.length) issues.push(['TooManyFields', tooMany])
@@ -163,6 +189,10 @@ export function parseDelimited(text, { numberFormat: requestedFormat = 'auto' } 
   if (invalidX.length) issues.push(['invalid-x', invalidX])
   if (invalidNumbers.length) issues.push(['invalid-number', invalidNumbers])
   if (emptyCells.length) issues.push(['empty-cell', emptyCells])
+  if (precisionChanges.count) issues.push(['precision-loss', precisionChanges.items])
+  if (precisionChanges.count > precisionChanges.items.length) {
+    issues.push(['precision-loss-truncated', precisionChanges.count - precisionChanges.items.length])
+  }
   if (headerIsText) {
     const names = new Map()
     columns.forEach(({ name }, c) => {

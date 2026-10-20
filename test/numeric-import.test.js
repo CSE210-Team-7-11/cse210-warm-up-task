@@ -24,8 +24,10 @@ test('parser owns invalid X, invalid Y, empty-cell and duplicate-header diagnost
   assert.ok(parsed.rows.flat().every((value) => typeof value === 'number' && !Number.isNaN(value)))
   const state = { ...initialState, ...parsed, parseIssues: parsed.issues, series: seriesFromColumns(parsed.columns) }
   assert.deepEqual(findIssues(state), parsed.issues, 'feedback must not invent or duplicate numeric-cell issues')
-  const { data } = buildChartData(state)
-  assert.deepEqual(data.map((row) => [row.s1, row.s2, row.s3]), parsed.rows.map((row) => row.slice(1)))
+  const { columns } = buildChartData(state)
+  assert.deepEqual(columns.ys.map((y) => Array.from(y)), [
+    [0, Infinity, 6], [Infinity, 4, Infinity], [-Infinity, 5, Infinity],
+  ])
 })
 
 test('parser and quote-error positions stay in source data rows after invalid X records are removed', () => {

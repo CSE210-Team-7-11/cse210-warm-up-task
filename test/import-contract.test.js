@@ -22,7 +22,7 @@ test('quoted empty/formula-empty fields break lines, #N/A connects, and actual z
 })
 
 test('all invalid X forms are diagnosed and removed from every plotted series', () => {
-  const invalid = ['', '   ', '#N/A', 'Infinity', '-Infinity', 'NaN', '1e309', 'abc']
+  const invalid = ['', '   ', '#N/A', 'Infinity', '-Infinity', 'NaN', 'abc']
   const text = 'X,A,B\n0,0,1\n' + invalid.map(x => `"${x}",20,30`).join('\n') + '\n2,4,5'
   const state = imported(text)
   assert.deepEqual(findIssues(state), [['invalid-x', invalid.map((_, i) => i + 1)]])
@@ -36,7 +36,7 @@ test('all invalid X forms are diagnosed and removed from every plotted series', 
 })
 
 test('invalid Y text produces cell diagnostics and gaps rather than zero or #N/A connections', () => {
-  const invalid = ['Infinity', '-Infinity', 'NaN', '1e309', '12kg', 'true', 'false', 'n/a', '#n/a']
+  const invalid = ['Infinity', '-Infinity', 'NaN', '12kg', 'true', 'false', 'n/a', '#n/a']
   const state = imported('X,A\n1,10\n' + invalid.map((y, i) => `${i + 2},${y}`).join('\n') + '\n11,20')
   assert.deepEqual(findIssues(state), [['invalid-number', invalid.map((value, i) => [1, i + 1, value])]])
   const line = prepareChart(state)

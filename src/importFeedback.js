@@ -18,7 +18,7 @@ import { MAX_SERIES } from './state.js'
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024
 const ACCEPTED_EXT = /\.(csv|tsv|txt)$/i
-const INFO_TYPES = new Set(['empty-cell', 'ignored-columns'])
+const INFO_TYPES = new Set(['empty-cell', 'ignored-columns', 'precision-loss', 'precision-loss-truncated'])
 const MAX_LISTED = 3
 const MAX_VALUE_CHARS = 20
 
@@ -130,6 +130,10 @@ export function describeIssue([type, data], { columns, rows }) {
       return `${count(data.length, 'value isn’t a number', 'values aren’t numbers')} and won’t be plotted: ${cellList(data, columns, rows)}.`
     case 'empty-cell':
       return `${count(data.length, 'empty cell')} won’t be plotted: ${cellList(data, columns)}.`
+    case 'precision-loss':
+      return `${count(data.length, 'value was', 'values were')} rounded for 64-bit precision: ${cellList(data, columns, rows)}.`
+    case 'precision-loss-truncated':
+      return `List truncated. ${count(data, 'additional precision warning')} omitted.`
     case 'ignored-columns':
       return `Only the first ${MAX_SERIES} series are plotted (${count(data, 'column')} ignored).`
     case 'duplicate-header':

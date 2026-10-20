@@ -5,6 +5,7 @@ import { marker } from './Marker.js'
 import lineGraph from './LineGraph.js'
 import tooltip from './Tooltip.js'
 import { withSeriesColors } from './colors.js'
+import { collectOverflowErrors, finiteCalculation } from '../numericErrors.js'
 import './Graph.css'
 
 const DEFAULT_LABELS = {
@@ -20,7 +21,7 @@ const MAX_RADIUS = 100
 const MIN_HOVER_TARGET_RADIUS = 10
 const HOVER_EXTRA_RADIUS = 1.5
 
-const round = (v) => Math.round(v * 10) / 10
+const round = (v) => Math.abs(v) >= 1e21 ? v : Math.round(v * 10) / 10
 
 let nextChartId = 0
 
@@ -39,7 +40,7 @@ export function createChart(container, options) {
   // the hovered point, as { seriesNumber, pointNumber }
   let hovered = null
 
-  function update({ points, series, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true, pointSize = 7, colors = {} }) {
+  function update({ points, series, xColumnName, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true, pointSize = 7, colors = {} }) {
     hovered = null
 
     const { title, subtitle, x_axis_label, y_axis_label } = { ...DEFAULT_LABELS, ...labels }
@@ -51,6 +52,8 @@ export function createChart(container, options) {
     }
 
     const shownSeries = withSeriesColors(allSeries)
+    const xName = xColumnName ?? x_axis_label
+    const yName = shownSeries.map((oneSeries) => oneSeries.name || y_axis_label).join(', ')
 
     const shownPoints = []
     for (const oneSeries of shownSeries) {
@@ -73,7 +76,21 @@ export function createChart(container, options) {
       return Math.min(MAX_RADIUS, r)
     }
 
-    const { left, right, top, bottom, toX, toY, xTicks, yTicks, xGridlines, yGridlines } = computeLayout({ xMin, xMax, yMin, yMax })
+    const [layout, trends] = collectOverflowErrors([
+      () => computeLayout({ xMin, xMax, yMin, yMax, xColumnName: xName, yColumnName: yName }),
+      () => showTrendLine && type === 'scatter' ? collectOverflowErrors(shownSeries.map((oneSeries) => () => {
+        const seriesName = oneSeries.name || y_axis_label
+        const trend = trendLine(oneSeries.points, xName, seriesName)
+        if (!trend) return null
+        const { min: firstX, max: lastX } = minMax(oneSeries.points.map((point) => point.x))
+        const [firstY, lastY] = collectOverflowErrors([
+          () => finiteCalculation(trend.slope * firstX + trend.startHeight, seriesName, () => `${xName}=${firstX}`, 'trend line'),
+          () => finiteCalculation(trend.slope * lastX + trend.startHeight, seriesName, () => `${xName}=${lastX}`, 'trend line'),
+        ])
+        return { oneSeries, firstX, lastX, firstY, lastY }
+      })) : [],
+    ])
+    const { left, right, top, bottom, toX, toY, xTicks, yTicks, xGridlines, yGridlines } = layout
 
     // Overlapping white outlines can hide every series on dense plots.
     svg.classList.toggle('dense', shownPoints.length > right - left)
@@ -131,19 +148,17 @@ export function createChart(container, options) {
       ]),
     ]
 
-    if (showTrendLine && type === 'scatter') {
-      for (const oneSeries of shownSeries) {
-        const trend = trendLine(oneSeries.points)
-        if (!trend) continue
-        const { min: firstX, max: lastX } = minMax(oneSeries.points.map((point) => point.x))
+    for (const trend of trends) {
+      if (trend) {
+        const { oneSeries, firstX, lastX, firstY, lastY } = trend
         children.push(el('line', {
           class: 'trend',
           'clip-path': `url(#${plotAreaId})`,
           style: { stroke: oneSeries.color },
           x1: toX(firstX),
-          y1: toY(trend.slope * firstX + trend.startHeight),
+          y1: toY(firstY),
           x2: toX(lastX),
-          y2: toY(trend.slope * lastX + trend.startHeight),
+          y2: toY(lastY),
         }))
       }
     }

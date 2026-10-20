@@ -1,10 +1,13 @@
-import { useLayoutEffect, useMemo, useRef } from 'react'
+import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { BarChartIcon } from './ui/Icons.jsx'
 import { createChart } from '../graph/Graph.js'
 import { prepareChart } from './charts/chartAdapter.js'
+import { isNumericOverflowError } from '../numericErrors.js'
+import NumericOverflowAlert from './NumericOverflowAlert.jsx'
+import PrecisionWarnings from './PrecisionWarnings.jsx'
 import './ChartPreview.css'
 
-function GraphView({ graphProps }) {
+function GraphView({ graphProps, onRenderResult }) {
   const containerRef = useRef(null)
   const chartRef = useRef(null)
 
@@ -17,15 +20,33 @@ function GraphView({ graphProps }) {
   }, [])
 
   useLayoutEffect(() => {
-    chartRef.current.update(graphProps)
-  }, [graphProps])
+    try {
+      chartRef.current.update(graphProps)
+      onRenderResult(null)
+    } catch (error) {
+      if (!isNumericOverflowError(error)) throw error
+      onRenderResult(error)
+    }
+  }, [graphProps, onRenderResult])
 
   return <div ref={containerRef} />
 }
 
 // the chart is drawn by the graph library in src/graph
-export default function ChartPreview({ state }) {
-  const { graphProps, pointCount } = useMemo(() => prepareChart(state), [state])
+export default function ChartPreview({ state, precision = 'float64' }) {
+  const { graphProps, pointCount, warnings = [], warningCount, error: preparationError } = useMemo(() => {
+    try {
+      return prepareChart(state, { precision })
+    } catch (error) {
+      if (!isNumericOverflowError(error)) throw error
+      return { error }
+    }
+  }, [state, precision])
+  const [renderFailure, setRenderFailure] = useState(null)
+  const onRenderResult = useCallback((error) => {
+    setRenderFailure(error ? { graphProps, error } : null)
+  }, [graphProps])
+  const error = preparationError || (renderFailure?.graphProps === graphProps ? renderFailure.error : null)
 
   return (
     <section className="panel chart-preview" aria-label="Graph preview">
@@ -37,21 +58,26 @@ export default function ChartPreview({ state }) {
       </header>
 
       <div className="chart-preview-body">
-        {pointCount < 2 ? (
+        {error ? (
+          <NumericOverflowAlert error={error} className="chart-preview-error" />
+        ) : pointCount < 2 ? (
           <div className="chart-preview-empty">
             Drop a file with at least two numeric rows and your graph will show up here.
           </div>
         ) : (
-          <GraphView graphProps={graphProps} />
+          <GraphView graphProps={graphProps} onRenderResult={onRenderResult} />
         )}
+        <PrecisionWarnings warnings={warnings} count={warningCount} />
       </div>
 
-      <footer className="chart-preview-footer">
-        <span>
-          {graphProps.series.length} series · {pointCount} data points
-        </span>
-        <span>Hover over a point to pull up tooltips!</span>
-      </footer>
+      {!error && (
+        <footer className="chart-preview-footer">
+          <span>
+            {graphProps.series.length} series · {pointCount} data points
+          </span>
+          <span>Hover over a point to pull up tooltips!</span>
+        </footer>
+      )}
     </section>
   )
 }

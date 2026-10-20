@@ -1,0 +1,17 @@
+.precision-warnings {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  color: #8a5a18;
+  background: #fff8e8;
+  overflow-wrap: anywhere;
+}
+
+.precision-warnings ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+}
+
+.precision-warnings li + li {
+  margin-top: 4px;
+}
