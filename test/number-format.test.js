@@ -91,10 +91,28 @@ test('header labels, dropped extra fields, and nonnumeric text do not select the
   assert.deepEqual(text.issues, [['invalid-number', [[1, 0, 'version 1.2,3']]]])
 })
 
-test('the only-separator default never requests manual input merely because another locale differs', () => {
+test('ambiguous single separators never request manual input', () => {
+  const parsed = parseDelimited('X;A\n1;1,010\n2;1.500\n3;2,000\n4;1.5')
+  assert.equal(parsed.numberFormat, '.')
+  assert.deepEqual(parsed.rows, [[1, 1010], [2, 1.5], [3, 2000], [4, 1.5]])
+  assert.deepEqual(parsed.issues, [])
+})
+
+test('a decimal comma like 1,5 is detected without a grouped value', () => {
+  const parsed = parseDelimited('Time;Height;Weight\n1;1,5;2.300\n2,5;3,25;4\n3;-0,75;1,5e2')
+  assert.equal(parsed.numberFormat, ',')
+  assert.deepEqual(parsed.rows, [[1, 1.5, 2300], [2.5, 3.25, 4], [3, -0.75, 150]])
+  assert.deepEqual(parsed.issues, [])
+})
+
+test('decimal commas and decimal points in one file are reported as mixed', () => {
   const parsed = parseDelimited('X;A\n1;1,010\n2;1.500\n3;1,5\n4;1.5')
+  assert.equal(parsed.numberFormat, '.')
   assert.deepEqual(parsed.rows, [[1, 1010], [2, 1.5], [3, Infinity], [4, 1.5]])
-  assert.deepEqual(parsed.issues, [['invalid-number', [[1, 2, '1,5']]]])
+  assert.deepEqual(parsed.issues, [
+    ['number-format', [[1, 2, '1,5'], [1, 3, '1.5']]],
+    ['invalid-number', [[1, 2, '1,5']]],
+  ])
 })
 
 test('detected format applies to X as well as every series', () => {

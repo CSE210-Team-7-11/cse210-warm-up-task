@@ -1,0 +1,27 @@
+{
+  "delimiter": ",",
+  "numberFormat": ".",
+  "columns": [
+    "X",
+    "A",
+    "B"
+  ],
+  "issues": [],
+  "x": [
+    1,
+    2,
+    3
+  ],
+  "ys": [
+    [
+      10,
+      "-Infinity",
+      12
+    ],
+    [
+      20,
+      21,
+      "-Infinity"
+    ]
+  ]
+}
