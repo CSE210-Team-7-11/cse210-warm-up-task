@@ -23,10 +23,6 @@ const MAX_VALUE_CHARS = 20
 
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v)
 
-export const isValidCellValue = (value, columnIndex) =>
-  isNumber(value) || (columnIndex > 0 && (value === Infinity || value === -Infinity || Number.isNaN(value) ||
-    (typeof value === 'string' && value.trim() === '#N/A')))
-
 /** Why a file can't be imported, or '' when it's worth reading. */
 export function checkFile({ name }) {
   if (/\.xlsx?$/i.test(name)) {
@@ -39,12 +35,8 @@ export function checkFile({ name }) {
 /** Why a parseDelimited() result can't be imported, or '' when it can. */
 export function checkParsed(parsed, name) {
   if (!parsed) return `${name} is empty.`
-  if (parsed.columns.length === 0) {
-    if (parsed.issues.some(([type]) => type === 'MissingQuotes')) {
-      return `${name} has a quoted field without a closing quote.`
-    }
-    return `${name} has no readable columns.`
-  }
+  if (parsed.issues.some(([type]) => type === 'MissingQuotes')) return `${name} has a quoted field without a closing quote.`
+  if (parsed.columns.length === 0) return `${name} has no readable columns.`
   if (parsed.columns.length < 2) {
     return `${name} has only one column. Separate columns with commas or tabs: X first, then at least one series.`
   }
@@ -55,27 +47,9 @@ export function checkParsed(parsed, name) {
   return ''
 }
 
-/** Every issue with the current data: parser issues first, then cell checks. */
-export function findIssues({ columns, rows, parseIssues = [], series = [] }) {
-  const invalidX = []
-  const invalidNumbers = []
-  const emptyCells = []
-  rows.forEach((row, r) => {
-    if (!isNumber(row[0])) {
-      invalidX.push(r)
-      return
-    }
-    for (let c = 1; c < columns.length; c++) {
-      const v = row[c]
-      if (v === '' || v === undefined) emptyCells.push([c, r])
-      else if (!isValidCellValue(v, c)) invalidNumbers.push([c, r])
-    }
-  })
-
+/** Every issue with the current data: what the parser found, then series colors. */
+export function findIssues({ parseIssues = [], series = [] }) {
   const issues = [...parseIssues]
-  if (invalidX.length) issues.push(['invalid-x', invalidX])
-  if (invalidNumbers.length) issues.push(['invalid-number', invalidNumbers])
-  if (emptyCells.length) issues.push(['empty-cell', emptyCells])
   const uncolored = series.filter((oneSeries) => !oneSeries.color).length
   if (uncolored) issues.push(['needs-color', uncolored])
   return issues
@@ -105,16 +79,16 @@ function shortValue(v) {
   return s.length > MAX_VALUE_CHARS ? `${s.slice(0, MAX_VALUE_CHARS - 1)}…` : s
 }
 
-function cellList(cells, columns, rows) {
+function cellList(cells, columns) {
   const listed = cells.slice(0, MAX_LISTED).map(([c, r, text]) => {
     const where = `row ${r + 1} (${columns[c]?.name ?? `column ${c + 1}`})`
-    return text !== undefined || rows ? `"${shortValue(text ?? rows?.[r]?.[c])}" in ${where}` : where
+    return text !== undefined ? `"${shortValue(text)}" in ${where}` : where
   })
   return listed.join(', ') + more(cells)
 }
 
 /** Compact data problem, location, and correction where needed. */
-export function describeIssue([type, data], { columns, rows }) {
+export function describeIssue([type, data], { columns }) {
   const plural = Array.isArray(data) && data.length !== 1
   const xName = columns[0]?.name || 'X'
   switch (type) {
@@ -125,17 +99,17 @@ export function describeIssue([type, data], { columns, rows }) {
     case 'invalid-x':
       return `${rowList(data)}: ${xName} must be a number.`
     case 'invalid-number':
-      return `${count(data.length, 'nonnumeric value')}: ${cellList(data, columns, rows)}. Replace with numbers.`
+      return `${count(data.length, 'nonnumeric value')}: ${cellList(data, columns)}. Replace with numbers.`
     case 'empty-cell':
       return `${count(data.length, 'empty cell')}: ${cellList(data, columns)}.`
     case 'precision-loss':
-      return `Rounded for 64-bit precision: ${cellList(data, columns, rows)}.`
+      return `Rounded for 64-bit precision: ${cellList(data, columns)}.`
     case 'precision-loss-truncated':
       return `${count(data, 'more precision warning')}.`
     case 'duplicate-header':
       return `Duplicate column names: ${data.map((c) => `"${columns[c].name}" (column ${c + 1})`).join(', ')}. Use unique names.`
     case 'number-format':
-      return `Invalid or mixed number formats: ${cellList(data, columns, rows)}. Use 1,234.56.`
+      return `Invalid or mixed number formats: ${cellList(data, columns)}. Use 1,234.56.`
     case 'needs-color':
       return `Series after the first ${MAX_AUTO_COLORS} need an explicit color: ${count(data, 'series', 'series')} not plotted.`
     case 'UndetectableDelimiter':

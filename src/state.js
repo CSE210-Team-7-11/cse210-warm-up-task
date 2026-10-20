@@ -184,6 +184,7 @@ export function parseDelimited(text, { numberFormat: requestedFormat = 'auto', e
   }
   const parseErrors = new Map()
   for (const { code, row } of result.errors) {
+    if (code === 'UndetectableDelimiter' && columns.length > 1) continue
     if (!parseErrors.has(code)) parseErrors.set(code, { rows: [], count: 0 })
     const error = parseErrors.get(code)
     error.count++
