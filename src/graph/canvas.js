@@ -1,5 +1,5 @@
-import { WIDTH, HEIGHT, PADDING, TEXT_SIZE, TITLE_TEXT_SIZE, TICK_SIZE } from './scale.js'
-import { legendEntries, LEGEND_CENTER_Y, LABEL_BASELINE_OFFSET, LABEL_PADDING } from './Legend.js'
+import { WIDTH, HEIGHT, MARGIN, PADDING, TEXT_SIZE, TITLE_TEXT_SIZE, TICK_SIZE } from './scale.js'
+import { legendEntries, LABEL_BASELINE_OFFSET, LABEL_PADDING } from './Legend.js'
 import { DEFAULT_COLOR, THEME } from './theme.js'
 
 const MARKER_BATCH = 256
@@ -65,18 +65,31 @@ export function drawFrame(ctx, layout, { title, subtitle, x_axis_label, y_axis_l
     text(ctx, yLabels[i], left - TICK_SIZE - PADDING, toY(v) + 4, { ...THEME.label, align: 'right' })
   }
 
-  text(ctx, x_axis_label, (left + right) / 2, HEIGHT, { ...THEME.label, align: 'center' })
+  text(ctx, x_axis_label, (left + right) / 2, layout.height ?? HEIGHT, { ...THEME.label, align: 'center' })
   ctx.translate(TEXT_SIZE, (top + bottom) / 2)
   ctx.rotate(-Math.PI / 2)
   text(ctx, y_axis_label, 0, 0, { ...THEME.label, align: 'center' })
   ctx.restore()
 }
 
+export function measureLegend(ctx, series, labels = {}) {
+  setFont(ctx, THEME.title.size, THEME.title.weight)
+  const titleWidth = ctx.measureText(labels.title || '').width
+  setFont(ctx, THEME.subtitle.size, THEME.subtitle.weight)
+  const subtitleWidth = ctx.measureText(labels.subtitle || '').width
+  setFont(ctx, THEME.label.size, THEME.label.weight)
+  return legendEntries({ series, left: MARGIN.left, right: WIDTH - MARGIN.right,
+    headerRight: Math.max(MARGIN.left, Math.max(titleWidth, subtitleWidth) + 10),
+    measureText: label => ctx.measureText(label).width })
+}
+
 export function drawLegend(ctx, series, layout) {
-  for (const { r, label, color, shape, x } of legendEntries({ series, right: layout.right })) {
-    drawDot(ctx, shape, x + r, LEGEND_CENTER_Y, r, color)
-    text(ctx, label, x + 2 * r + LABEL_PADDING, LEGEND_CENTER_Y + LABEL_BASELINE_OFFSET)
+  const legend = layout.legend ?? measureLegend(ctx, series)
+  for (const { r, label, color, shape, x, y } of legend.entries) {
+    drawDot(ctx, shape, x + r, y, r, color)
+    text(ctx, label, x + 2 * r + LABEL_PADDING, y + LABEL_BASELINE_OFFSET)
   }
+  return legend
 }
 
 export const dashPattern = (dash) => dash ? String(dash).trim().split(/[\s,]+/).map(Number) : []
@@ -189,7 +202,7 @@ export function drawLines(ctx, columns, series, layout, { showLines = true, show
     if (!showPoints || oneSeries.marker === 'none') continue
     if (dense) {
       const width = Math.ceil(WIDTH * scale) + 1
-      const drawn = new Uint8Array(width * (Math.ceil(HEIGHT * scale) + 1))
+      const drawn = new Uint8Array(width * (Math.ceil((layout.height ?? HEIGHT) * scale) + 1))
       ctx.fillStyle = color
       ctx.beginPath()
       let count = 0

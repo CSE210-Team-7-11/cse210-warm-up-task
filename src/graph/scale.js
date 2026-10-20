@@ -166,11 +166,12 @@ export function findNearest(columns, layout, px, py, maxDistance, {
   return hit ?? nearest
 }
 
-export function computeLayout({ xMin, xMax, yMin, yMax, xColumnName = 'X', yColumnName = 'Y' }) {
+export function computeLayout({ xMin, xMax, yMin, yMax, xColumnName = 'X', yColumnName = 'Y', extraHeight = 0 }) {
   const left = MARGIN.left
   const right = WIDTH - MARGIN.right
-  const top = MARGIN.top
-  const bottom = HEIGHT - MARGIN.bottom
+  const top = MARGIN.top + extraHeight
+  const height = HEIGHT + extraHeight
+  const bottom = height - MARGIN.bottom
   function axis(min, max, start, end, columnName) {
     const toPixel = scale(min, max, start, end, columnName)
     const fromPixel = invert(min, max, start, end, columnName)
@@ -191,6 +192,7 @@ export function computeLayout({ xMin, xMax, yMin, yMax, xColumnName = 'X', yColu
     right,
     top,
     bottom,
+    height,
     toX: x.toPixel,
     toY: y.toPixel,
     fromX: x.fromPixel,

@@ -5,6 +5,7 @@ import { prepareChart } from './charts/chartAdapter.js'
 import { isNumericOverflowError } from '../numericErrors.js'
 import NumericOverflowAlert from './NumericOverflowAlert.jsx'
 import PrecisionWarnings from './PrecisionWarnings.jsx'
+import ChartWarnings from './ChartWarnings.jsx'
 import './ChartPreview.css'
 
 function GraphView({ graphProps, onRenderResult }) {
@@ -21,11 +22,10 @@ function GraphView({ graphProps, onRenderResult }) {
 
   useLayoutEffect(() => {
     try {
-      chartRef.current.update(graphProps)
-      onRenderResult(null)
+      onRenderResult(chartRef.current.update(graphProps))
     } catch (error) {
       if (!isNumericOverflowError(error)) throw error
-      onRenderResult(error)
+      onRenderResult({ error })
     }
   }, [graphProps, onRenderResult])
 
@@ -42,11 +42,12 @@ export default function ChartPreview({ state, precision = 'float64' }) {
       return { error }
     }
   }, [state, precision])
-  const [renderFailure, setRenderFailure] = useState(null)
-  const onRenderResult = useCallback((error) => {
-    setRenderFailure(error ? { graphProps, error } : null)
+  const [renderResult, setRenderResult] = useState(null)
+  const onRenderResult = useCallback((result) => {
+    setRenderResult({ graphProps, ...result })
   }, [graphProps])
-  const error = preparationError || (renderFailure?.graphProps === graphProps ? renderFailure.error : null)
+  const currentResult = renderResult?.graphProps === graphProps ? renderResult : null
+  const error = preparationError || currentResult?.error
 
   return (
     <section className="panel chart-preview" aria-label="Graph preview">
@@ -68,6 +69,7 @@ export default function ChartPreview({ state, precision = 'float64' }) {
           <GraphView graphProps={graphProps} onRenderResult={onRenderResult} />
         )}
         <PrecisionWarnings warnings={warnings} count={warningCount} />
+        {!error && pointCount >= 2 && <ChartWarnings warnings={currentResult?.warnings ?? []} />}
       </div>
 
       {!error && (

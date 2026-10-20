@@ -13,6 +13,7 @@ let PrecisionWarnings
 let NumericOverflowAlert
 let SpecsPanel
 let parseForUI
+let ChartWarnings
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' })
   ChartPreview = (await server.ssrLoadModule('/src/components/ChartPreview.jsx')).default
@@ -21,8 +22,18 @@ before(async () => {
   NumericOverflowAlert = (await server.ssrLoadModule('/src/components/NumericOverflowAlert.jsx')).default
   SpecsPanel = (await server.ssrLoadModule('/src/components/SpecsPanel.jsx')).default
   parseForUI = (await server.ssrLoadModule('/src/state.js')).parseDelimited
+  ChartWarnings = (await server.ssrLoadModule('/src/components/ChartWarnings.jsx')).default
 })
 after(async () => { await server?.close() })
+
+test('chart warning feedback reports omitted legend entries', () => {
+  assert.equal(renderToStaticMarkup(createElement(ChartWarnings, { warnings: [] })), '')
+  for (const count of [1, 3]) {
+    const html = renderToStaticMarkup(createElement(ChartWarnings, { warnings: [['legend-overflow', count]] }))
+    assert.match(html, /role="status"/)
+    assert.ok(html.includes(`${count} series ${count === 1 ? "doesn&#x27;t" : "don&#x27;t"} fit in the legend.`))
+  }
+})
 
 test('precision feedback shows at most ten warnings and marks truncated lists', () => {
   for (const length of [0, 1, 10, 11]) {
