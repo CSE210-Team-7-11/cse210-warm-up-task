@@ -1,4 +1,4 @@
-const DEFAULT_COLOR = '#256b47'
+import { DEFAULT_COLOR } from './theme.js'
 
 const MIN_NORMAL_DIFFERENCE = 15
 const MIN_COLORBLIND_DIFFERENCE = 8
@@ -55,33 +55,80 @@ function separation(a, b) {
   )
 }
 
+// Nine OKLab values per candidate: normal, protan, then deutan.
 let candidates = null
 
-function isAllowed(color) {
-  const [lightness, a, b] = color.normal
+function isAllowed([lightness, a, b]) {
   return lightness >= 0.43 && lightness <= 0.77 && Math.hypot(a, b) >= 0.1
 }
 
+function oklabInto(out, offset, r, g, b) {
+  const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
+  const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
+  const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
+  out[offset] = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s
+  out[offset + 1] = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s
+  out[offset + 2] = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
+}
+
+function simulatedInto(out, offset, matrix, r, g, b) {
+  oklabInto(out, offset,
+    Math.min(1, Math.max(0, matrix[0][0] * r + matrix[0][1] * g + matrix[0][2] * b)),
+    Math.min(1, Math.max(0, matrix[1][0] * r + matrix[1][1] * g + matrix[1][2] * b)),
+    Math.min(1, Math.max(0, matrix[2][0] * r + matrix[2][1] * g + matrix[2][2] * b)))
+}
+
 function getCandidates() {
-  if (!candidates) {
-    candidates = []
-    for (let r = 0; r < 32; r++) {
-      for (let g = 0; g < 32; g++) {
-        for (let b = 0; b < 32; b++) {
-          const hex = '#' + [r, g, b].map((step) => Math.round((step * 255) / 31).toString(16).padStart(2, '0')).join('')
-          const color = appearance(hex)
-          if (isAllowed(color)) {
-            candidates.push(color)
-          }
-        }
+  if (candidates) return candidates
+  const steps = Array.from({ length: 32 }, (_, step) => Math.round((step * 255) / 31))
+  const linear = steps.map(toLinear)
+  const pairs = steps.map((value) => value.toString(16).padStart(2, '0'))
+  const hex = []
+  const labs = new Float64Array(32 ** 3 * 9)
+  for (let r = 0; r < 32; r++) {
+    for (let g = 0; g < 32; g++) {
+      for (let b = 0; b < 32; b++) {
+        const offset = hex.length * 9
+        oklabInto(labs, offset, linear[r], linear[g], linear[b])
+        const lightness = labs[offset]
+        if (lightness < 0.43 || lightness > 0.77 || Math.hypot(labs[offset + 1], labs[offset + 2]) < 0.1) continue
+        simulatedInto(labs, offset + 3, PROTAN, linear[r], linear[g], linear[b])
+        simulatedInto(labs, offset + 6, DEUTAN, linear[r], linear[g], linear[b])
+        hex.push('#' + pairs[r] + pairs[g] + pairs[b])
       }
     }
   }
+  candidates = { hex, labs: labs.slice(0, hex.length * 9) }
   return candidates
 }
 
+const NORMAL_SCALE = (100 / MIN_NORMAL_DIFFERENCE) ** 2
+const COLORBLIND_SCALE = (100 / MIN_COLORBLIND_DIFFERENCE) ** 2
+
+// Squared distances preserve ordering without a square root per candidate.
+function separationSquaredAt(labs, i, { normal, protan, deutan }) {
+  const o = i * 9
+  const n0 = labs[o] - normal[0], n1 = labs[o + 1] - normal[1], n2 = labs[o + 2] - normal[2]
+  const p0 = labs[o + 3] - protan[0], p1 = labs[o + 4] - protan[1], p2 = labs[o + 5] - protan[2]
+  const d0 = labs[o + 6] - deutan[0], d1 = labs[o + 7] - deutan[1], d2 = labs[o + 8] - deutan[2]
+  return Math.min(
+    (n0 * n0 + n1 * n1 + n2 * n2) * NORMAL_SCALE,
+    (p0 * p0 + p1 * p1 + p2 * p2) * COLORBLIND_SCALE,
+    (d0 * d0 + d1 * d1 + d2 * d2) * COLORBLIND_SCALE,
+  )
+}
+
+function candidateAt({ hex, labs }, i) {
+  const values = Array.from(labs.subarray(i * 9, i * 9 + 9))
+  return { hex: hex[i], normal: values.slice(0, 3), protan: values.slice(3, 6), deutan: values.slice(6) }
+}
+
 function refine(color, used) {
-  const closestTo = (candidate) => Math.min(Infinity, ...used.map((other) => separation(candidate, other)))
+  const closestTo = (candidate) => {
+    let closest = Infinity
+    for (const other of used) closest = Math.min(closest, separation(candidate, other))
+    return closest
+  }
   let best = color
   let bestSeparation = closestTo(color)
   let improved = true
@@ -96,7 +143,7 @@ function refine(color, used) {
           continue
         }
         const candidate = appearance('#' + next.map((value) => value.toString(16).padStart(2, '0')).join(''))
-        if (isAllowed(candidate) && closestTo(candidate) > bestSeparation) {
+        if (isAllowed(candidate.normal) && closestTo(candidate) > bestSeparation) {
           best = candidate
           bestSeparation = closestTo(candidate)
           improved = true
@@ -107,32 +154,43 @@ function refine(color, used) {
   return best
 }
 
-// gives each series without a color the one that differs most from the colors in use (readable up to 12 series)
+// Past this many colors, some pair falls below the separation that red-green
+// colorblind viewers need, so further series must be given a color.
+export const MAX_AUTO_COLORS = 11
+
+// Pick the color with the greatest separation from those already in use.
 export function withSeriesColors(series) {
   if (series.every((oneSeries) => oneSeries.color)) {
     return series
   }
   const used = series.map((oneSeries) => appearance(oneSeries.color)).filter(Boolean)
-  const closest = getCandidates().map((candidate) => Math.min(Infinity, ...used.map((color) => separation(candidate, color))))
+  if (used.length >= MAX_AUTO_COLORS) {
+    return series
+  }
+  const table = getCandidates()
+  const { labs } = table
+  const count = table.hex.length
+  const closest = new Float64Array(count).fill(Infinity)
+  for (const color of used) {
+    for (let i = 0; i < count; i++) closest[i] = Math.min(closest[i], separationSquaredAt(labs, i, color))
+  }
 
   return series.map((oneSeries) => {
-    if (oneSeries.color) {
+    if (oneSeries.color || used.length >= MAX_AUTO_COLORS) {
       return oneSeries
     }
     let picked = appearance(DEFAULT_COLOR)
     if (used.length > 0) {
       let best = 0
-      for (let i = 1; i < closest.length; i++) {
+      for (let i = 1; i < count; i++) {
         if (closest[i] > closest[best]) {
           best = i
         }
       }
-      picked = refine(candidates[best], used)
+      picked = refine(candidateAt(table, best), used)
     }
     used.push(picked)
-    candidates.forEach((candidate, i) => {
-      closest[i] = Math.min(closest[i], separation(candidate, picked))
-    })
+    for (let i = 0; i < count; i++) closest[i] = Math.min(closest[i], separationSquaredAt(labs, i, picked))
     return { ...oneSeries, color: picked.hex }
   })
 }
