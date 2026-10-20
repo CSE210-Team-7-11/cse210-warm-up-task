@@ -165,3 +165,31 @@ test('detects decimal commas before preparing chart points', () => {
   ])
   assert.deepEqual(state.parseIssues, [])
 })
+
+function sparseState(emptyCells) {
+  const parsed = parseDelimited('X,A,B\n1,10,\n2,,20\n3,30,\n4,0,40', { emptyCells })
+  return { ...initialState, ...parsed, parseIssues: parsed.issues, series: seriesFromColumns(parsed.columns), emptyCells }
+}
+
+test('empty cell settings reach the prepared columns unchanged', () => {
+  for (const [emptyCells, missing] of [['gap', Infinity], ['connect', -Infinity], ['zero', 0]]) {
+    const { graphProps } = prepareChart(sparseState(emptyCells))
+    assert.deepEqual([...graphProps.columns.ys[0]], [10, missing, 30, 0])
+    assert.deepEqual([...graphProps.columns.ys[1]], [missing, 20, missing, 40])
+  }
+})
+
+test('a real zero is drawn as zero under every empty cell setting', () => {
+  for (const emptyCells of ['gap', 'zero', 'connect']) {
+    const { graphProps } = prepareChart(sparseState(emptyCells))
+    assert.deepEqual(graphProps.series[0].points[3], { x: 4, y: 0 }, emptyCells)
+  }
+})
+
+test('empty cells count as points only when set to zero', () => {
+  assert.equal(prepareChart(sparseState('gap')).pointCount, 5)
+  assert.equal(prepareChart(sparseState('connect')).pointCount, 5)
+  assert.equal(prepareChart(sparseState('zero')).pointCount, 8)
+  assert.ok(prepareChart({ ...sparseState('gap'), emptyCells: undefined }).graphProps.series[1].points
+    .some(({ y }) => y === Infinity))
+})

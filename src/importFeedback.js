@@ -10,14 +10,14 @@
   //   'empty-cell'       [column, row]s        series value is empty; not plotted
   //   'duplicate-header' column indexes        repeated header names
   //   'number-format'    [column, row, text]s  separators don't agree
-  //   'ignored-columns' count                  columns past MAX_SERIES
+  //   'needs-color'      count                 series without a color; not plotted
 // Row indexes refer to source data records, excluding headers and blanks.
 // Messages show row numbers starting from 1.
 
-import { MAX_SERIES } from './state.js'
+import { MAX_AUTO_COLORS } from './graph/colors.js'
 
 const ACCEPTED_EXT = /\.(csv|tsv|txt)$/i
-const INFO_TYPES = new Set(['empty-cell', 'ignored-columns', 'precision-loss', 'precision-loss-truncated'])
+const INFO_TYPES = new Set(['empty-cell', 'precision-loss', 'precision-loss-truncated'])
 const MAX_LISTED = 3
 const MAX_VALUE_CHARS = 20
 
@@ -56,17 +56,16 @@ export function checkParsed(parsed, name) {
 }
 
 /** Every issue with the current data: parser issues first, then cell checks. */
-export function findIssues({ columns, rows, parseIssues = [] }) {
+export function findIssues({ columns, rows, parseIssues = [], series = [] }) {
   const invalidX = []
   const invalidNumbers = []
   const emptyCells = []
-  const lastSeries = Math.min(columns.length - 1, MAX_SERIES)
   rows.forEach((row, r) => {
     if (!isNumber(row[0])) {
       invalidX.push(r)
       return
     }
-    for (let c = 1; c <= lastSeries; c++) {
+    for (let c = 1; c < columns.length; c++) {
       const v = row[c]
       if (v === '' || v === undefined) emptyCells.push([c, r])
       else if (!isValidCellValue(v, c)) invalidNumbers.push([c, r])
@@ -77,8 +76,8 @@ export function findIssues({ columns, rows, parseIssues = [] }) {
   if (invalidX.length) issues.push(['invalid-x', invalidX])
   if (invalidNumbers.length) issues.push(['invalid-number', invalidNumbers])
   if (emptyCells.length) issues.push(['empty-cell', emptyCells])
-  const ignored = columns.length - 1 - MAX_SERIES
-  if (ignored > 0) issues.push(['ignored-columns', ignored])
+  const uncolored = series.filter((oneSeries) => !oneSeries.color).length
+  if (uncolored) issues.push(['needs-color', uncolored])
   return issues
 }
 
@@ -133,12 +132,12 @@ export function describeIssue([type, data], { columns, rows }) {
       return `Rounded for 64-bit precision: ${cellList(data, columns, rows)}.`
     case 'precision-loss-truncated':
       return `${count(data, 'more precision warning')}.`
-    case 'ignored-columns':
-      return `${count(data, 'extra column')} ignored. Limit: ${MAX_SERIES} series.`
     case 'duplicate-header':
       return `Duplicate column names: ${data.map((c) => `"${columns[c].name}" (column ${c + 1})`).join(', ')}. Use unique names.`
     case 'number-format':
       return `Invalid or mixed number formats: ${cellList(data, columns, rows)}. Use 1,234.56.`
+    case 'needs-color':
+      return `Series after the first ${MAX_AUTO_COLORS} need an explicit color: ${count(data, 'series', 'series')} not plotted.`
     case 'UndetectableDelimiter':
       return 'Column separator not detected. Use commas or tabs.'
     case 'MissingQuotes':
@@ -162,7 +161,7 @@ export function summarizeData({ sourceName, columns, rows }) {
   return {
     sourceName,
     rowCount: rows.length,
-    seriesCount: Math.max(0, Math.min(columns.length - 1, MAX_SERIES)),
+    seriesCount: Math.max(0, columns.length - 1),
     xName: columns[0]?.name ?? '',
     xRange: xMin <= xMax ? [xMin, xMax] : null,
   }

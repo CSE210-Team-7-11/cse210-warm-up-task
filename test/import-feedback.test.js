@@ -54,9 +54,11 @@ test('finds cell issues in the ADR-0007 [type, data] shape, after parser issues'
   assert.deepEqual(issues.map(isWarning), [true, true, true, false])
 })
 
-test('only checks plotted columns and counts the ignored ones', () => {
+test('checks every series column, with no limit on how many', () => {
   const wide = [...columns, { key: 'c3', name: 'D' }, { key: 'c4', name: 'E' }]
-  assert.deepEqual(findIssues({ columns: wide, rows: [[1, 2, 3, 4, 'text']] }), [['ignored-columns', 1]])
+  assert.deepEqual(findIssues({ columns: wide, rows: [[1, 2, 3, 4, 'text']] }), [['invalid-number', [[4, 0]]]])
+  const twelve = Array.from({ length: 13 }, (_, c) => ({ key: `c${c}`, name: `S${c}` }))
+  assert.equal(summarizeData({ sourceName: 'a.csv', columns: twelve, rows: [] }).seriesCount, 12)
 })
 
 test('accepts #N/A in series while retaining invalid X and number warnings', () => {
@@ -111,7 +113,6 @@ test('describes issues with row numbers from 1, column names and offending value
     describeIssue(['TooManyFields', [0, 1, 2, 3, 4]], data),
     '5 rows (1, 2, 3 and 2 more) have more values than there are columns',
   )
-  assert.equal(describeIssue(['ignored-columns', 2], data), '2 extra columns ignored. Limit: 3 series.')
   assert.equal(describeIssue(['UndetectableDelimiter', 1], data), 'Column separator not detected. Use commas or tabs.')
 })
 

@@ -1,16 +1,25 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { withSeriesColors } from '../src/graph/colors.js'
+import { MAX_AUTO_COLORS, withSeriesColors } from '../src/graph/colors.js'
 
 const blank = (count) => Array.from({ length: count }, () => ({}))
 
-test('gives every series without a color its own color', () => {
-  const colors = withSeriesColors(blank(12)).map((series) => series.color)
+test('gives every series without a color its own color, up to the limit', () => {
+  const colors = withSeriesColors(blank(MAX_AUTO_COLORS)).map((series) => series.color)
 
-  assert.equal(new Set(colors).size, 12)
+  assert.equal(new Set(colors).size, MAX_AUTO_COLORS)
   for (const color of colors) {
     assert.match(color, /^#[0-9a-f]{6}$/)
   }
+})
+
+test('stops once the limit of colors is in use, counting colors the caller set', () => {
+  const series = withSeriesColors([...blank(MAX_AUTO_COLORS), { color: '#123456' }])
+
+  assert.ok(series.slice(0, MAX_AUTO_COLORS - 1).every((oneSeries) => oneSeries.color))
+  assert.equal(series[MAX_AUTO_COLORS - 1].color, undefined)
+  assert.equal(series[MAX_AUTO_COLORS].color, '#123456')
+  assert.equal(withSeriesColors([...blank(MAX_AUTO_COLORS + 2)]).filter((oneSeries) => oneSeries.color).length, MAX_AUTO_COLORS)
 })
 
 test('keeps colors the caller set', () => {

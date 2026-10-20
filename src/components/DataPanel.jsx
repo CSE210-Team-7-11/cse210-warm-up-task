@@ -20,7 +20,7 @@ import './DataPanel.css'
  * drop/browse a new CSV or TSV file.
  */
 export default function DataPanel({ state, onImport }) {
-  const { sourceName, rows, columns, parseIssues } = state
+  const { sourceName, rows, columns, parseIssues, series } = state
   const fileInputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
   const [fileError, setFileError] = useState('')
@@ -30,8 +30,8 @@ export default function DataPanel({ state, onImport }) {
     [sourceName, columns, rows],
   )
   const issues = useMemo(
-    () => findIssues({ columns, rows, parseIssues }),
-    [columns, rows, parseIssues],
+    () => findIssues({ columns, rows, parseIssues, series }),
+    [columns, rows, parseIssues, series],
   )
   const warnings = issues.filter(isWarning)
   const notes = issues.filter((issue) => !isWarning(issue) && issue[0] !== 'precision-loss' && issue[0] !== 'precision-loss-truncated')

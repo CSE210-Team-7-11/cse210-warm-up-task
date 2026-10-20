@@ -11,6 +11,7 @@ let ChartPreview
 let DataPanel
 let PrecisionWarnings
 let NumericOverflowAlert
+let SpecsPanel
 let parseForUI
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' })
@@ -18,6 +19,7 @@ before(async () => {
   DataPanel = (await server.ssrLoadModule('/src/components/DataPanel.jsx')).default
   PrecisionWarnings = (await server.ssrLoadModule('/src/components/PrecisionWarnings.jsx')).default
   NumericOverflowAlert = (await server.ssrLoadModule('/src/components/NumericOverflowAlert.jsx')).default
+  SpecsPanel = (await server.ssrLoadModule('/src/components/SpecsPanel.jsx')).default
   parseForUI = (await server.ssrLoadModule('/src/state.js')).parseDelimited
 })
 after(async () => { await server?.close() })
@@ -128,4 +130,18 @@ test('import feedback shows all float64 precision changes and their source data 
   assert.match(html, /source data row 1/)
   assert.match(html, /source data row 2/)
   assert.doesNotMatch(html, /role="alert"|All values are valid/)
+})
+
+test('series that are not plotted show a warning instead of a key', () => {
+  const columns = Array.from({ length: 14 }, (_, c) => ({ key: `c${c}`, name: c ? `S${c}` : 'X' }))
+  for (const chartType of ['line', 'scatter']) {
+    const state = { ...initialState, chartType, columns, series: seriesFromColumns(columns) }
+    const html = renderToStaticMarkup(createElement(SpecsPanel, { state, update() {}, onReset() {} }))
+    assert.equal((html.match(/aria-label="Not plotted: needs an explicit color"/g) ?? []).length, 2, chartType)
+    assert.equal((html.match(/class="series-key"/g) ?? []).length, 11, chartType)
+    assert.equal((html.match(/type="color"/g) ?? []).length, 13, chartType)
+    assert.match(html, /aria-label="Plot S12"/)
+    assert.match(html, /aria-label="Plot S13"/)
+    assert.doesNotMatch(html, /aria-label="Plot S11"/)
+  }
 })
