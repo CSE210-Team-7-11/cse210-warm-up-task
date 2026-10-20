@@ -2,14 +2,19 @@ import { Float32OverflowError, throwOverflowErrors } from '../../numericErrors.j
 
 import { precisionWarning } from '../../precision.js'
 import { addDiagnostic, createDiagnostics } from '../../diagnostics.js'
+import { emptyCellValue } from '../../numberFormat.js'
 
 // Build sorted numeric columns. Series metadata follows the same order as ys.
-// Collects overflow errors before returning and reports non-blocking precision warnings.
 export function buildChartData(state, { precision = 'float64' } = {}) {
   if (precision !== 'float64' && precision !== 'float32') {
     throw new TypeError('precision must be "float64" or "float32".')
   }
+  const { emptyCells = 'gap' } = state
+  if (!['gap', 'zero', 'connect'].includes(emptyCells)) {
+    throw new TypeError('emptyCells must be "gap", "zero", or "connect".')
+  }
   const Column = precision === 'float32' ? Float32Array : Float64Array
+  const empty = emptyCellValue(emptyCells)
   const indexes = []
   for (let i = 0; i < state.rows.length; i++) {
     if (Number.isFinite(state.rows[i][0])) indexes.push(i)
@@ -31,7 +36,7 @@ export function buildChartData(state, { precision = 'float64' } = {}) {
     }
     for (let s = 0; s < state.series.length; s++) {
       const columnIndex = state.series[s].columnIndex
-      const value = row[columnIndex]
+      const value = Number.isNaN(row[columnIndex]) ? empty : row[columnIndex]
       ys[s][i] = value
       if (precision === 'float32' && Number.isFinite(value) && !Number.isFinite(ys[s][i])) {
         addDiagnostic(errors, () => new Float32OverflowError(value, state.columns[columnIndex]?.name ?? `Column ${columnIndex + 1}`))

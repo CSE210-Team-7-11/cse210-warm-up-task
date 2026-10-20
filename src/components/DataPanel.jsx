@@ -13,14 +13,21 @@ import {
   summarizeData,
 } from '../importFeedback.js'
 import { AlertCircleIcon, CheckCircleIcon, UploadIcon } from './ui/Icons.jsx'
+import Select from './ui/Select.jsx'
 import './DataPanel.css'
+
+const EMPTY_CELL_OPTIONS = [
+  { value: 'gap', label: 'Gap' },
+  { value: 'zero', label: 'Zero' },
+  { value: 'connect', label: 'Connect' },
+]
 
 /**
  * Step 02: load data from a file. The only way to change the data is to
  * drop/browse a new CSV or TSV file.
  */
-export default function DataPanel({ state, onImport }) {
-  const { sourceName, rows, columns, parseIssues } = state
+export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
+  const { sourceName, rows, columns, parseIssues, emptyCells } = state
   const fileInputRef = useRef(null)
   const [dragging, setDragging] = useState(false)
   const [fileError, setFileError] = useState('')
@@ -34,7 +41,8 @@ export default function DataPanel({ state, onImport }) {
     [columns, rows, parseIssues],
   )
   const warnings = issues.filter(isWarning)
-  const notes = issues.filter((issue) => !isWarning(issue) && issue[0] !== 'precision-loss' && issue[0] !== 'precision-loss-truncated')
+  const notes = issues.filter((issue) => !isWarning(issue) && issue[0] !== 'precision-loss' && issue[0] !== 'precision-loss-truncated' &&
+    !(issue[0] === 'empty-cell' && emptyCells === 'zero'))
   const precisionWarnings = issues.filter(([type]) => type === 'precision-loss')
     .flatMap(([, cells]) => cells.map(([c, r, text, stored]) => precisionWarning(text, stored, columns[c].name, 64, r)))
   const precisionCount = precisionWarnings.length + (issues.find(([type]) => type === 'precision-loss-truncated')?.[1] ?? 0)
@@ -51,7 +59,7 @@ export default function DataPanel({ state, onImport }) {
       reader.onload = () => {
         let parsed
         try {
-          parsed = parseDelimited(String(reader.result ?? ''))
+          parsed = parseDelimited(String(reader.result ?? ''), { emptyCells: 'mark' })
         } catch (error) {
           if (!isNumericOverflowError(error)) throw error
           setFileError(error)
@@ -133,6 +141,10 @@ export default function DataPanel({ state, onImport }) {
               e.target.value = ''
             }}
           />
+        </div>
+        <div className="data-panel-option">
+          <span className="field-label" aria-hidden="true">Empty cells</span>
+          <Select variant="compact" value={emptyCells} options={EMPTY_CELL_OPTIONS} onChange={onEmptyCellsChange} ariaLabel="Empty cells" />
         </div>
         {fileError && (typeof fileError === 'string' ? (
           <p className="data-panel-error" role="alert">
