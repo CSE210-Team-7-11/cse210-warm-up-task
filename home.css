@@ -1,15 +1,29 @@
-@import url('https://cdn.jsdelivr.net/gh/IdreesInc/Monocraft@main/dist/Monocraft-ttf/Monocraft.ttf');
+@font-face {
+    font-family: 'Monocraft';
+    src: url('https://cdn.jsdelivr.net/gh/IdreesInc/Monocraft@main/dist/Monocraft-ttf/Monocraft.ttf') format('truetype');
+    font-weight: normal;
+    font-style: normal;
+}
 @import url('https://fonts.googleapis.com/css?family=Montserrat:wght@400;500;600;700;900&display=swap');
 
 :root {
     /* Branding colors */ 
     --primary-bg: white;
     --secondary-bg: #017143;
+    --tertiary-bg: #33473f;
     --red-acc: #ee3124;
     --orange-acc: #ec431c;
+    --canvas-border: rgb(185, 185, 185);
+
+    /* Fonts */
     --font-sans: 'Montserrat';
-    --font-hdr-sz: 2rem;
+    --font-hdr-sz: 1.5rem;
     --font-body-sz: 2rem;
+
+    /* shape */
+    --radius-lg: 12px;
+    --radius-md: 8px;
+    --radius-sm: 6px;
 }
 
 /* Remove default margin */
@@ -39,9 +53,11 @@ header {
         box-sizing: border-box;
 
     nav {
+        display: flex;
         color: var(--primary-bg);
         font-size: var(--font-hdr-sz);
         font-weight: 900;
+        align-items: center;
     }
 
     nav a {
@@ -72,6 +88,9 @@ main {
 canvas {
     width: 100%;
     height: 100%;
+    border: 2px solid var(--canvas-border);
+    border-radius: var(--radius-lg);
+    box-sizing: border-box;
 }
 
 /* Home content */
@@ -82,7 +101,12 @@ canvas {
 }
 
 #code-editor {
-    margin: 2vh 2vh 2vh 2vh;
+    color: var(--primary-bg);
+    background-color: var(--tertiary-bg);
+    border-radius: var(--radius-lg);
+    font-family: 'Monocraft', 'Courier New', Courier, monospace;
+    margin-top: 2vh;
+    padding: 2vh 2vh 2vh 2vh;
 }
 
 #promo {
@@ -153,18 +177,25 @@ h1 {
 
 .example-section {
     display: grid;
+    row-gap: 2vh;
     grid-template-rows: auto 1fr 1fr;
+    justify-content: center;
     box-sizing: border-box;
+}
+
+.example-canvas {
+    width: 45vw;
+    height: 35vh;
 }
 
 .example-canvas:has(+ .example-canvas) {
     padding-top: 2vh;
-    padding-bottom: 1vh;
+    padding-bottom: 2vh;
     box-sizing: border-box;
 }
 
 .example-canvas + .example-canvas {
-    padding-top: 1vh;
+    padding-top: 2vh;
     padding-bottom: 2vh;
     box-sizing: border-box;
 }
