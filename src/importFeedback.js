@@ -3,14 +3,16 @@
 // import UI can share the same checks and wording.
 //
 // Issues use the ADR-0007 import-result shape, a list of [type, data]:
-//   'TooFewFields'    row indexes      row padded with empty cells (parser)
-//   'TooManyFields'   row indexes      non-empty extra values dropped (parser)
-//   'invalid-x'       row indexes      X missing or not a number; row skipped
-//   'invalid-number'  [column, row]s   series value isn't a number; not plotted
-//   'empty-cell'      [column, row]s   series value is empty; not plotted
-//   'ignored-columns' count            columns past MAX_SERIES; not plotted
-// Rows are 0-based indexes into `rows` (the header isn't a row) and column 0
-// is X. Messages number rows from 1, matching the data table.
+  //   'TooFewFields'     row indexes           row padded with empty cells
+  //   'TooManyFields'    row indexes           non-empty extra values dropped
+  //   'invalid-x'        row indexes           X invalid; row skipped
+  //   'invalid-number'   [column, row, text]s  invalid series value; not plotted
+  //   'empty-cell'       [column, row]s        series value is empty; not plotted
+  //   'duplicate-header' column indexes        repeated header names
+  //   'number-format'    [column, row, text]s  separators don't agree
+  //   'ignored-columns' count                  columns past MAX_SERIES
+// Row indexes refer to source data records, excluding headers and blanks.
+// Messages show row numbers starting from 1.
 
 import { MAX_SERIES } from './state.js'
 
@@ -23,7 +25,8 @@ const MAX_VALUE_CHARS = 20
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v)
 
 export const isValidCellValue = (value, columnIndex) =>
-  isNumber(value) || (columnIndex > 0 && typeof value === 'string' && value.trim() === '#N/A')
+  isNumber(value) || (columnIndex > 0 && (value === Infinity || value === -Infinity ||
+    (typeof value === 'string' && value.trim() === '#N/A')))
 
 /** Why a file can't be imported, or '' when it's worth reading. */
 export function checkFile({ name, size }) {
@@ -50,7 +53,10 @@ export function checkParsed(parsed, name) {
   if (parsed.columns.length < 2) {
     return `${name} has only one column. Separate columns with commas or tabs: X first, then at least one series.`
   }
-  if (parsed.rows.length === 0) return `${name} has a header row but no data rows.`
+  if (parsed.rows.length === 0) {
+    if (parsed.issues.some(([type]) => type === 'invalid-x')) return `${name} has no valid X values.`
+    return `${name} has a header row but no data rows.`
+  }
   return ''
 }
 
@@ -102,9 +108,9 @@ function shortValue(v) {
 }
 
 function cellList(cells, columns, rows) {
-  const listed = cells.slice(0, MAX_LISTED).map(([c, r]) => {
+  const listed = cells.slice(0, MAX_LISTED).map(([c, r, text]) => {
     const where = `row ${r + 1} (${columns[c]?.name ?? `column ${c + 1}`})`
-    return rows ? `“${shortValue(rows[r][c])}” in ${where}` : where
+    return text !== undefined || rows ? `“${shortValue(text ?? rows?.[r]?.[c])}” in ${where}` : where
   })
   return listed.join(', ') + more(cells)
 }
@@ -126,6 +132,10 @@ export function describeIssue([type, data], { columns, rows }) {
       return `${count(data.length, 'empty cell')} won’t be plotted: ${cellList(data, columns)}.`
     case 'ignored-columns':
       return `Only the first ${MAX_SERIES} series are plotted (${count(data, 'column')} ignored).`
+    case 'duplicate-header':
+      return `Repeated column names: ${data.map((c) => `“${columns[c].name}” (column ${c + 1})`).join(', ')}.`
+    case 'number-format':
+      return `Number separators are ambiguous or conflicting: ${cellList(data, columns, rows)}. Using comma thousands separators and decimal points.`
     default:
       return `${type}: ${Array.isArray(data) ? count(data.length, 'place') : data}.`
   }

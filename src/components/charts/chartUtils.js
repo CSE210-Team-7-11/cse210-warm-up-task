@@ -27,7 +27,7 @@ export function num(v) {
  * Turn the editor state into chart-ready data. Column 0 is always X.
  * Returns:
  *   data    [{ x, s1: number|null, s2: number|null, ... }] sorted by x
- *           +Infinity marks an empty-cell gap; -Infinity marks a #N/A skip.
+ *           +Infinity marks a gap; -Infinity marks a #N/A skip.
  *   series  the series to draw (from state.series)
  */
 export function buildChartData(state) {
@@ -37,16 +37,7 @@ export function buildChartData(state) {
     if (!Number.isFinite(x)) continue
     const point = { x }
     for (const s of state.series) {
-      const cell = row[s.columnIndex]
-      const value = typeof cell === 'string' ? cell.trim() : cell
-      if (value === '#N/A') {
-        point[s.id] = -Infinity
-      } else if (value === '' || value === null || value === undefined) {
-        point[s.id] = Infinity
-      } else {
-        const v = num(value)
-        point[s.id] = Number.isFinite(v) ? v : null
-      }
+      point[s.id] = row[s.columnIndex]
     }
     data.push(point)
   }

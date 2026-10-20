@@ -4,12 +4,17 @@ import { prepareChart } from '../src/components/charts/chartAdapter.js'
 import { initialState, seriesFromColumns, parseDelimited } from '../src/state.js'
 
 function editorState(rows, overrides = {}) {
-  const columns = [
-    { key: 'c0', name: 'Time' },
-    { key: 'c1', name: 'Trial A' },
-    { key: 'c2', name: 'Trial B' },
-  ]
-  return { ...initialState, columns, series: seriesFromColumns(columns), rows, ...overrides }
+  const text = [['Time', 'Trial A', 'Trial B'], ...rows]
+    .map((row) => row.map((value) => `"${String(value ?? '').replaceAll('"', '""')}"`).join(','))
+    .join('\n')
+  const parsed = parseDelimited(text)
+  return {
+    ...initialState,
+    ...parsed,
+    parseIssues: parsed.issues,
+    series: seriesFromColumns(parsed.columns),
+    ...overrides,
+  }
 }
 
 test('keeps each series paired with its values and styles when sorting by x', () => {
@@ -90,7 +95,7 @@ test('keeps invalid values as breaks instead of treating them as #N/A or zero', 
   const { graphProps, pointCount } = prepareChart(editorState(rows))
 
   assert.equal(pointCount, 4)
-  assert.deepEqual(graphProps.series.map(s => s.points[1]), [{ x: 2, y: null }, { x: 2, y: null }])
+  assert.deepEqual(graphProps.series.map(s => s.points[1]), [{ x: 2, y: Infinity }, { x: 2, y: Infinity }])
 })
 
 test('passes chart settings and labels through, including hiding and restoring a subtitle', () => {
@@ -128,4 +133,28 @@ test('does not mutate source data or round numeric values', () => {
 test('reports zero and one valid point accurately for the existing preview threshold', () => {
   assert.equal(prepareChart(editorState([])).pointCount, 0)
   assert.equal(prepareChart(editorState([[1, 2, '']])).pointCount, 1)
+})
+
+test('converts numeric text before sorting and retains import diagnostics', () => {
+  const state = editorState([['2', '1,010', '0'], ['1', '0x10', '1e2'], ['bad', '9', '9']])
+  const { graphProps, pointCount } = prepareChart(state)
+
+  assert.equal(pointCount, 4)
+  assert.deepEqual(graphProps.series.map((series) => series.points), [
+    [{ x: 1, y: 16 }, { x: 2, y: 1010 }],
+    [{ x: 1, y: 100 }, { x: 2, y: 0 }],
+  ])
+  assert.deepEqual(state.parseIssues, [['invalid-x', [2]]])
+})
+
+test('detects decimal commas before preparing chart points', () => {
+  const state = editorState([['2', '1.500', '0'], ['1', '1.010,5', '#N/A']])
+  const { graphProps, pointCount } = prepareChart(state)
+
+  assert.equal(pointCount, 3)
+  assert.deepEqual(graphProps.series.map((series) => series.points), [
+    [{ x: 1, y: 1010.5 }, { x: 2, y: 1500 }],
+    [{ x: 1, y: -Infinity }, { x: 2, y: 0 }],
+  ])
+  assert.deepEqual(state.parseIssues, [])
 })

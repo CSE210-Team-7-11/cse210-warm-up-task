@@ -21,8 +21,8 @@ const columns = [
 test('reports rows the parser padded or cut, but not empty trailing fields', () => {
   const parsed = parseDelimited('Month,Owned,Funds\n1,2\n2,3,4,5\n3,4,5,\n4,5,6')
 
-  assert.deepEqual(parsed.issues, [['TooFewFields', [0]], ['TooManyFields', [1]]])
-  assert.deepEqual(parsed.rows[0], [1, 2, ''])
+  assert.deepEqual(parsed.issues, [['TooFewFields', [0]], ['TooManyFields', [1]], ['empty-cell', [[2, 0]]]])
+  assert.deepEqual(parsed.rows[0], [1, 2, Infinity])
   assert.deepEqual(parsed.rows[2], [3, 4, 5])
   assert.deepEqual(parseDelimited('a,b\n1,2').issues, [])
 })
@@ -64,9 +64,9 @@ test('accepts #N/A in series while retaining invalid X and number warnings', () 
   const parsed = parseDelimited('X,A,B\n1,#N/A,0\n2, #N/A ,3\n#N/A,4,5\n4,n/a,bad\n5,,6')
   const originalRows = structuredClone(parsed.rows)
 
-  assert.deepEqual(findIssues(parsed), [
+  assert.deepEqual(findIssues({ ...parsed, parseIssues: parsed.issues }), [
     ['invalid-x', [2]],
-    ['invalid-number', [[1, 3], [2, 3]]],
+    ['invalid-number', [[1, 3, 'n/a'], [2, 3, 'bad']]],
     ['empty-cell', [[1, 4]]],
   ])
   assert.deepEqual(parsed.rows, originalRows)
@@ -81,7 +81,10 @@ test('table validation accepts the series marker but requires numeric X values',
   assert.equal(isValidCellValue(0, 0), true)
   assert.equal(isValidCellValue(0, 1), true)
   assert.equal(isValidCellValue(NaN, 1), false)
-  assert.equal(isValidCellValue(Infinity, 1), false)
+  assert.equal(isValidCellValue(Infinity, 1), true)
+  assert.equal(isValidCellValue(-Infinity, 1), true)
+  assert.equal(isValidCellValue(Infinity, 0), false)
+  assert.equal(isValidCellValue(-Infinity, 0), false)
 })
 
 test('the sample data has nothing to report', () => {
