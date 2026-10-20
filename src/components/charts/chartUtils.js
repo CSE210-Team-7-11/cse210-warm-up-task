@@ -16,33 +16,29 @@ export const CHART_THEME = {
   fontSize: 11,
 }
 
-/** Parse a table cell into a finite number, or NaN. Empty cells are not zero. */
-export function num(v) {
-  if (v === '' || v === null || v === undefined) return NaN
-  const n = typeof v === 'number' ? v : Number(v)
-  return Number.isFinite(n) ? n : NaN
-}
-
-/**
- * Turn the editor state into chart-ready data. Column 0 is always X.
- * Returns:
- *   data    [{ x, s1: number|null, s2: number|null, ... }] sorted by x
- *           +Infinity marks a gap; -Infinity marks a #N/A skip.
- *   series  the series to draw (from state.series)
- */
-export function buildChartData(state) {
-  const data = []
-  for (const row of state.rows) {
-    const x = num(row[0])
-    if (!Number.isFinite(x)) continue
-    const point = { x }
-    for (const s of state.series) {
-      point[s.id] = row[s.columnIndex]
-    }
-    data.push(point)
+// Build sorted numeric columns. Series metadata follows the same order as ys.
+export function buildChartData(state, { precision = 'float64' } = {}) {
+  if (precision !== 'float64' && precision !== 'float32') {
+    throw new TypeError('precision must be "float64" or "float32".')
   }
-  data.sort((a, b) => a.x - b.x)
-  return { data, series: state.series }
+  const Column = precision === 'float32' ? Float32Array : Float64Array
+  const indexes = []
+  for (let i = 0; i < state.rows.length; i++) {
+    if (Number.isFinite(state.rows[i][0])) indexes.push(i)
+  }
+  indexes.sort((a, b) => state.rows[a][0] - state.rows[b][0])
+
+  const length = indexes.length
+  const x = new Column(length)
+  const ys = state.series.map(() => new Column(length))
+  for (let i = 0; i < length; i++) {
+    const row = state.rows[indexes[i]]
+    x[i] = row[0]
+    for (let s = 0; s < state.series.length; s++) {
+      ys[s][i] = row[state.series[s].columnIndex]
+    }
+  }
+  return { columns: { length, x, ys }, series: state.series }
 }
 
 /** Snap a rough interval to 1 / 2 / 5 x 10^n. */
@@ -67,17 +63,17 @@ function range(from, to, step) {
  * Y: 0..niceMax (35 -> 40, ticks every 10); extends below 0 for negative data.
  * Returns null when there is nothing to plot.
  */
-export function computeScales(data, series) {
-  if (data.length === 0 || series.length === 0) return null
+export function computeScales(columns) {
+  if (columns.length === 0 || columns.ys.length === 0) return null
   let xMin = Infinity
   let xMax = -Infinity
   let yMin = Infinity
   let yMax = -Infinity
-  for (const p of data) {
-    xMin = Math.min(xMin, p.x)
-    xMax = Math.max(xMax, p.x)
-    for (const s of series) {
-      const v = p[s.id]
+  for (let i = 0; i < columns.length; i++) {
+    xMin = Math.min(xMin, columns.x[i])
+    xMax = Math.max(xMax, columns.x[i])
+    for (const y of columns.ys) {
+      const v = y[i]
       if (!Number.isFinite(v)) continue
       yMin = Math.min(yMin, v)
       yMax = Math.max(yMax, v)

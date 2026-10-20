@@ -14,8 +14,8 @@ test('CSV empty cells break a line while #N/A connects neighboring points', () =
     [[1, 2], [4, 5]],
     [[1, 2, 4, 5]],
   ])
-  const { data, series } = buildChartData(state)
-  assert.equal(computeScales(data, series).y.domain.every(Number.isFinite), true)
+  const { columns: chartColumns } = buildChartData(state)
+  assert.equal(computeScales(chartColumns).y.domain.every(Number.isFinite), true)
 })
 
 test('skipped samples do not erase a break or create empty segments at the edges', () => {

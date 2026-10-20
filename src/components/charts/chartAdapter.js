@@ -1,26 +1,31 @@
 import { buildChartData } from './chartUtils.js'
 
 // Keep the editor-to-chart conversion outside the preview component.
-export function prepareChart(state) {
-  const { data, series } = buildChartData(state)
-  const graphSeries = series.map((oneSeries) => ({
-    name: oneSeries.name,
-    color: oneSeries.color,
-    marker: oneSeries.marker,
-    dash: oneSeries.dash,
-    points: data
-      .filter((row) => state.chartType === 'line' || Number.isFinite(row[oneSeries.id]))
-      .map((row) => ({ x: row.x, y: row[oneSeries.id] })),
-  }))
-
+export function prepareChart(state, options) {
+  const { columns, series } = buildChartData(state, options)
   let pointCount = 0
-  for (const oneSeries of graphSeries) {
-    pointCount += oneSeries.points.filter((point) => Number.isFinite(point.y)).length
-  }
+  // TODO: The SVG renderer still needs point objects remove on Canvas migration.
+  const graphSeries = series.map((oneSeries, s) => {
+    const points = []
+    for (let i = 0; i < columns.length; i++) {
+      const y = columns.ys[s][i]
+      const finite = Number.isFinite(y)
+      if (finite) pointCount++
+      if (state.chartType === 'line' || finite) points.push({ x: columns.x[i], y })
+    }
+    return {
+      name: oneSeries.name,
+      color: oneSeries.color,
+      marker: oneSeries.marker,
+      dash: oneSeries.dash,
+      points,
+    }
+  })
 
   return {
     pointCount,
     graphProps: {
+      columns,
       series: graphSeries,
       type: state.chartType,
       showPoints: state.showPoints,
