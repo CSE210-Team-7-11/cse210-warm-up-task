@@ -220,19 +220,20 @@ export function drawLines(ctx, columns, series, layout, { showLines = true, show
 
 // trends are [{ color, firstX, firstY, lastX, lastY }]
 export function drawTrendLines(ctx, trends, layout) {
-  const { left, right, top, bottom } = layout
-  const toX = pixelMap(layout.xMin, layout.xMax, left, right)
-  const toY = pixelMap(layout.yMin, layout.yMax, bottom, top)
+  const { left, right, top, bottom, toX, toY } = layout
   ctx.save()
-  ctx.beginPath()
-  ctx.rect(left, top, right - left, bottom - top)
-  ctx.clip()
-  ctx.globalAlpha = 0.5
-  ctx.setLineDash([4, 3])
-  for (const { color, firstX, firstY, lastX, lastY } of trends) {
-    line(ctx, toX(firstX), toY(firstY), toX(lastX), toY(lastY), color || DEFAULT_COLOR)
+  try {
+    ctx.beginPath()
+    ctx.rect(left, top, right - left, bottom - top)
+    ctx.clip()
+    ctx.globalAlpha = 0.5
+    ctx.setLineDash([4, 3])
+    for (const { color, firstX, firstY, lastX, lastY } of trends) {
+      line(ctx, toX(firstX), toY(firstY), toX(lastX), toY(lastY), color || DEFAULT_COLOR)
+    }
+  } finally {
+    ctx.restore()
   }
-  ctx.restore()
 }
 
 function markerPath(ctx, shape, x, y, size) {

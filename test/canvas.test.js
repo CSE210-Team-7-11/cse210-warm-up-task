@@ -300,3 +300,42 @@ test('series with one point or a single X value have no trend line', () => {
   assert.equal(trendLine([1, 2], [5, -Infinity], 2), null)
   assert.equal(trendLine([2, 2, 2], [1, 5, 9], 3), null)
 })
+
+test('finite trend lines can extend beyond the data bounds and remain clipped', () => {
+  const graph = importedChart('X,A\n-0.55,-8.2\n-0.275,-8.2\n0.275,8.2\n0.55,8.2')
+  const layout = computeLayout(bounds(graph.columns))
+  const fit = trendLine(graph.columns.x, graph.columns.ys[0], graph.columns.length)
+  const trend = { ...fit, firstY: fit.slope * fit.firstX + fit.startHeight, lastY: fit.slope * fit.lastX + fit.startHeight }
+  const ctx = recorder()
+  drawTrendLines(ctx, [trend], layout)
+  const move = ctx.calls.find(([name]) => name === 'moveTo')
+  const line = ctx.calls.find(([name]) => name === 'lineTo')
+  assert.deepEqual(move, ['moveTo', layout.toX(trend.firstX), layout.toY(trend.firstY)])
+  assert.deepEqual(line, ['lineTo', layout.toX(trend.lastX), layout.toY(trend.lastY)])
+  assert.ok(move[2] > layout.bottom)
+  assert.ok(line[2] < layout.top)
+  assert.ok(ctx.calls.some(([name]) => name === 'clip'))
+})
+
+test('trend projection overflow reports the source column and restores Canvas state', () => {
+  for (const values of [
+    ['-8.2e307', '-8.2e307', '8.2e307', '8.2e307'],
+    ['8.2e307', '8.2e307', '-8.2e307', '-8.2e307'],
+  ]) {
+    const text = 'Time,Trial A\n' + ['-0.55', '-0.275', '0.275', '0.55'].map((x, i) => `${x},${values[i]}`).join('\n')
+    const graph = importedChart(text)
+    const layout = computeLayout({ ...bounds(graph.columns), xColumnName: 'Time', yColumnName: 'Trial A' })
+    const fit = trendLine(graph.columns.x, graph.columns.ys[0], graph.columns.length)
+    const trend = { ...fit, firstY: fit.slope * fit.firstX + fit.startHeight, lastY: fit.slope * fit.lastX + fit.startHeight }
+    assert.ok(Object.values(fit).every(Number.isFinite))
+    assert.ok(Number.isFinite(trend.firstY) && Number.isFinite(trend.lastY))
+    const ctx = recorder()
+    assert.throws(() => drawTrendLines(ctx, [trend], layout), {
+      name: 'Float64OverflowError',
+      message: 'The chart position for 9.84e+307 in "Trial A" is too large for 64-bit precision.',
+    })
+    assert.ok(ctx.calls.every(call => call.every(value => typeof value !== 'number' || Number.isFinite(value))))
+    assert.equal(ctx.calls.some(([name]) => name === 'moveTo' || name === 'lineTo'), false)
+    assert.deepEqual(ctx.calls.at(-1), ['restore'])
+  }
+})
