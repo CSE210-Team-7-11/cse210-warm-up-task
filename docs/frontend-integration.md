@@ -29,7 +29,7 @@ Keep the existing demo working while the chart library evolves. The first change
 
 Data stays sorted by x, invalid x values are omitted, and input data is left unchanged. Numeric zero remains a valid sample. The preview still requires at least two valid points in total.
 
-For line charts, empty Y cells become `+Infinity` and break the line. `#N/A` becomes `-Infinity`, which the renderer skips while connecting neighboring valid points. Other invalid Y values are reported as diagnostics and break the line. Line strokes and area fills use the same segments. Markers, coordinate-based hover, and point counts include only finite values. Point-object indexes remain aligned with the shared numeric columns in both chart modes; scatter drawing skips nonfinite Y values.
+For line charts, empty Y cells become `+Infinity` and break the line by default; `parseDelimited(text, { emptyCells })` accepts `'gap'` (default), `'zero'`, or `'connect'` (`-Infinity`). Empty X cells are always invalid. `#N/A` becomes `-Infinity`, which the renderer skips while connecting neighboring valid points. Other invalid Y values are reported as diagnostics and break the line. Line strokes and area fills use the same segments. Markers, coordinate-based hover, and point counts include only finite values. Point-object indexes remain aligned with the shared numeric columns in both chart modes; scatter drawing skips nonfinite Y values.
 
 These markers follow ADR-0007 while retaining the current point-object interface; migration to typed columns remains separate. The importer still supplies raw cell values. Empty-cell choices in an import dialog and the data panel's validation messages remain separate work; the existing panel still flags `#N/A` as nonnumeric.
 
