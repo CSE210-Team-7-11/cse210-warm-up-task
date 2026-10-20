@@ -23,8 +23,28 @@
         </header>
         <main id="home-content">
             <section id="code-demo">
-                <canvas id="code-chart"></canvas>
-                <textarea id="code-editor">Try the library...</textarea>
+                <div id="code-chart"></div>
+                <div class="code-editor">
+                    <pre aria-hidden="true"><code id="code-highlight"></code></pre>
+                    <textarea id="code-editor" aria-label="Live JavaScript chart editor" aria-describedby="code-error" spellcheck="false" autocapitalize="off" wrap="off">// Give the library a try!
+// chart is a createChart() instance, edit as you please.
+chart.update({
+  type: 'line', // Try 'scatter'
+  labels: {
+    title: 'Snack sales',
+    subtitle: 'Made with 78js',
+    x_axis_label: 'Day',
+    y_axis_label: 'Sales',
+  },
+  series: [{ name: 'Snacks', color: '#017143' }],
+  columns: {
+    length: 5,
+    x: Float64Array.of(1, 2, 3, 5, 6),
+    ys: [Float64Array.of(7, 11, 8, 15, 18)],
+  },
+});</textarea>
+                </div>
+                <output id="code-error" role="status"></output>
             </section>
             <section id="promo">
                 <img class="logo" id="main-logo" src="/78js_logo.svg" alt="78 js logo">
@@ -44,5 +64,6 @@
                 <img class="footer-logo" src="/78js_logo_white.svg" alt="78 js logo">
             </a>
         </footer>
+        <script type="module" src="./src/home.js"></script>
     </body>
 </html>

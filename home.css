@@ -1,10 +1,11 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;900&display=swap');
+
 @font-face {
     font-family: 'Monocraft';
     src: url('https://cdn.jsdelivr.net/gh/IdreesInc/Monocraft@main/dist/Monocraft-ttf/Monocraft.ttf') format('truetype');
     font-weight: normal;
     font-style: normal;
 }
-@import url('https://fonts.googleapis.com/css?family=Montserrat:wght@400;500;600;700;900&display=swap');
 
 :root {
     /* Branding colors */ 
@@ -97,16 +98,71 @@ canvas {
 
 #code-demo {
     display: grid;
-    grid-template-rows: 1fr 1fr;
+    grid-template-rows: auto minmax(20rem, 1fr) auto;
+    gap: 1rem;
+    min-width: 0;
 }
 
-#code-editor {
+#code-chart {
+    padding: 2vh;
+    border: 2px solid var(--canvas-border);
+    border-radius: var(--radius-lg);
+}
+
+#code-chart canvas {
+    display: block;
+    border: 0;
+    border-radius: 0;
+}
+
+.code-editor {
+    position: relative;
+    overflow: hidden;
     color: var(--primary-bg);
     background-color: var(--tertiary-bg);
     border-radius: var(--radius-lg);
-    font-family: 'Monocraft', 'Courier New', Courier, monospace;
-    margin-top: 2vh;
-    padding: 2vh 2vh 2vh 2vh;
+}
+
+.code-editor pre,
+.code-editor textarea {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    box-sizing: border-box;
+    padding: 1rem;
+    border: 0;
+    font: 14px/1.5 'Monocraft', 'Courier New', Courier, monospace;
+    white-space: pre;
+    tab-size: 2;
+    scrollbar-gutter: stable;
+}
+
+.code-editor pre {
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.code-editor code {
+    font: inherit;
+}
+
+#code-editor {
+    background: transparent;
+    color: transparent;
+    caret-color: white;
+    resize: none;
+}
+
+.code-editor:focus-within {
+    outline: 2px solid var(--secondary-bg);
+    outline-offset: 2px;
+}
+
+#code-error {
+    color: #a52219;
+    min-height: 1.5em;
+    overflow-wrap: anywhere;
 }
 
 #promo {
