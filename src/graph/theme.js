@@ -9,24 +9,3 @@ export const THEME = {
   outline: '#fff',
   tooltip: { background: '#ffffff', border: '#eaede3', text: '#20382c', muted: '#8a968c' },
 }
-
-export function themeProperties() {
-  const { title, subtitle, label, axis, gridline, outline, tooltip } = THEME
-  return {
-    '--graph-title-size': `${title.size}px`,
-    '--graph-title-weight': title.weight,
-    '--graph-title-color': title.color,
-    '--graph-subtitle-size': `${subtitle.size}px`,
-    '--graph-subtitle-weight': subtitle.weight,
-    '--graph-subtitle-color': subtitle.color,
-    '--graph-label-size': `${label.size}px`,
-    '--graph-label-color': label.color,
-    '--graph-axis': axis,
-    '--graph-gridline': gridline,
-    '--graph-outline': outline,
-    '--graph-series': DEFAULT_COLOR,
-    '--graph-tooltip-background': tooltip.background,
-    '--graph-tooltip-border': tooltip.border,
-    '--graph-tooltip-text': tooltip.text,
-  }
-}

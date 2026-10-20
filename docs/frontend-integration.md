@@ -8,12 +8,12 @@ Keep the existing demo working while the chart library evolves. The first change
 
 ```js
 {
+  columns: { length: 1, x: Float64Array [1], ys: [Float64Array [2]] },
   series: [{
     name: 'Trial A',
     color: '#2a78d6',
     marker: 'circle',
-    dash: '',
-    points: [{ x: 1, y: 2 }]
+    dash: ''
   }],
   type: 'line',
   showPoints: true,
@@ -29,9 +29,9 @@ Keep the existing demo working while the chart library evolves. The first change
 
 Data stays sorted by x, invalid x values are omitted, and input data is left unchanged. Numeric zero remains a valid sample. The preview still requires at least two valid points in total.
 
-For line charts, empty Y cells break the line by default. The data panel's "Empty cells" setting can instead zero them or connect across them: the panel imports with `parseDelimited(text, { emptyCells: 'mark' })`, which keeps empty Y cells as `NaN`, and `buildChartData` turns them into `+Infinity`, `0`, or `-Infinity` for `state.emptyCells` (`'gap'`, `'zero'`, or `'connect'`), so changing the setting needs no new import. Empty X cells are always invalid. `#N/A` becomes `-Infinity`, which the renderer skips while connecting neighboring valid points. Other invalid Y values are reported as diagnostics and break the line. Line strokes and area fills use the same segments. Markers, coordinate-based hover, and point counts include only finite values. Point-object indexes remain aligned with the shared numeric columns in both chart modes; scatter drawing skips nonfinite Y values.
+For line charts, empty Y cells break the line by default. The data panel's "Empty cells" setting can instead zero them or connect across them: the panel imports with `parseDelimited(text, { emptyCells: 'mark' })`, which keeps empty Y cells as `NaN`, and `buildChartData` turns them into `+Infinity`, `0`, or `-Infinity` for `state.emptyCells` (`'gap'`, `'zero'`, or `'connect'`), so changing the setting needs no new import. Empty X cells are always invalid. `#N/A` becomes `-Infinity`, which the renderer skips while connecting neighboring valid points. Other invalid Y values are reported as diagnostics and break the line. Both chart types read the same columns, and a scatter chart is drawn as a line chart without the lines. Markers, hover, and point counts include only finite values.
 
-These markers follow ADR-0007 while retaining the current point-object interface; migration to typed columns remains separate. The importer still supplies raw cell values. Empty-cell choices in an import dialog and the data panel's validation messages remain separate work; the existing panel still flags `#N/A` as nonnumeric.
+These markers and columns follow ADR-0007. The importer still supplies raw cell values. Empty-cell choices in an import dialog and the data panel's validation messages remain separate work; the existing panel still flags `#N/A` as nonnumeric.
 
 ## Integration changes
 

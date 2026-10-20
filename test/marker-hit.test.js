@@ -19,21 +19,21 @@ const markerOptions = (isAbove) => ({
 test('visible marker shapes include their edges and reject transparent corners', () => {
   assert.equal(containsMarker('circle', 3, 4, 5), true)
   assert.equal(containsMarker('circle', 5, 5, 5), false)
-  assert.equal(containsMarker('square', 5, 5, 5), true)
-  assert.equal(containsMarker('square', 5, 5, 5, true), false)
-  assert.equal(containsMarker('triangle', 0, -5, 5), true)
-  assert.equal(containsMarker('triangle', 5, -5, 5), false)
+  assert.equal(containsMarker('square', 4.5, 4.5, 5), true)
+  assert.equal(containsMarker('square', 5, 5, 5), false)
   assert.equal(containsMarker('triangle', 5, 5, 5), true)
-  assert.equal(containsMarker('triangle', 0, -6, 5, true), true)
-  assert.equal(containsMarker('triangle', 0, -6.01, 5, true), false)
+  assert.equal(containsMarker('triangle', 5, -5, 5), false)
+  assert.equal(containsMarker('triangle', 0, -6, 5), true)
+  assert.equal(containsMarker('triangle', 0, -6.01, 5), false)
   assert.equal(containsMarker('circle', 0, 0, 0), false)
 })
 
 test('marker hit testing includes visible outlines', () => {
-  assert.equal(containsMarker('circle', 5.5, 0, 5, false, 0.5), true)
-  assert.equal(containsMarker('square', 5.5, 5.5, 5, false, 0.5), true)
-  assert.equal(containsMarker('triangle', 0, -5.5, 5, false, 0.5), true)
-  assert.equal(containsMarker('triangle', 0, -7, 5, false, 0.5), false)
+  assert.equal(containsMarker('circle', 5.5, 0, 5, 0.5), true)
+  assert.equal(containsMarker('square', 5.5, 0, 5, 0.5), true)
+  assert.equal(containsMarker('square', 5.5, 5.5, 5, 0.5), false)
+  assert.equal(containsMarker('triangle', 0, -6.5, 5, 0.5), true)
+  assert.equal(containsMarker('triangle', 0, -7.5, 5, 0.5), false)
 })
 
 test('a visible upper series wins over a covered point with a closer centre', () => {
@@ -73,7 +73,7 @@ test('nearest-point selection remains available between markers and when markers
 test('square corners outside a circular target are still visible hits', () => {
   const columns = imported('X,A\n50,50')
   const options = { maxRadius: 3, hitTest: (_s, _i, dx, dy) => containsMarker('square', -dx, -dy, 3) }
-  assert.deepEqual(findNearest(columns, layout, layout.toX(50) + 3, layout.toY(50) + 3, 0, options), { seriesIndex: 0, index: 0 })
+  assert.deepEqual(findNearest(columns, layout, layout.toX(50) + 2.5, layout.toY(50) + 2.5, 0, options), { seriesIndex: 0, index: 0 })
 })
 
 test('missing values cannot become visible hits and inputs remain unchanged', () => {

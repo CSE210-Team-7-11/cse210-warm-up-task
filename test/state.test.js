@@ -31,10 +31,11 @@ test('whitespace CSV cells create gaps and missing-X warnings without zero point
   assert.deepEqual(findIssues(state), [['invalid-x', [2]], ['empty-cell', [[1, 1]]]])
   const line = prepareChart(state)
   assert.equal(line.pointCount, 3)
-  assert.deepEqual(line.graphProps.series[0].points, [
+  assert.deepEqual(Array.from(line.graphProps.columns.x, (x, i) => ({ x, y: line.graphProps.columns.ys[0][i] })), [
     { x: 1, y: 10 }, { x: 2, y: Infinity }, { x: 3, y: 30 }, { x: 4, y: 0 },
   ])
-  assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.series[0].points.filter(p => Number.isFinite(p.y)), [
+  const { columns } = prepareChart({ ...state, chartType: 'scatter' }).graphProps
+  assert.deepEqual(Array.from(columns.x, (x, i) => ({ x, y: columns.ys[0][i] })).filter(p => Number.isFinite(p.y)), [
     { x: 1, y: 10 }, { x: 3, y: 30 }, { x: 4, y: 0 },
   ])
 })

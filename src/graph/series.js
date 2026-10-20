@@ -7,10 +7,10 @@ export function prepareSeries(series, columns) {
   for (let i = 0; i < colored.length; i++) {
     if (!colored[i].color) continue
     shown.push(colored[i])
-    if (columns) ys.push(columns.ys[i])
+    ys.push(columns.ys[i])
   }
   return {
     series: shown,
-    columns: columns && (shown.length === series.length ? columns : { ...columns, ys }),
+    columns: shown.length === series.length ? columns : { ...columns, ys },
   }
 }
