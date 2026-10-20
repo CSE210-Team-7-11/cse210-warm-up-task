@@ -77,6 +77,52 @@ export function invert(domainMin, domainMax, rangeMin, rangeMax, columnName = 'a
   }
 }
 
+export function findNearest(columns, layout, px, py, maxDistance, { radiusAt, maxRadius = maxDistance } = {}) {
+  if (!columns.length || !Number.isFinite(px) || !Number.isFinite(py) ||
+    !Number.isFinite(maxDistance) || maxDistance < 0 ||
+    !Number.isFinite(maxRadius) || maxRadius < 0) return null
+
+  const inverseX = layout.fromX(Math.max(layout.left, Math.min(px, layout.right)))
+  const x = Math.max(layout.xMin, Math.min(inverseX, layout.xMax))
+  let low = 0
+  let high = columns.length
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2)
+    if (columns.x[middle] < x) low = middle + 1
+    else high = middle
+  }
+
+  let nearest = null
+  let distance = Math.max(maxDistance, maxRadius)
+  function check(index) {
+    // Missing-only rows can lie outside the plotted domain. Do not project them.
+    if (columns.x[index] < layout.xMin || columns.x[index] > layout.xMax) return false
+    const dx = layout.toX(columns.x[index]) - px
+    if (Math.abs(dx) > distance) return false
+    for (let seriesIndex = 0; seriesIndex < columns.ys.length; seriesIndex++) {
+      const y = columns.ys[seriesIndex][index]
+      if (!Number.isFinite(y)) continue
+      const nextDistance = Math.hypot(dx, layout.toY(y) - py)
+      const targetRadius = Math.max(maxDistance, radiusAt?.(seriesIndex, index) ?? 0)
+      if (nextDistance > targetRadius) continue
+      if (nextDistance < distance || (nextDistance === distance && (!nearest ||
+        seriesIndex < nearest.seriesIndex || (seriesIndex === nearest.seriesIndex && index < nearest.index)))) {
+        distance = nextDistance
+        nearest = { seriesIndex, index }
+      }
+    }
+    return true
+  }
+
+  for (let i = low; i < columns.length; i++) {
+    if (!check(i)) break
+  }
+  for (let i = low - 1; i >= 0; i--) {
+    if (!check(i)) break
+  }
+  return nearest
+}
+
 export function computeLayout({ xMin, xMax, yMin, yMax, xColumnName = 'X', yColumnName = 'Y' }) {
   const left = MARGIN.left
   const right = WIDTH - MARGIN.right
@@ -94,6 +140,8 @@ export function computeLayout({ xMin, xMax, yMin, yMax, xColumnName = 'X', yColu
   ])
 
   return {
+    xMin,
+    xMax,
     left,
     right,
     top,

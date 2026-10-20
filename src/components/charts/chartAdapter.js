@@ -11,7 +11,7 @@ export function prepareChart(state, options) {
       const y = columns.ys[s][i]
       const finite = Number.isFinite(y)
       if (finite) pointCount++
-      if (state.chartType === 'line' || finite) points.push({ x: columns.x[i], y })
+      points.push({ x: columns.x[i], y })
     }
     return {
       name: oneSeries.name,

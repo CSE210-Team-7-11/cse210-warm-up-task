@@ -17,7 +17,7 @@ test('quoted empty/formula-empty fields break lines, #N/A connects, and actual z
   assert.deepEqual(line.graphProps.series[0].points.map(p => p.y), [10, Infinity, 30, -Infinity, 50, Infinity, 0])
   assert.deepEqual(lineSegments(line.graphProps.series[0].points).map(segment => segment.map(p => p.x)), [[1], [3, 5], [7]])
   const scatter = prepareChart({ ...state, chartType: 'scatter' })
-  assert.deepEqual(scatter.graphProps.series[0].points, [{ x: 1, y: 10 }, { x: 3, y: 30 }, { x: 5, y: 50 }, { x: 7, y: 0 }])
+  assert.deepEqual(scatter.graphProps.series[0].points.filter(p => Number.isFinite(p.y)), [{ x: 1, y: 10 }, { x: 3, y: 30 }, { x: 5, y: 50 }, { x: 7, y: 0 }])
   assert.deepEqual(findIssues(state), [['empty-cell', [[1, 1], [1, 5]]]])
 })
 
@@ -43,7 +43,7 @@ test('invalid Y text produces cell diagnostics and gaps rather than zero or #N/A
   assert.equal(line.pointCount, 2)
   assert.deepEqual(line.graphProps.series[0].points.slice(1, -1).map(p => p.y), invalid.map(() => Infinity))
   assert.deepEqual(lineSegments(line.graphProps.series[0].points).map(segment => segment.map(p => p.x)), [[1], [11]])
-  assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.series[0].points, [{ x: 1, y: 10 }, { x: 11, y: 20 }])
+  assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.series[0].points.filter(p => Number.isFinite(p.y)), [{ x: 1, y: 10 }, { x: 11, y: 20 }])
 })
 
 test('quoted locale numbers retain field boundaries and convert without shifting later series', () => {
@@ -104,5 +104,5 @@ test('100k imported rows retain counts, endpoints, missing values and series pai
   assert.deepEqual(line.graphProps.series.map(s => s.points.length), [length - 1, length - 1, length - 1])
   assert.deepEqual(line.graphProps.series.map(s => s.points[0]), [{ x: 1, y: 99999 }, { x: 1, y: 199998 }, { x: 1, y: -99999 }])
   assert.deepEqual(line.graphProps.series.map(s => s.points.at(-1)), [{ x: length, y: 0 }, { x: length, y: 0 }, { x: length, y: 0 }])
-  assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.series.map(s => s.points.length), [length - 2, length - 2, length - 1])
+  assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.series.map(s => s.points.filter(p => Number.isFinite(p.y)).length), [length - 2, length - 2, length - 1])
 })
