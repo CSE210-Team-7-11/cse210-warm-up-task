@@ -9,6 +9,7 @@ import Papa from 'papaparse'
 import { isEmptyCell, isNumericOverflow, parseCell, resolveNumberFormat } from './numberFormat.js'
 import { Float64OverflowError, throwOverflowErrors } from './numericErrors.js'
 import { losesFloat64Precision } from './precision.js'
+import { addDiagnostic, createDiagnostics } from './diagnostics.js'
 
 export { parseCell } from './numberFormat.js'
 
@@ -113,19 +114,27 @@ export function parseDelimited(text, { numberFormat: requestedFormat = 'auto' } 
   const invalidNumbers = []
   const emptyCells = []
   const rows = []
-  const overflowErrors = []
-  const precisionChanges = []
+  const overflowErrors = createDiagnostics()
+  const precisionChanges = createDiagnostics()
   function importedCell(value, c, r, recordPrecision = true) {
     const parsed = parseCell(value, numberFormat)
     if (parsed === null && isNumericOverflow(value, numberFormat)) {
-      overflowErrors.push(new Float64OverflowError(String(value).trim(), columns[c].name, { sourceRow: r }))
+      addDiagnostic(overflowErrors, () => new Float64OverflowError(String(value).trim(), columns[c].name, { sourceRow: r }))
     }
     if (recordPrecision && Number.isFinite(parsed) && losesFloat64Precision(value, parsed, numberFormat)) {
-      precisionChanges.push([c, r, value, parsed])
+      addDiagnostic(precisionChanges, () => [c, r, value, parsed])
     }
     return parsed
   }
   body.forEach((row, r) => {
+    if (overflowErrors.count) {
+      for (let c = 0; c < columns.length; c++) {
+        if (isNumericOverflow(row[c], numberFormat)) {
+          addDiagnostic(overflowErrors, () => new Float64OverflowError(String(row[c]).trim(), columns[c].name, { sourceRow: r }))
+        }
+      }
+      return
+    }
     if (row.length < columns.length) tooFew.push(r)
     if (row.slice(columns.length).some((v) => !isEmptyCell(v))) tooMany.push(r)
     const x = importedCell(row[0], 0, r)
@@ -180,7 +189,10 @@ export function parseDelimited(text, { numberFormat: requestedFormat = 'auto' } 
   if (invalidX.length) issues.push(['invalid-x', invalidX])
   if (invalidNumbers.length) issues.push(['invalid-number', invalidNumbers])
   if (emptyCells.length) issues.push(['empty-cell', emptyCells])
-  if (precisionChanges.length) issues.push(['precision-loss', precisionChanges])
+  if (precisionChanges.count) issues.push(['precision-loss', precisionChanges.items])
+  if (precisionChanges.count > precisionChanges.items.length) {
+    issues.push(['precision-loss-truncated', precisionChanges.count - precisionChanges.items.length])
+  }
   if (headerIsText) {
     const names = new Map()
     columns.forEach(({ name }, c) => {

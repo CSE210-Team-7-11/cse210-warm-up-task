@@ -5,6 +5,7 @@ import { Float32OverflowError, finiteCalculation, throwOverflowErrors } from '..
 
 export { Float32OverflowError } from '../../numericErrors.js'
 import { precisionWarning } from '../../precision.js'
+import { addDiagnostic, createDiagnostics } from '../../diagnostics.js'
 
 export const CHART_HEIGHT = 420
 
@@ -37,29 +38,29 @@ export function buildChartData(state, { precision = 'float64' } = {}) {
   const length = indexes.length
   const x = new Column(length)
   const ys = state.series.map(() => new Column(length))
-  const errors = []
-  const warnings = []
+  const errors = createDiagnostics()
+  const warnings = createDiagnostics()
   for (let i = 0; i < length; i++) {
     const row = state.rows[indexes[i]]
     x[i] = row[0]
     if (precision === 'float32' && !Number.isFinite(x[i])) {
-      errors.push(new Float32OverflowError(row[0], state.columns[0]?.name ?? 'X'))
+      addDiagnostic(errors, () => new Float32OverflowError(row[0], state.columns[0]?.name ?? 'X'))
     } else if (!Object.is(row[0], x[i])) {
-      warnings.push(precisionWarning(row[0], x[i], state.columns[0]?.name ?? 'X', 32))
+      addDiagnostic(warnings, () => precisionWarning(row[0], x[i], state.columns[0]?.name ?? 'X', 32))
     }
     for (let s = 0; s < state.series.length; s++) {
       const columnIndex = state.series[s].columnIndex
       const value = row[columnIndex]
       ys[s][i] = value
       if (precision === 'float32' && Number.isFinite(value) && !Number.isFinite(ys[s][i])) {
-        errors.push(new Float32OverflowError(value, state.columns[columnIndex]?.name ?? `Column ${columnIndex + 1}`))
+        addDiagnostic(errors, () => new Float32OverflowError(value, state.columns[columnIndex]?.name ?? `Column ${columnIndex + 1}`))
       } else if (Number.isFinite(value) && !Object.is(value, ys[s][i])) {
-        warnings.push(precisionWarning(value, ys[s][i], state.columns[columnIndex]?.name ?? `Column ${columnIndex + 1}`, 32))
+        addDiagnostic(warnings, () => precisionWarning(value, ys[s][i], state.columns[columnIndex]?.name ?? `Column ${columnIndex + 1}`, 32))
       }
     }
   }
   throwOverflowErrors(errors)
-  return { columns: { length, x, ys }, series: state.series, warnings }
+  return { columns: { length, x, ys }, series: state.series, warnings: warnings.items, warningCount: warnings.count }
 }
 
 /** Snap a rough interval to 1 / 2 / 5 x 10^n. */

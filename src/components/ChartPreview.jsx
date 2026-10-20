@@ -34,7 +34,7 @@ function GraphView({ graphProps, onRenderResult }) {
 
 // the chart is drawn by the graph library in src/graph
 export default function ChartPreview({ state, precision = 'float64' }) {
-  const { graphProps, pointCount, warnings = [], error: preparationError } = useMemo(() => {
+  const { graphProps, pointCount, warnings = [], warningCount, error: preparationError } = useMemo(() => {
     try {
       return prepareChart(state, { precision })
     } catch (error) {
@@ -67,7 +67,7 @@ export default function ChartPreview({ state, precision = 'float64' }) {
         ) : (
           <GraphView graphProps={graphProps} onRenderResult={onRenderResult} />
         )}
-        <PrecisionWarnings warnings={warnings} />
+        <PrecisionWarnings warnings={warnings} count={warningCount} />
       </div>
 
       {!error && (

@@ -34,9 +34,10 @@ export default function DataPanel({ state, onImport }) {
     [columns, rows, parseIssues],
   )
   const warnings = issues.filter(isWarning)
-  const notes = issues.filter((issue) => !isWarning(issue) && issue[0] !== 'precision-loss')
+  const notes = issues.filter((issue) => !isWarning(issue) && issue[0] !== 'precision-loss' && issue[0] !== 'precision-loss-truncated')
   const precisionWarnings = issues.filter(([type]) => type === 'precision-loss')
     .flatMap(([, cells]) => cells.map(([c, r, text, stored]) => precisionWarning(text, stored, columns[c].name, 64, r)))
+  const precisionCount = precisionWarnings.length + (issues.find(([type]) => type === 'precision-loss-truncated')?.[1] ?? 0)
 
   const readFile = useCallback(
     (file) => {
@@ -173,7 +174,7 @@ export default function DataPanel({ state, onImport }) {
               {describeIssue(issue, { columns, rows })}
             </p>
           ))}
-          <PrecisionWarnings warnings={precisionWarnings} />
+          <PrecisionWarnings warnings={precisionWarnings} count={precisionCount} />
         </div>
       </div>
     </section>

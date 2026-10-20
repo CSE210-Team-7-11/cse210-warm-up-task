@@ -4,16 +4,72 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
 import { initialState, parseDelimited, seriesFromColumns } from '../src/state.js'
+import { prepareChart } from '../src/components/charts/chartAdapter.js'
 
 let server
 let ChartPreview
 let DataPanel
+let PrecisionWarnings
+let NumericOverflowAlert
+let parseForUI
 before(async () => {
   server = await createServer({ server: { middlewareMode: true, hmr: false, ws: false }, appType: 'custom' })
   ChartPreview = (await server.ssrLoadModule('/src/components/ChartPreview.jsx')).default
   DataPanel = (await server.ssrLoadModule('/src/components/DataPanel.jsx')).default
+  PrecisionWarnings = (await server.ssrLoadModule('/src/components/PrecisionWarnings.jsx')).default
+  NumericOverflowAlert = (await server.ssrLoadModule('/src/components/NumericOverflowAlert.jsx')).default
+  parseForUI = (await server.ssrLoadModule('/src/state.js')).parseDelimited
 })
 after(async () => { await server?.close() })
+
+test('precision feedback shows at most ten warnings and marks truncated lists', () => {
+  for (const length of [0, 1, 10, 11]) {
+    const parsed = parseDelimited('X,A\n' + '1,0.1\n'.repeat(length))
+    const state = { ...initialState, ...parsed, series: seriesFromColumns(parsed.columns) }
+    const { warnings, warningCount } = prepareChart(state, { precision: 'float32' })
+    const html = renderToStaticMarkup(createElement(PrecisionWarnings, { warnings, count: warningCount }))
+    assert.equal(warnings.length, Math.min(length, 10))
+    assert.equal(warningCount, length)
+    assert.equal((html.match(/<li>/g) ?? []).length, Math.min(length, 10))
+    if (length > 10) assert.ok(html.includes(`List truncated. Showing the first 10 of ${length} warnings.`))
+    else assert.doesNotMatch(html, /truncated/)
+    if (length) assert.ok(html.includes(`${length} ${length === 1 ? 'value was' : 'values were'} rounded`))
+    else assert.equal(html, '')
+  }
+})
+
+test('overflow feedback shows at most ten errors and marks truncated lists', () => {
+  for (const length of [2, 10, 11]) {
+    const text = 'X,A\n' + Array.from({ length }, (_, i) => `1,${i + 1}e309`).join('\n')
+    assert.throws(() => parseForUI(text), (error) => {
+      const html = renderToStaticMarkup(createElement(NumericOverflowAlert, { error }))
+      assert.equal(error.errors.length, Math.min(length, 10))
+      assert.equal(error.count, length)
+      assert.equal((html.match(/<li>/g) ?? []).length, Math.min(length, 10))
+      for (let i = 0; i < Math.min(length, 10); i++) assert.ok(html.includes(`${i + 1}e309 `))
+      assert.doesNotMatch(html, /11e309/)
+      if (length > 10) assert.ok(html.includes(`List truncated. Showing the first 10 of ${length} errors.`))
+      else assert.doesNotMatch(html, /truncated/)
+      assert.ok(html.includes(`${length} numeric overflow errors:`))
+      return true
+    })
+  }
+})
+
+test('import precision feedback uses the truncated count and preserves the first ten positions', () => {
+  for (const length of [10, 11]) {
+    const parsed = parseDelimited('X,A\n' + '1,1e-400\n'.repeat(length))
+    const state = { ...initialState, ...parsed, parseIssues: parsed.issues, series: seriesFromColumns(parsed.columns) }
+    const html = renderToStaticMarkup(createElement(DataPanel, { state, onImport: () => {} }))
+    assert.equal((html.match(/<li>/g) ?? []).length, 10)
+    assert.match(html, /source data row 1\)/)
+    assert.match(html, /source data row 10\)/)
+    assert.doesNotMatch(html, /source data row 11\)/)
+    assert.ok(html.includes(`${length} values were rounded`))
+    if (length > 10) assert.match(html, /List truncated. Showing the first 10 of 11 warnings./)
+    else assert.doesNotMatch(html, /truncated/)
+  }
+})
 
 test('notifies the user of float32 overflow instead of displaying a corrupted chart', () => {
   for (const text of ['X,A\n1,1\n2,-1e40\n3,3', 'X,A\n1e40,1\n2e40,2']) {

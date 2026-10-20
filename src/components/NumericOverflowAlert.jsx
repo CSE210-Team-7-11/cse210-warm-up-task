@@ -6,10 +6,11 @@ export default function NumericOverflowAlert({ error, className, children }) {
     <div className={className} role="alert">
       {error instanceof NumericOverflowErrors ? (
         <>
-          <p>{error.errors.length} numeric overflow errors:</p>
+          <p>{error.count} numeric overflow errors:</p>
           <ul className="numeric-overflow-errors">
             {error.errors.map((oneError, index) => <li key={index}>{oneError.message}</li>)}
           </ul>
+          {error.count > error.errors.length && <p>List truncated. Showing the first {error.errors.length} of {error.count} errors.</p>}
         </>
       ) : <p>{error.message}</p>}
       {children && <p>{children}</p>}
