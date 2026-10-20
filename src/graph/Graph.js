@@ -1,5 +1,5 @@
-import { WIDTH, HEIGHT, bounds, computeLayout, findNearest, trendLine } from './scale.js'
-import { drawFrame, drawLegend, drawLines, drawMarker, drawTooltip, drawTrendLines } from './canvas.js'
+import { WIDTH, bounds, computeLayout, findNearest, trendLine } from './scale.js'
+import { drawFrame, drawLegend, drawLines, drawMarker, drawTooltip, drawTrendLines, measureLegend } from './canvas.js'
 import { prepareSeries } from './series.js'
 import { containsMarker } from './markerHit.js'
 import { collectOverflowErrors, finiteCalculation } from '../numericErrors.js'
@@ -51,9 +51,11 @@ export function createChart(container, options) {
     // scatter charts always show their points
     const markerSize = type === 'scatter' || showPoints ? pointSize : 0
     const markerRadius = () => markerSize / 2
+    if (!canvas.isConnected) container.append(canvas)
+    const legend = measureLegend(ctx, shownSeries, { title, subtitle })
 
     const [layout, trends] = collectOverflowErrors([
-      () => computeLayout({ xMin, xMax, yMin, yMax, xColumnName: xName, yColumnName: yName }),
+      () => ({ ...computeLayout({ xMin, xMax, yMin, yMax, xColumnName: xName, yColumnName: yName, extraHeight: legend.extraHeight }), legend }),
       () => showTrendLine && type === 'scatter' ? collectOverflowErrors(shownSeries.map((oneSeries, s) => () => {
         const seriesName = oneSeries.name || y_axis_label
         const trend = trendLine(columns.x, columns.ys[s], columns.length, xName, seriesName)
@@ -76,12 +78,12 @@ export function createChart(container, options) {
     }
     const isAbove = (s, i, otherSeries, otherIndex) => s < otherSeries || (s === otherSeries && i > otherIndex)
     canvas.setAttribute('aria-label', `${type} plot of ${pointCount} points`)
-    if (!canvas.isConnected) container.append(canvas)
 
     view = { columns, layout, markerRadius, maxRadius: markerSize / 2, hitTest: markerSize ? hitTest : undefined, maxHitRadius, isAbove,
       shownSeries, type, x_axis_label, toX, toY, bounds: { left, right, top, bottom }, trends: trends.filter(Boolean),
       labels: { title, subtitle, x_axis_label, y_axis_label }, markerSize, dense }
     drawCanvas()
+    return { warnings: legend.warnings }
   }
 
   function drawCanvas() {
@@ -89,13 +91,13 @@ export function createChart(container, options) {
     if (!cssWidth) return
     const ratio = window.devicePixelRatio || 1
     const width = Math.round(cssWidth * ratio)
-    const height = Math.round(cssWidth * HEIGHT / WIDTH * ratio)
+    const height = Math.round(cssWidth * view.layout.height / WIDTH * ratio)
     if (canvas.width !== width || canvas.height !== height) {
       canvas.width = saved.width = width
       canvas.height = saved.height = height
     }
-    ctx.setTransform(width / WIDTH, 0, 0, height / HEIGHT, 0, 0)
-    ctx.clearRect(0, 0, WIDTH, HEIGHT)
+    ctx.setTransform(width / WIDTH, 0, 0, height / view.layout.height, 0, 0)
+    ctx.clearRect(0, 0, WIDTH, view.layout.height)
     const { columns, layout, shownSeries, labels, type, trends, markerSize, dense } = view
     drawFrame(ctx, layout, labels)
     drawLegend(ctx, shownSeries, layout)
@@ -138,7 +140,7 @@ export function createChart(container, options) {
     const rect = event.currentTarget.getBoundingClientRect()
     if (!rect.width || !rect.height) return
     const px = (event.clientX - rect.left) * WIDTH / rect.width
-    const py = (event.clientY - rect.top) * HEIGHT / rect.height
+    const py = (event.clientY - rect.top) * view.layout.height / rect.height
     const nearest = findNearest(view.columns, view.layout, px, py, HOVER_DISTANCE, {
       radiusAt: view.markerRadius, maxRadius: view.maxRadius,
       hitTest: view.hitTest, maxHitRadius: view.maxHitRadius, isAbove: view.isAbove,
