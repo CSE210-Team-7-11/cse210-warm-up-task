@@ -1,6 +1,4 @@
 import { useCallback, useState } from 'react'
-import TopNav from './components/TopNav.jsx'
-import TitleBar from './components/TitleBar.jsx'
 import ChartTypePicker from './components/ChartTypePicker.jsx'
 import DataPanel from './components/DataPanel.jsx'
 import ChartPreview from './components/ChartPreview.jsx'
@@ -30,14 +28,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <TopNav userInitials="LK" />
       <main className="page">
-        <TitleBar
-          graphName={state.graphName}
-          onRename={(graphName) => update({ graphName })}
-          onNewGraph={() => setState(initialState)}
-        />
-
         <div className="workspace">
           <aside className="column column-left">
             <ChartTypePicker
@@ -55,11 +46,10 @@ export default function App() {
             <SpecsPanel state={state} update={update} onReset={resetSpecs} />
           </aside>
         </div>
-
-        <footer className="page-footer">
-          We are selling your data. Don&apos;t say we didn&apos;t warn you.
-        </footer>
       </main>
+      <footer className="page-footer">
+        <a href="./home.html">Back to 78js</a>
+      </footer>
     </div>
   )
 }

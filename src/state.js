@@ -76,7 +76,6 @@ export const DEFAULT_SPECS = {
 }
 
 export const initialState = {
-  graphName: 'How Many Smitskis I Own',
   chartType: 'line', // 'line' | 'scatter'
   sourceName: 'Sample data',
   columns: DEFAULT_COLUMNS,

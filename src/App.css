@@ -18,7 +18,6 @@
   gap: 16px;
   /* All three columns share a bottom edge in the mockup. */
   align-items: stretch;
-  margin-top: 16px;
 }
 
 .column {
@@ -52,9 +51,16 @@
 }
 
 .page-footer {
-  margin-top: 24px;
-  font-size: 11px;
-  color: var(--text-muted);
+  padding: 16px 32px;
+  border-top: 1px solid var(--border);
+  background: var(--bg-surface);
+  font-size: var(--font-md);
+  text-align: center;
+}
+
+.page-footer a {
+  color: var(--green-700);
+  text-underline-offset: 3px;
 }
 
 /* Three columns hold down to ~1000px; below that the specs column drops under. */
