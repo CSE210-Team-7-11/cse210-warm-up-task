@@ -4,7 +4,7 @@ import { parseDelimited, initialState, seriesFromColumns } from '../src/state.js
 import { prepareChart } from '../src/components/charts/chartAdapter.js'
 import { findIssues } from '../src/importFeedback.js'
 
-test('keeps whitespace-only cells missing while preserving zero and nonblank text', () => {
+test('keeps whitespace-only cells missing and preserves zero and original invalid text in diagnostics', () => {
   for (const delimiter of [',', ';', '\t']) {
     const text = [
       ['X', 'A', 'B'],
@@ -14,8 +14,10 @@ test('keeps whitespace-only cells missing while preserving zero and nonblank tex
       ['3', ' 4 ', '#N/A'],
     ].map(row => row.join(delimiter)).join('\n')
     const parsed = parseDelimited(text)
-    assert.deepEqual(parsed.rows, [[1, '', 0], [2, '', ' padded '], ['', 20, 30], [3, 4, '#N/A']])
-    assert.deepEqual(parsed.issues, [])
+    assert.deepEqual(parsed.rows, [[1, Infinity, 0], [2, Infinity, Infinity], [3, 4, -Infinity]])
+    assert.deepEqual(parsed.issues, [
+      ['invalid-x', [2]], ['invalid-number', [[2, 1, ' padded ']]], ['empty-cell', [[1, 0], [1, 1]]],
+    ])
   }
 })
 
@@ -39,7 +41,7 @@ test('whitespace CSV cells create gaps and missing-X warnings without zero point
 test('keeps quoted commas in one field without shifting later values', () => {
   const parsed = parseDelimited('X,A,B\n2,"1,010",905')
 
-  assert.deepEqual(parsed.rows, [[2, '1,010', 905]])
+  assert.deepEqual(parsed.rows, [[2, 1010, 905]])
   assert.deepEqual(parsed.issues, [])
   assert.equal(parsed.delimiter, ',')
 })
@@ -47,8 +49,10 @@ test('keeps quoted commas in one field without shifting later values', () => {
 test('preserves quoted newlines, escaped quotes and spaces inside fields', () => {
   const parsed = parseDelimited('X,A,B\n1,"first\nsecond","say ""hi"""\n2," padded ",3')
 
-  assert.deepEqual(parsed.rows, [[1, 'first\nsecond', 'say "hi"'], [2, ' padded ', 3]])
-  assert.deepEqual(parsed.issues, [])
+  assert.deepEqual(parsed.rows, [[1, Infinity, Infinity], [2, Infinity, 3]])
+  assert.deepEqual(parsed.issues, [['invalid-number', [
+    [1, 0, 'first\nsecond'], [2, 0, 'say "hi"'], [1, 1, ' padded '],
+  ]]])
 })
 
 test('detects semicolon and tab delimiters', () => {
@@ -66,8 +70,8 @@ test('retains numeric first rows and the existing numeric conversion', () => {
   const parsed = parseDelimited('1,0x10,2e2\n2,,#N/A')
 
   assert.deepEqual(parsed.columns.map(({ name }) => name), ['Column 1', 'Column 2', 'Column 3'])
-  assert.deepEqual(parsed.rows, [[1, 16, 200], [2, '', '#N/A']])
-  assert.deepEqual(parsed.issues, [])
+  assert.deepEqual(parsed.rows, [[1, 16, 200], [2, Infinity, -Infinity]])
+  assert.deepEqual(parsed.issues, [['empty-cell', [[1, 1]]]])
 })
 
 test('keeps duplicate header names without renaming or dropping columns', () => {
@@ -77,13 +81,14 @@ test('keeps duplicate header names without renaming or dropping columns', () => 
     { key: 'c0', name: 'X' }, { key: 'c1', name: 'A' }, { key: 'c2', name: 'A' },
   ])
   assert.deepEqual(parsed.rows, [[1, 2, 3]])
+  assert.deepEqual(parsed.issues, [['duplicate-header', [1, 2]]])
 })
 
 test('reports short and long rows before padding or trimming them', () => {
   const parsed = parseDelimited('X,A,B\n1,2\n2,3,4,5\n3,4,5,\n4,5,6')
 
-  assert.deepEqual(parsed.issues, [['TooFewFields', [0]], ['TooManyFields', [1]]])
-  assert.deepEqual(parsed.rows, [[1, 2, ''], [2, 3, 4], [3, 4, 5], [4, 5, 6]])
+  assert.deepEqual(parsed.issues, [['TooFewFields', [0]], ['TooManyFields', [1]], ['empty-cell', [[2, 0]]]])
+  assert.deepEqual(parsed.rows, [[1, 2, Infinity], [2, 3, 4], [3, 4, 5], [4, 5, 6]])
 })
 
 test('skips blank records without dropping zero values or creating trailing rows', () => {
@@ -97,7 +102,10 @@ test('skips blank records without dropping zero values or creating trailing rows
 test('reports malformed quotes alongside row-width issues', () => {
   const parsed = parseDelimited('X,A,B\n1,2\n2,"broken')
 
-  assert.deepEqual(parsed.issues, [['TooFewFields', [0, 1]], ['MissingQuotes', [1]]])
+  assert.deepEqual(parsed.issues, [
+    ['TooFewFields', [0, 1]], ['MissingQuotes', [1]],
+    ['invalid-number', [[1, 1, 'broken']]], ['empty-cell', [[2, 0], [2, 1]]],
+  ])
 })
 
 test('groups repeated Papa errors by code using data-row positions', () => {
@@ -106,21 +114,28 @@ test('groups repeated Papa errors by code using data-row positions', () => {
   assert.deepEqual(parsed.issues, [
     ['InvalidQuotes', [0, 0, 0]],
     ['MissingQuotes', [0]],
+    ['invalid-number', [[1, 0, 'a"b\n2,"c"d']]],
   ])
 })
 
-test('maps errors past leading blanks, a header, and a multiline record to returned rows', () => {
+test('maps errors past leading blanks, a header, and a multiline record to source data rows', () => {
   const parsed = parseDelimited('\n \nX,Y,Z\n1,"first\nsecond",3\n\n2,"broken')
 
-  assert.deepEqual(parsed.rows, [[1, 'first\nsecond', 3], [2, 'broken', '']])
-  assert.deepEqual(parsed.issues, [['TooFewFields', [1]], ['MissingQuotes', [1]]])
+  assert.deepEqual(parsed.rows, [[1, Infinity, 3], [2, Infinity, Infinity]])
+  assert.deepEqual(parsed.issues, [
+    ['TooFewFields', [1]], ['MissingQuotes', [1]],
+    ['invalid-number', [[1, 0, 'first\nsecond'], [1, 1, 'broken']]], ['empty-cell', [[2, 1]]],
+  ])
 })
 
 test('uses the same row indexes without a header', () => {
   const parsed = parseDelimited('\n1,2,3\n\n2,"broken')
 
-  assert.deepEqual(parsed.rows, [[1, 2, 3], [2, 'broken', '']])
-  assert.deepEqual(parsed.issues, [['TooFewFields', [1]], ['MissingQuotes', [1]]])
+  assert.deepEqual(parsed.rows, [[1, 2, 3], [2, Infinity, Infinity]])
+  assert.deepEqual(parsed.issues, [
+    ['TooFewFields', [1]], ['MissingQuotes', [1]],
+    ['invalid-number', [[1, 1, 'broken']]], ['empty-cell', [[2, 1]]],
+  ])
 })
 
 test('reports a malformed header as a count rather than a data-row position', () => {

@@ -6,6 +6,9 @@
 // column (up to MAX_SERIES) is plotted as a series.
 
 import Papa from 'papaparse'
+import { isEmptyCell, parseCell, resolveNumberFormat } from './numberFormat.js'
+
+export { parseCell } from './numberFormat.js'
 
 /**
  * Colorblind-safe series styles (validated for red-green colorblindness on a
@@ -74,52 +77,56 @@ export const initialState = {
   columns: DEFAULT_COLUMNS,
   rows: DEFAULT_ROWS,
   series: seriesFromColumns(DEFAULT_COLUMNS),
-  // Issues only the parser can see (e.g. TooFewFields); cell issues are derived from rows.
+  // Import issues.
   parseIssues: [],
   ...DEFAULT_SPECS,
 }
 
-/** Parse a cell string into a number, or return '' for empty. */
-export function parseCell(value) {
-  if (value === '' || value === null || value === undefined) return ''
-  // Papa preserves whitespace; blank cells must stay missing, not become zero.
-  if (typeof value === 'string' && value.trim() === '') return ''
-  const n = Number(value)
-  return Number.isFinite(n) ? n : String(value)
-}
-
-/**
- * Parse uploaded delimited text (CSV, TSV, semicolon-separated).
- * Returns { columns, rows, issues, delimiter }, or null for empty input.
- * Issues are in the form [type, data] (ADR-0007), with Papa error codes for parse errors.
- * Row positions always index the returned `rows` array (0-based).
- * Errors outside the data rows, including header errors, carry a count instead.
- * Rows are padded or cut to the header's width, reporting TooFewFields or TooManyFields.
- * Dropping only empty trailing fields (e.g. "1,2,") is not reported.
- */
-export function parseDelimited(text) {
+// Parse delimited text into numeric rows and import issues. Returns null if empty.
+// numberFormat is 'auto', '.' or ','; the result includes the resolved separator.
+// Issue positions refer to source data records, excluding headers and blanks.
+export function parseDelimited(text, { numberFormat: requestedFormat = 'auto' } = {}) {
+  if (!['auto', '.', ','].includes(requestedFormat)) {
+    throw new TypeError('numberFormat must be "auto", ".", or ",".')
+  }
   const result = Papa.parse(text, {
     header: false,
     dynamicTyping: false,
     skipEmptyLines: 'greedy',
   })
-  // Papa can discard an empty record while still reporting malformed quotes.
-  // An undetectable delimiter alone is expected for genuinely empty input.
+  // Keep malformed empty records so their parse errors aren't lost.
   if (result.data.length === 0 && result.errors.every(({ code }) => code === 'UndetectableDelimiter')) return null
   const first = result.data[0] ?? []
-  const headerIsText = first.some((v) => v !== '' && !Number.isFinite(Number(v)))
+  // Check both number formats when detecting a header.
+  const headerIsText = first.some((v) => parseCell(v, '.') === null && parseCell(v, ',') === null)
   const columns = headerIsText
     ? first.map((name, i) => ({ key: `c${i}`, name }))
     : first.map((_, i) => ({ key: `c${i}`, name: `Column ${i + 1}` }))
   const body = headerIsText ? result.data.slice(1) : result.data
+  const { numberFormat, issues: formatIssues } = resolveNumberFormat(body, columns.length, requestedFormat)
   const tooFew = []
   const tooMany = []
-  const rows = body.map((row, r) => {
-    const cells = row.map(parseCell)
-    if (cells.length < columns.length) tooFew.push(r)
-    if (cells.slice(columns.length).some((v) => v !== '')) tooMany.push(r)
-    while (cells.length < columns.length) cells.push('')
-    return cells.slice(0, columns.length)
+  const invalidX = []
+  const invalidNumbers = []
+  const emptyCells = []
+  const rows = []
+  body.forEach((row, r) => {
+    if (row.length < columns.length) tooFew.push(r)
+    if (row.slice(columns.length).some((v) => !isEmptyCell(v))) tooMany.push(r)
+    const x = parseCell(row[0], numberFormat)
+    if (!Number.isFinite(x)) {
+      invalidX.push(r)
+      return
+    }
+    const cells = [x]
+    for (let c = 1; c < columns.length; c++) {
+      const value = row[c]
+      const parsed = parseCell(value, numberFormat)
+      if (parsed === null) invalidNumbers.push([c, r, value])
+      else if (isEmptyCell(value)) emptyCells.push([c, r])
+      cells.push(parsed === null ? Infinity : parsed)
+    }
+    rows.push(cells)
   })
   const issues = []
   if (tooFew.length) issues.push(['TooFewFields', tooFew])
@@ -152,5 +159,21 @@ export function parseDelimited(text) {
   for (const [code, { rows, count }] of parseErrors) {
     issues.push([code, rows.length === count ? rows : count])
   }
-  return { columns, rows, issues, delimiter: result.meta.delimiter }
+  issues.push(...formatIssues)
+  if (invalidX.length) issues.push(['invalid-x', invalidX])
+  if (invalidNumbers.length) issues.push(['invalid-number', invalidNumbers])
+  if (emptyCells.length) issues.push(['empty-cell', emptyCells])
+  if (headerIsText) {
+    const names = new Map()
+    columns.forEach(({ name }, c) => {
+      if (!names.has(name)) names.set(name, [])
+      names.get(name).push(c)
+    })
+    const duplicates = [...names.values()]
+      .filter((indexes) => indexes.length > 1)
+      .flat()
+      .sort((a, b) => a - b)
+    if (duplicates.length) issues.push(['duplicate-header', duplicates])
+  }
+  return { columns, rows, issues, delimiter: result.meta.delimiter, numberFormat }
 }
