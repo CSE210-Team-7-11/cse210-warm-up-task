@@ -1,5 +1,5 @@
 export function containsMarker(shape, dx, dy, radius, outline = 0) {
-  if (!(radius > 0)) return false
+  if (!(radius > 0) || shape === 'none') return false
   if (shape === 'square') {
     const corner = Math.min(1, radius)
     const x = Math.max(0, Math.abs(dx) - radius + corner)
