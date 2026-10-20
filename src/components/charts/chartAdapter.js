@@ -4,7 +4,7 @@ import { buildChartData } from './chartUtils.js'
 export function prepareChart(state, options) {
   const { columns, series } = buildChartData(state, options)
   let pointCount = 0
-  // TODO: The SVG renderer still needs point objects remove on Canvas migration.
+  // TODO: The SVG renderer still needs point objects, remove on Canvas migration.
   const graphSeries = series.map((oneSeries, s) => {
     const points = []
     for (let i = 0; i < columns.length; i++) {
