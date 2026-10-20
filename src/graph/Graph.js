@@ -7,6 +7,7 @@ import { drawFrame, drawLegend, drawLines, drawMarker, drawTooltip as drawCanvas
 import { withSeriesColors } from './colors.js'
 import { themeProperties } from './theme.js'
 import { columnsFromPoints } from './pointColumns.js'
+import { containsMarker } from './markerHit.js'
 import { collectOverflowErrors, finiteCalculation } from '../numericErrors.js'
 import './Graph.css'
 
@@ -146,6 +147,21 @@ export function createChart(container, options) {
     const { left, right, top, bottom, toX, toY, xTicks, yTicks, xGridlines, yGridlines } = layout
     // Overlapping white outlines can hide every series on dense plots.
     const dense = pointCount > right - left
+    const outline = dense ? 0 : type === 'line' ? 0.75 : 0.5
+    const maxHitRadius = maxRadius + 0.5 + 2 * outline
+    const hitTest = (s, i, dx, dy) => {
+      if (type === 'line') {
+        if (!showPoints) return false
+        if (view.markerRows && !(view.markerRows[s][i >> 3] & (1 << (i & 7)))) return false
+      }
+      return containsMarker(shownSeries[s].marker, -dx, -dy, markerRadius(s, i), type === 'line', outline)
+    }
+    const isAbove = (s, i, otherSeries, otherIndex) => {
+      if (type === 'line') return s < otherSeries || (s === otherSeries && i > otherIndex)
+      const point = hoverPoints?.[i] ?? { seriesNumber: s, pointNumber: i }
+      const other = hoverPoints?.[otherIndex] ?? { seriesNumber: otherSeries, pointNumber: otherIndex }
+      return point.seriesNumber > other.seriesNumber || (point.seriesNumber === other.seriesNumber && point.pointNumber > other.pointNumber)
+    }
     const chart = type === 'line' ? canvas : svg
     chart.setAttribute('aria-label', `${type} plot of ${pointCount} points`)
     if (!chart.isConnected) {
@@ -156,7 +172,7 @@ export function createChart(container, options) {
     sizeWarning.textContent = sizeWarnings.join(' ')
 
     if (type === 'line') {
-      view = { columns, layout, hoverPoints, markerRadius, maxRadius, shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom },
+      view = { columns, layout, hoverPoints, markerRadius, maxRadius, hitTest: showPoints ? hitTest : undefined, maxHitRadius, isAbove, shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom },
         labels: { title, subtitle, x_axis_label, y_axis_label }, showPoints, pointSize, dense }
       drawCanvas()
       return
@@ -261,7 +277,7 @@ export function createChart(container, options) {
       fragment.append(child)
     }
     svg.replaceChildren(fragment)
-    view = { columns, layout, hoverPoints, markerRadius, maxRadius, shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom }, markers, tooltipLayer }
+    view = { columns, layout, hoverPoints, markerRadius, maxRadius, hitTest, maxHitRadius, isAbove, shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom }, markers, tooltipLayer }
   }
 
   function drawCanvas() {
@@ -279,7 +295,7 @@ export function createChart(container, options) {
     const { columns, layout, shownSeries, labels, showPoints, pointSize, dense } = view
     drawFrame(ctx, layout, labels)
     drawLegend(ctx, shownSeries, layout)
-    drawLines(ctx, columns, shownSeries, layout, { showPoints, pointSize, dense })
+    view.markerRows = drawLines(ctx, columns, shownSeries, layout, { showPoints, pointSize, dense })
     const savedCtx = saved.getContext('2d')
     savedCtx.clearRect(0, 0, width, height)
     savedCtx.drawImage(canvas, 0, 0)
@@ -321,6 +337,7 @@ export function createChart(container, options) {
     const py = (event.clientY - rect.top) * HEIGHT / rect.height
     const nearest = findNearest(view.columns, view.layout, px, py, HOVER_DISTANCE, {
       radiusAt: view.markerRadius, maxRadius: view.maxRadius,
+      hitTest: view.hitTest, maxHitRadius: view.maxHitRadius, isAbove: view.isAbove,
     })
     if (!nearest) return setHovered(null)
     const { seriesNumber, pointNumber } = view.hoverPoints?.[nearest.index] ?? {

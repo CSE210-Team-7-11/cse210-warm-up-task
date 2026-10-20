@@ -170,6 +170,7 @@ export function drawLines(ctx, columns, series, layout, { showPoints = true, poi
   const toX = pixelMap(layout.xMin, layout.xMax, layout.left, layout.right)
   const toY = pixelMap(layout.yMin, layout.yMax, layout.bottom, layout.top)
   const scale = ctx.getTransform?.().a ?? 1
+  const markerRows = showPoints && dense ? series.map(() => new Uint8Array(Math.ceil(columns.length / 8))) : null
 
   for (let seriesIndex = series.length - 1; seriesIndex >= 0; seriesIndex--) {
     const oneSeries = series[seriesIndex]
@@ -197,6 +198,7 @@ export function drawLines(ctx, columns, series, layout, { showPoints = true, poi
         const pixel = Math.round(x * scale) + Math.round(y * scale) * width
         if (drawn[pixel]) continue
         drawn[pixel] = 1
+        markerRows[seriesIndex][i >> 3] |= 1 << (i & 7)
         markerPath(ctx, oneSeries.marker, x, y, pointSize)
         // small batches are faster than one big path of overlapping markers
         if (++count % MARKER_BATCH === 0) {
@@ -211,6 +213,7 @@ export function drawLines(ctx, columns, series, layout, { showPoints = true, poi
       }
     }
   }
+  return markerRows
 }
 
 function markerPath(ctx, shape, x, y, size) {

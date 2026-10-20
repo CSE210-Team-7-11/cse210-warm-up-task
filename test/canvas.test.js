@@ -264,3 +264,12 @@ test('Canvas breaks at diagnosed invalid Y text rather than connecting or plotti
   const graph = importedChart('X,A\n1,10\n' + invalid.map((y, i) => `${i + 2},${y}`).join('\n') + '\n11,20')
   assert.deepEqual(drawnSegments(graph), [[[1], [11]]])
 })
+
+test('dense Canvas drawing records only markers that survived pixel deduplication', () => {
+  const data = { length: 4, x: new Float64Array([1, 1, 1, 2]), ys: [new Float64Array([10, 10, Infinity, 20])] }
+  const ctx = recorder()
+  const rows = drawLines(ctx, data, [{ color: '#a00' }], layout, { dense: true })
+  assert.equal(rows[0][0], 0b1001)
+  assert.equal(drawLines(recorder(), data, [{ color: '#a00' }], layout, { dense: false }), null)
+  assert.equal(drawLines(recorder(), data, [{ color: '#a00' }], layout, { dense: true, showPoints: false }), null)
+})
