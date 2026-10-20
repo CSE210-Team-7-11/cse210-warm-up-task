@@ -2,9 +2,9 @@ import { el } from './svg.js'
 import { marker } from './Marker.js'
 import { minMax } from './scale.js'
 
-const LEGEND_CENTER_Y = 20
-const LABEL_BASELINE_OFFSET = 3
-const LABEL_PADDING = 5
+export const LEGEND_CENTER_Y = 20
+export const LABEL_BASELINE_OFFSET = 3
+export const LABEL_PADDING = 5
 const ENTRY_GAP = 10
 const APPROX_CHAR_WIDTH = 5
 const SMALLEST_DOT_RADIUS = 3
@@ -18,7 +18,7 @@ const roundToOneSignificantFigure = (value) => {
 
 const entryWidth = ({ r, label }) => 2 * r + LABEL_PADDING + label.length * APPROX_CHAR_WIDTH
 
-export default function legend({ sizes, series, toRadius, right }) {
+export function legendEntries({ sizes, series, toRadius, right }) {
   let entries = []
   if (sizes.length > 0) {
     const { min: smallestSize, max: largestSize } = minMax(sizes)
@@ -50,8 +50,11 @@ export default function legend({ sizes, series, toRadius, right }) {
     const x = previous ? previous.x + entryWidth(previous) + ENTRY_GAP : rightAlignedStart
     placedEntries.push({ ...entry, x })
   }
+  return placedEntries
+}
 
-  return el('g', { class: 'legend' }, placedEntries.map(({ r, label, color, shape, x }) =>
+export default function legend(options) {
+  return el('g', { class: 'legend' }, legendEntries(options).map(({ r, label, color, shape, x }) =>
     el('g', {}, [
       marker({ shape, color, cx: x + r, cy: LEGEND_CENTER_Y, r }),
       el('text', {

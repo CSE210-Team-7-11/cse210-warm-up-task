@@ -142,6 +142,8 @@ export function computeLayout({ xMin, xMax, yMin, yMax, xColumnName = 'X', yColu
   return {
     xMin,
     xMax,
+    yMin,
+    yMax,
     left,
     right,
     top,

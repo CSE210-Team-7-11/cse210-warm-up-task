@@ -1,4 +1,4 @@
-const DEFAULT_COLOR = '#256b47'
+import { DEFAULT_COLOR } from './theme.js'
 
 const MIN_NORMAL_DIFFERENCE = 15
 const MIN_COLORBLIND_DIFFERENCE = 8
