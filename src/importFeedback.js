@@ -40,7 +40,7 @@ export function checkParsed(parsed, name) {
   if (parsed.columns.length < 2) {
     return `${name} has only one column. Separate columns with commas or tabs: X first, then at least one series.`
   }
-  if (parsed.rows.length === 0) {
+  if ((parsed.numericColumns?.length ?? parsed.rows.length) === 0) {
     if (parsed.issues.some(([type]) => type === 'invalid-x')) return `${name} has no valid X values.`
     return `${name} has a header row but no data rows.`
   }
@@ -124,17 +124,19 @@ export function describeIssue([type, data], { columns }) {
 }
 
 /** Compact facts about the loaded data, for a one- or two-line summary. */
-export function summarizeData({ sourceName, columns, rows }) {
+export function summarizeData({ sourceName, columns, rows, numericColumns }) {
   let xMin = Infinity
   let xMax = -Infinity
-  for (const row of rows) {
-    if (!isNumber(row[0])) continue
-    if (row[0] < xMin) xMin = row[0]
-    if (row[0] > xMax) xMax = row[0]
+  const length = numericColumns?.length ?? rows.length
+  for (let i = 0; i < length; i++) {
+    const x = numericColumns ? numericColumns.x[i] : rows[i][0]
+    if (!isNumber(x)) continue
+    if (x < xMin) xMin = x
+    if (x > xMax) xMax = x
   }
   return {
     sourceName,
-    rowCount: rows.length,
+    rowCount: numericColumns?.length ?? rows.length,
     seriesCount: Math.max(0, columns.length - 1),
     xName: columns[0]?.name ?? '',
     xRange: xMin <= xMax ? [xMin, xMax] : null,

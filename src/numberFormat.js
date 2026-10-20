@@ -50,35 +50,65 @@ export function parseCell(value, decimalSeparator = '.', { emptyCells = 'gap' } 
 
 // Detect the file's number format from its placement of ',' and '.'.
 export function resolveNumberFormat(rows, width, requested) {
-  if (requested !== 'auto') return { numberFormat: requested, issues: [] }
+  const detector = createNumberFormatDetector(width, requested)
+  detector.addRows(rows)
+  const { numberFormat, collectIssues } = detector.finish()
+  const cells = []
+  rows.forEach((row, r) => collectIssues(row, r, cells))
+  return { numberFormat, issues: cells.length ? [['number-format', cells]] : [] }
+}
+
+function formatEvidence(text) {
+  if ((!text.includes(',') && !text.includes('.')) || !NUMERIC_PUNCTUATION.test(text)) return undefined
+  if (!text.includes(',')) {
+    const dot = !Number.isNaN(Number(text))
+    const comma = COMMA_GROUPING.test(text)
+    return dot !== comma ? dot ? '.' : ',' : undefined
+  }
+  if (!text.includes('.')) {
+    if (!Number.isNaN(Number(text.replace(',', '.')))) return DOT_GROUPING.test(text) ? undefined : ','
+    return DOT_GROUPING.test(text) ? '.' : undefined
+  }
+  const dot = Number.isFinite(parseCell(text, '.')) || isNumericOverflow(text, '.')
+  const comma = Number.isFinite(parseCell(text, ',')) || isNumericOverflow(text, ',')
+  if (dot !== comma) return dot ? '.' : ','
+  return null
+}
+
+export function createNumberFormatDetector(width, requested = 'auto') {
   const formats = new Set()
   let ambiguous = false
-  function scan(visit, includeDotOnly) {
-    rows.forEach((row, r) => {
+  let dotOnly = false
+  function addRows(rows) {
+    if (requested !== 'auto') return
+    for (const row of rows) {
       for (let c = 0; c < Math.min(width, row.length); c++) {
         const text = row[c].trim()
-        const hasComma = text.includes(',')
-        const hasDot = text.includes('.')
-        if (!(hasComma || (includeDotOnly && hasDot)) || !NUMERIC_PUNCTUATION.test(text)) continue
-        const dot = Number.isFinite(parseCell(text, '.')) || isNumericOverflow(text, '.')
-        const comma = Number.isFinite(parseCell(text, ',')) || isNumericOverflow(text, ',')
-        let format = null
-        if (dot !== comma) format = dot ? '.' : ','
-        else if (!hasDot || !hasComma) continue
-        visit(format, c, r, row[c])
+        if (!text.includes(',')) {
+          if (!dotOnly && formatEvidence(text) === '.') dotOnly = true
+          continue
+        }
+        const format = formatEvidence(text)
+        if (format === undefined) continue
+        if (format === null) ambiguous = true
+        else formats.add(format)
       }
-    })
+    }
   }
-  const record = (format) => {
-    if (format === null) ambiguous = true
-    else formats.add(format)
+  function finish() {
+    const includeDotOnly = formats.has(',')
+    if (includeDotOnly && dotOnly) formats.add('.')
+    const conflict = ambiguous || formats.size > 1
+    return {
+      numberFormat: requested !== 'auto' ? requested : conflict ? '.' : formats.values().next().value ?? '.',
+      collectIssues(row, r, cells) {
+        if (requested !== 'auto' || !conflict) return
+        for (let c = 0; c < Math.min(width, row.length); c++) {
+          const text = row[c].trim()
+          if ((text.includes(',') || includeDotOnly) && formatEvidence(text) !== undefined) cells.push([c, r, row[c]])
+        }
+      },
+    }
   }
-  scan(record, false)
-  if (formats.has(',')) scan(record, true)
-  if (!ambiguous && formats.size <= 1) {
-    return { numberFormat: formats.values().next().value ?? '.', issues: [] }
-  }
-  const cells = []
-  scan((_, c, r, text) => cells.push([c, r, text]), formats.has(','))
-  return { numberFormat: '.', issues: [['number-format', cells]] }
+  return { addRows, finish }
 }
