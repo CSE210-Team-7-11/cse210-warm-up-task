@@ -2,8 +2,7 @@
 // passes slices + handlers down to the panels.
 //
 // The data table is read-only in the UI: data comes from the sample below or
-// from a dropped CSV/TSV file. Column 0 is always the X axis; every other
-// column (up to MAX_SERIES) is plotted as a series.
+// from a dropped CSV/TSV file. Column 0 is X; every other column is a series.
 
 import Papa from 'papaparse'
 import { isEmptyCell, isNumericOverflow, parseCell, resolveNumberFormat } from './numberFormat.js'
@@ -18,14 +17,15 @@ export { parseCell } from './numberFormat.js'
  * white surface, all pairs, so they also work for scatter plots).
  * Color is never the only cue: each series also gets its own line dash and
  * scatter marker shape, so charts still read in grayscale or for CVD users.
- * Don't cycle these — past MAX_SERIES, extra columns are not plotted.
  */
 export const SERIES_STYLES = [
   { color: '#2a78d6', dash: '', marker: 'circle' }, // blue, solid
   { color: '#eb6834', dash: '6 4', marker: 'square' }, // orange, dashed
   { color: '#1baf7a', dash: '2 3', marker: 'triangle' }, // aqua, dotted
 ]
-export const MAX_SERIES = SERIES_STYLES.length
+
+// Precomputed so imports don't run the color picker.
+export const MORE_COLORS = ['#940069', '#d794fb', '#436300', '#5a08c4', '#de22a7', '#d2b200', '#cf003a', '#0000ff']
 
 // Sample dataset — one year of an (allegedly) healthy hobby. Smitskis owned
 // climbs (with sprees in month 9 and 12) while funds drain, with small payday
@@ -54,10 +54,13 @@ export const DEFAULT_ROWS = [
 
 /** Build the series list from the table's columns (column 0 is X). */
 export function seriesFromColumns(columns) {
-  return columns.slice(1, 1 + MAX_SERIES).map((c, i) => ({
+  return columns.slice(1).map((c, i) => ({
     id: `s${i + 1}`,
     columnIndex: i + 1,
     name: c.name,
+    color: MORE_COLORS[i - SERIES_STYLES.length],
+    dash: '',
+    marker: 'circle',
     ...SERIES_STYLES[i],
   }))
 }

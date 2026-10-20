@@ -4,7 +4,7 @@ import legend from './Legend.js'
 import { marker } from './Marker.js'
 import tooltip from './Tooltip.js'
 import { drawFrame, drawLegend, drawLines, drawMarker, drawTooltip as drawCanvasTooltip, formatTicks } from './canvas.js'
-import { withSeriesColors } from './colors.js'
+import { prepareSeries } from './series.js'
 import { themeProperties } from './theme.js'
 import { columnsFromPoints } from './pointColumns.js'
 import { containsMarker } from './markerHit.js'
@@ -66,7 +66,9 @@ export function createChart(container, options) {
       allSeries = [{ name: labels.legend, points }]
     }
 
-    const shownSeries = withSeriesColors(allSeries)
+    const plotted = prepareSeries(allSeries, columns)
+    const shownSeries = plotted.series
+    columns = plotted.columns
     // TODO: Remove point-object fallback on Canvas migration.
     let hoverPoints
     if (!columns) {

@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { parseDelimited, initialState, seriesFromColumns } from '../src/state.js'
+import { parseDelimited, initialState, seriesFromColumns, MORE_COLORS, SERIES_STYLES } from '../src/state.js'
+import { MAX_AUTO_COLORS, withSeriesColors } from '../src/graph/colors.js'
 import { prepareChart } from '../src/components/charts/chartAdapter.js'
-import { findIssues } from '../src/importFeedback.js'
+import { describeIssue, findIssues, isWarning } from '../src/importFeedback.js'
 
 test('keeps whitespace-only cells missing and preserves zero and original invalid text in diagnostics', () => {
   for (const delimiter of [',', ';', '\t']) {
@@ -150,4 +151,42 @@ test('records delimiter errors without inventing a row position', () => {
 
   assert.deepEqual(parsed.issues, [['UndetectableDelimiter', 1]])
   assert.equal(parsed.delimiter, ',')
+})
+
+test('every column becomes a series, colored automatically up to the limit', () => {
+  const columns = Array.from({ length: 14 }, (_, c) => ({ key: `c${c}`, name: c ? `S${c}` : 'X' }))
+  const series = seriesFromColumns(columns)
+  assert.equal(series.length, 13)
+  assert.deepEqual(series.map((s) => s.columnIndex), Array.from({ length: 13 }, (_, i) => i + 1))
+  const colored = series.slice(0, MAX_AUTO_COLORS)
+  assert.equal(new Set(colored.map((s) => s.color)).size, MAX_AUTO_COLORS)
+  assert.ok(series.slice(MAX_AUTO_COLORS).every((s) => s.color === undefined))
+  SERIES_STYLES.forEach((style, i) => assert.deepEqual({ color: series[i].color, dash: series[i].dash, marker: series[i].marker }, style))
+  assert.ok(series.slice(3).every((s) => s.dash === '' && s.marker === 'circle'))
+})
+
+test('the sample data keeps its original series styles', () => {
+  assert.deepEqual(initialState.series.map(({ color, dash, marker }) => ({ color, dash, marker })), SERIES_STYLES.slice(0, 2))
+})
+
+test('the stored colors are what the color picker chooses after the fixed styles', () => {
+  assert.equal(SERIES_STYLES.length + MORE_COLORS.length, MAX_AUTO_COLORS)
+  const picked = withSeriesColors([...SERIES_STYLES.map(({ color }) => ({ color })), ...MORE_COLORS.map(() => ({}))])
+  assert.deepEqual(picked.slice(SERIES_STYLES.length).map((s) => s.color), MORE_COLORS)
+})
+
+test('series past the limit are not plotted and the import messages say why', () => {
+  const header = ['X', ...Array.from({ length: 13 }, (_, s) => `S${s + 1}`)].join(',')
+  const parsed = parseDelimited(`${header}\n1,${Array(13).fill(1).join(',')}\n2,${Array(13).fill(2).join(',')}`)
+  const state = { ...initialState, ...parsed, parseIssues: parsed.issues, series: seriesFromColumns(parsed.columns) }
+  const { graphProps, pointCount } = prepareChart(state)
+  assert.equal(graphProps.series.length, MAX_AUTO_COLORS)
+  assert.equal(pointCount, 2 * MAX_AUTO_COLORS)
+  const issues = findIssues(state)
+  assert.deepEqual(issues, [['needs-color', 2]])
+  assert.equal(describeIssue(issues[0], state), 'Series after the first 11 need an explicit color: 2 series not plotted.')
+  assert.equal(isWarning(issues[0]), true)
+  const withColor = { ...state, series: state.series.map((s, i) => (i === MAX_AUTO_COLORS ? { ...s, color: '#123456' } : s)) }
+  assert.equal(prepareChart(withColor).graphProps.series.length, MAX_AUTO_COLORS + 1)
+  assert.deepEqual(findIssues(withColor), [['needs-color', 1]])
 })

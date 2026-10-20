@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import Select from './ui/Select.jsx'
 import Toggle from './ui/Toggle.jsx'
-import { ChevronDownIcon, ChevronUpIcon, ResetIcon } from './ui/Icons.jsx'
+import { AlertCircleIcon, ChevronDownIcon, ChevronUpIcon, ResetIcon } from './ui/Icons.jsx'
 import SeriesKey from './charts/SeriesKey.jsx'
 import './SpecsPanel.css'
 
@@ -49,6 +49,25 @@ function ToggleRow({ label, checked, onChange }) {
       <span className="specs-panel-row-label">{label}</span>
       <Toggle checked={checked} onChange={onChange} label={label} />
     </div>
+  )
+}
+
+function SeriesColor({ series, onChange }) {
+  const [color, setColor] = useState('#000000')
+  return (
+    <span className="specs-panel-series-color">
+      <input
+        type="color"
+        value={series.color || color}
+        aria-label={`Color for ${series.name}`}
+        onChange={(e) => series.color ? onChange(e.target.value) : setColor(e.target.value)}
+      />
+      {!series.color && (
+        <button type="button" aria-label={`Plot ${series.name}`} onClick={() => onChange(color)}>
+          Plot
+        </button>
+      )}
+    </span>
   )
 }
 
@@ -129,14 +148,28 @@ export default function SpecsPanel({ state, update, onReset }) {
         </div>
       </Section>
 
-      {/* Read-only key: colors + line/marker styles are fixed (colorblind-safe), see SERIES_STYLES. */}
       <Section id="series" title="Data series" open={open.series} onToggle={() => toggleSection('series')}>
         {state.series.map((s) => (
           <div className="specs-panel-series-row" key={s.id}>
-            <SeriesKey series={s} chartType={state.chartType} />
+            {s.color ? (
+              <SeriesKey series={s} chartType={state.chartType} />
+            ) : (
+              <span
+                className={`specs-panel-series-warning${state.chartType === 'scatter' ? ' is-scatter' : ''}`}
+                role="img"
+                aria-label="Not plotted: needs an explicit color"
+                title="Not plotted: needs an explicit color"
+              >
+                <AlertCircleIcon size={12} />
+              </span>
+            )}
             <span className="specs-panel-series-name" title={s.name}>
               {s.name}
             </span>
+            <SeriesColor
+              series={s}
+              onChange={(color) => update({ series: state.series.map((oneSeries) => oneSeries.id === s.id ? { ...oneSeries, color } : oneSeries) })}
+            />
           </div>
         ))}
         <ToggleRow

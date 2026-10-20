@@ -231,6 +231,19 @@ function importedChart(text) {
   return prepareChart({ ...initialState, ...parsed, series: seriesFromColumns(parsed.columns), chartType: 'line' }).graphProps
 }
 
+test('the empty cell setting decides how Canvas lines cross empty cells', () => {
+  const cases = [
+    ['gap', [[[[1, 10]], [[3, 30], [4, 0]]], [[[2, 20]], [[4, 40]]]]],
+    ['connect', [[[[1, 10], [3, 30], [4, 0]]], [[[2, 20], [4, 40]]]]],
+    ['zero', [[[[1, 10], [2, 0], [3, 30], [4, 0]]], [[[1, 0], [2, 20], [3, 0], [4, 40]]]]],
+  ]
+  for (const [emptyCells, expected] of cases) {
+    const parsed = parseDelimited('X,A,B\n1,10,\n2,,20\n3,30,\n4,0,40', { emptyCells })
+    const state = { ...initialState, ...parsed, series: seriesFromColumns(parsed.columns) }
+    assert.deepEqual(drawnSegments(prepareChart(state).graphProps, true), expected)
+  }
+})
+
 test('Canvas breaks at CSV empty cells and connects across #N/A independently per series', () => {
   const graph = importedChart('X,A,B\n1,10,15\n2,20,25\n3,,#N/A\n4,40,45\n5,50,55')
   assert.deepEqual(drawnSegments(graph), [
