@@ -186,7 +186,7 @@ export function drawLines(ctx, columns, series, layout, { showLines = true, show
       ctx.restore()
     }
 
-    if (!showPoints) continue
+    if (!showPoints || oneSeries.marker === 'none') continue
     if (dense) {
       const width = Math.ceil(WIDTH * scale) + 1
       const drawn = new Uint8Array(width * (Math.ceil(HEIGHT * scale) + 1))
@@ -251,13 +251,14 @@ function markerPath(ctx, shape, x, y, size) {
     ctx.lineTo(x + r + 0.5, y + h / 2)
     ctx.lineTo(x - r - 0.5, y + h / 2)
     ctx.closePath()
-  } else {
+  } else if (shape !== 'none') {
     ctx.moveTo(x + r, y)
     ctx.arc(x, y, r, 0, 2 * Math.PI)
   }
 }
 
 export function drawMarker(ctx, shape, x, y, size, color, { outline = true } = {}) {
+  if (shape === 'none') return
   ctx.beginPath()
   markerPath(ctx, shape, x, y, size)
   ctx.fillStyle = color || DEFAULT_COLOR
@@ -270,6 +271,14 @@ export function drawMarker(ctx, shape, x, y, size, color, { outline = true } = {
 
 function drawDot(ctx, shape, x, y, r, color) {
   ctx.beginPath()
+  if (shape === 'none') {
+    ctx.moveTo(x - r - 1, y)
+    ctx.lineTo(x + r + 1, y)
+    ctx.strokeStyle = color || DEFAULT_COLOR
+    ctx.lineWidth = 2
+    ctx.stroke()
+    return
+  }
   if (shape === 'square') {
     ctx.rect(x - r, y - r, 2 * r, 2 * r)
   } else if (shape === 'triangle') {

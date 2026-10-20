@@ -48,6 +48,22 @@ test('explicit colors are not limited and retain the existing numeric storage', 
   assert.equal(plotted.columns, columns)
 })
 
+test('scatter preparation replaces None without changing the stored shape or numeric columns', () => {
+  const parsed = parseDelimited('X,A,B\n1,2,6\n2,3,5\n3,4,4')
+  const series = seriesFromColumns(parsed.columns).map((s, i) => Object.freeze(i === 0 ? { ...s, marker: 'none' } : s))
+  Object.freeze(series)
+  for (const precision of ['float32', 'float64']) {
+    const { columns } = buildChartData({ ...initialState, ...parsed, series }, { precision })
+    for (const type of ['line', 'scatter', 'line']) {
+      const plotted = prepareSeries(series, columns, type)
+      assert.deepEqual(plotted.series.map(s => s.marker), [type === 'scatter' ? 'circle' : 'none', 'square'])
+      assert.equal(plotted.columns, columns)
+      assert.equal(plotted.series[1], series[1])
+      assert.equal(series[0].marker, 'none')
+    }
+  }
+})
+
 test('manual colors and empty cell settings preserve series values without reimporting', () => {
   const header = ['X', ...Array.from({ length: 13 }, (_, i) => `S${i + 1}`)].join(',')
   const text = [header, [1, ...Array(11).fill(1), '', '#N/A'].join(','), [2, ...Array(11).fill(2), 5, 9].join(',')].join('\n')

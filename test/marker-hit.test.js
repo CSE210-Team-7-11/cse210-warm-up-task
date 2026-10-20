@@ -26,6 +26,7 @@ test('visible marker shapes include their edges and reject transparent corners',
   assert.equal(containsMarker('triangle', 0, -6, 5), true)
   assert.equal(containsMarker('triangle', 0, -6.01, 5), false)
   assert.equal(containsMarker('circle', 0, 0, 0), false)
+  assert.equal(containsMarker('none', 0, 0, 5), false)
 })
 
 test('marker hit testing includes visible outlines', () => {

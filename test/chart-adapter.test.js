@@ -214,3 +214,17 @@ test('marked empty cells count as points only when set to zero', () => {
   assert.ok(seriesPoints(prepareChart({ ...sparseState('gap'), emptyCells: undefined }).graphProps)[1]
     .some(({ y }) => y === Infinity))
 })
+
+test('chart preparation preserves the chosen marker for the renderer', () => {
+  const state = editorState([[1, 2, 3], [2, 3, 4]])
+  const series = state.series.map((oneSeries, i) => i === 0 ? { ...oneSeries, marker: 'none' } : oneSeries)
+  const markers = (chartType) => prepareChart({ ...state, series, chartType }).graphProps.series.map((s) => s.marker)
+  assert.deepEqual(markers('line'), ['none', 'square'])
+  assert.deepEqual(markers('scatter'), ['none', 'square'])
+  assert.equal(series[0].marker, 'none')
+})
+
+test('importing a file gives each series its default shape again', () => {
+  const { columns } = parseDelimited('X,A,B,C\n1,2,3,4')
+  assert.deepEqual(seriesFromColumns(columns).map((s) => s.marker), ['circle', 'square', 'triangle'])
+})

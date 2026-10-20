@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import { bounds, computeLayout, findNearest, minMax, trendLine } from '../src/graph/scale.js'
-import { dashPattern, drawFrame, drawLegend, drawLines, drawTooltip, drawTrendLines, formatTicks } from '../src/graph/canvas.js'
+import { dashPattern, drawFrame, drawLegend, drawLines, drawMarker, drawTooltip, drawTrendLines, formatTicks } from '../src/graph/canvas.js'
 import { initialState, parseDelimited, seriesFromColumns } from '../src/state.js'
 import { prepareChart } from '../src/components/charts/chartAdapter.js'
 
@@ -338,4 +338,35 @@ test('trend projection overflow reports the source column and restores Canvas st
     assert.equal(ctx.calls.some(([name]) => name === 'moveTo' || name === 'lineTo'), false)
     assert.deepEqual(ctx.calls.at(-1), ['restore'])
   }
+})
+
+test('a series without a marker keeps its line while the others keep their markers', () => {
+  const series = [{ color: '#a00', marker: 'none' }, { color: '#00a', marker: 'square' }]
+  const data = columns([[1, 2, 3, 4, 5], [5, 4, 3, 2, 1]])
+  for (const dense of [false, true]) {
+    const ctx = recorder()
+    const rows = drawLines(ctx, data, series, layout, { dense })
+    const fills = []
+    let fill
+    for (const [name, value] of ctx.calls) {
+      if (name === 'fillStyle=') fill = value
+      if (name === 'fill') fills.push(fill)
+    }
+    assert.ok(fills.length > 0 && fills.every((color) => color === '#00a'), String(dense))
+    assert.equal(strokes(ctx).filter((path) => path.length === 5).length, 2)
+    if (dense) assert.ok(rows[0].every((byte) => byte === 0))
+  }
+})
+
+test('the legend keys a series without markers by a short line', () => {
+  const ctx = recorder()
+  drawLegend(ctx, [{ name: 'A', color: '#a00', marker: 'none' }], layout)
+  assert.equal(ctx.calls.some(([name]) => name === 'fill' || name === 'arc'), false)
+  assert.deepEqual(ctx.calls.filter(([name]) => ['strokeStyle=', 'lineWidth='].includes(name)), [['strokeStyle=', '#a00'], ['lineWidth=', 2]])
+})
+
+test('no marker is drawn for a shape of none, whoever draws it', () => {
+  const ctx = recorder()
+  drawMarker(ctx, 'none', 10, 10, 7, '#a00')
+  assert.deepEqual(ctx.calls, [])
 })
