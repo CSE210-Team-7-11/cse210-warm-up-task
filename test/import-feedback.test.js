@@ -5,7 +5,6 @@ import {
   checkParsed,
   describeIssue,
   findIssues,
-  isValidCellValue,
   isWarning,
   summarizeData,
 } from '../src/importFeedback.js'
@@ -41,52 +40,49 @@ test('explains why parsed text is rejected', () => {
   assert.equal(checkParsed(parseDelimited('x,y\n1,2'), 'a.csv'), '')
 })
 
-test('finds cell issues in the ADR-0007 [type, data] shape, after parser issues', () => {
-  const rows = [[1, 2, 3], ['bad', 'also bad', ''], [3, 'n/a', ''], ['', 4, 5]]
-  const issues = findIssues({ columns, rows, parseIssues: [['TooFewFields', [2]]] })
+test('an unclosed quote rejects the file even when earlier rows were read', () => {
+  const parsed = parseDelimited('X,Y\n1,2\n3,"4\n5,6')
+  assert.equal(parsed.rows.length, 2)
+  assert.equal(checkParsed(parsed, 'a.csv'), 'a.csv has a quoted field without a closing quote.')
+})
 
-  assert.deepEqual(issues, [
-    ['TooFewFields', [2]],
+test('a comma file with uneven rows imports without a separator note', () => {
+  for (const text of ['X,Y\n1', 'a,b,c\n1\n2,3\n4']) {
+    const parsed = parseDelimited(text)
+    assert.equal(checkParsed(parsed, 'a.csv'), '')
+    assert.equal(parsed.issues.some(([type]) => type === 'UndetectableDelimiter'), false)
+    assert.equal(parsed.issues[0][0], 'TooFewFields')
+  }
+})
+
+test('the parser finds cell issues in the ADR-0007 [type, data] shape, after its row issues', () => {
+  const parsed = parseDelimited('Month,Owned,Funds\n1,2,3\nbad,also bad,\n3,n/a,\n,4,5\n6')
+  assert.deepEqual(parsed.issues, [
+    ['TooFewFields', [4]],
     ['invalid-x', [1, 3]],
-    ['invalid-number', [[1, 2]]],
-    ['empty-cell', [[2, 2]]],
+    ['invalid-number', [[1, 2, 'n/a']]],
+    ['empty-cell', [[2, 2], [1, 4], [2, 4]]],
   ])
-  assert.deepEqual(issues.map(isWarning), [true, true, true, false])
+  assert.deepEqual(parsed.issues.map(isWarning), [true, true, true, false])
 })
 
-test('checks every series column, with no limit on how many', () => {
-  const wide = [...columns, { key: 'c3', name: 'D' }, { key: 'c4', name: 'E' }]
-  assert.deepEqual(findIssues({ columns: wide, rows: [[1, 2, 3, 4, 'text']] }), [['invalid-number', [[4, 0]]]])
-  const twelve = Array.from({ length: 13 }, (_, c) => ({ key: `c${c}`, name: `S${c}` }))
-  assert.equal(summarizeData({ sourceName: 'a.csv', columns: twelve, rows: [] }).seriesCount, 12)
-})
-
-test('accepts #N/A in series while retaining invalid X and number warnings', () => {
+test('import messages are the parser issues, plus series that need a color', () => {
   const parsed = parseDelimited('X,A,B\n1,#N/A,0\n2, #N/A ,3\n#N/A,4,5\n4,n/a,bad\n5,,6')
   const originalRows = structuredClone(parsed.rows)
-
-  assert.deepEqual(findIssues({ ...parsed, parseIssues: parsed.issues }), [
+  assert.deepEqual(parsed.issues, [
     ['invalid-x', [2]],
     ['invalid-number', [[1, 3, 'n/a'], [2, 3, 'bad']]],
     ['empty-cell', [[1, 4]]],
   ])
+  assert.deepEqual(findIssues({ parseIssues: parsed.issues }), parsed.issues)
+  assert.deepEqual(findIssues({ parseIssues: parsed.issues, series: [{ color: '#000' }, {}] }), [...parsed.issues, ['needs-color', 1]])
   assert.deepEqual(parsed.rows, originalRows)
 })
 
-test('table validation accepts the series marker but requires numeric X values', () => {
-  assert.equal(isValidCellValue('#N/A', 1), true)
-  assert.equal(isValidCellValue(' #N/A ', 2), true)
-  assert.equal(isValidCellValue('#N/A', 0), false)
-  assert.equal(isValidCellValue('n/a', 1), false)
-  assert.equal(isValidCellValue('bad', 1), false)
-  assert.equal(isValidCellValue(0, 0), true)
-  assert.equal(isValidCellValue(0, 1), true)
-  assert.equal(isValidCellValue(NaN, 1), true)
-  assert.equal(isValidCellValue(NaN, 0), false)
-  assert.equal(isValidCellValue(Infinity, 1), true)
-  assert.equal(isValidCellValue(-Infinity, 1), true)
-  assert.equal(isValidCellValue(Infinity, 0), false)
-  assert.equal(isValidCellValue(-Infinity, 0), false)
+test('the parser checks every series column, with no limit on how many', () => {
+  assert.deepEqual(parseDelimited('X,A,B,C,D\n1,2,3,4,text').issues, [['invalid-number', [[4, 0, 'text']]]])
+  const twelve = Array.from({ length: 13 }, (_, c) => ({ key: `c${c}`, name: `S${c}` }))
+  assert.equal(summarizeData({ sourceName: 'a.csv', columns: twelve, rows: [] }).seriesCount, 12)
 })
 
 test('the sample data has nothing to report', () => {
@@ -94,15 +90,15 @@ test('the sample data has nothing to report', () => {
 })
 
 test('describes issues with row numbers from 1, column names and offending values', () => {
-  const rows = [[1, 'abc', ''], [2, 'n/a', ''], [3, 'x', ''], [4, 'a very long value that keeps going', '']]
-  const data = { columns, rows }
+  const data = { columns }
+  const invalid = [[1, 0, 'abc'], [1, 1, 'n/a'], [1, 2, 'x'], [1, 3, 'a very long value that keeps going']]
 
   assert.equal(
-    describeIssue(['invalid-number', [[1, 0], [1, 1], [1, 2], [1, 3]]], data),
+    describeIssue(['invalid-number', invalid], data),
     '4 nonnumeric values: "abc" in row 1 (Owned), "n/a" in row 2 (Owned), "x" in row 3 (Owned) and 1 more. Replace with numbers.',
   )
   assert.equal(
-    describeIssue(['invalid-number', [[1, 3]]], data),
+    describeIssue(['invalid-number', [invalid[3]]], data),
     '1 nonnumeric value: "a very long value t…" in row 4 (Owned). Replace with numbers.',
   )
   assert.equal(describeIssue(['empty-cell', [[2, 0]]], data), '1 empty cell: row 1 (Funds).')

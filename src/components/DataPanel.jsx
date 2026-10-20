@@ -37,8 +37,8 @@ export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
     [sourceName, columns, rows],
   )
   const issues = useMemo(
-    () => findIssues({ columns, rows, parseIssues, series }),
-    [columns, rows, parseIssues, series],
+    () => findIssues({ parseIssues, series }),
+    [parseIssues, series],
   )
   const warnings = issues.filter(isWarning)
   const notes = issues.filter((issue) => !isWarning(issue) && issue[0] !== 'precision-loss' && issue[0] !== 'precision-loss-truncated' &&
@@ -177,13 +177,13 @@ export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
                 <span className="data-panel-status-icon">
                   <AlertCircleIcon size={14} />
                 </span>
-                {describeIssue(issue, { columns, rows })}
+                {describeIssue(issue, { columns })}
               </p>
             ))
           )}
           {notes.map((issue) => (
             <p key={issue[0]} className="data-panel-caption">
-              {describeIssue(issue, { columns, rows })}
+              {describeIssue(issue, { columns })}
             </p>
           ))}
           <PrecisionWarnings warnings={precisionWarnings} count={precisionCount} />
