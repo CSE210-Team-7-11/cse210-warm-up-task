@@ -1,6 +1,9 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { computeLayout, minMax } from '../src/graph/scale.js'
+import { computeLayout, invert, minMax, scale, ticks, trendLine } from '../src/graph/scale.js'
+import { buildChartData, computeScales, linear } from '../src/components/charts/chartUtils.js'
+import { initialState } from '../src/state.js'
+import { Float64OverflowError } from '../src/numericErrors.js'
 
 test('fromX(toX) returns value', () => {
     const { toX, fromX } = computeLayout({ xMin: 0, xMax: 100, yMin: 0, yMax: 100 })
@@ -35,4 +38,48 @@ test('minMax preserves empty and special-number bounds', () => {
 test('minMax handles arrays larger than the function argument limit', () => {
   const values = Array.from({ length: 200000 }, (_, i) => i - 100000)
   assert.deepEqual(minMax(values), { min: -100000, max: 99999 })
+})
+
+test('overflowing float64 axis calculations throw instead of returning nonfinite coordinates', () => {
+  const max = Number.MAX_VALUE
+  for (const calculate of [
+    () => scale(-max, max, 0, 100),
+    () => invert(-max, max, 0, 100),
+    () => ticks(-max, max),
+    () => computeLayout({ xMin: -max, xMax: max, yMin: 0, yMax: 1 }),
+    () => computeLayout({ xMin: 0, xMax: 1, yMin: -max, yMax: max }),
+    () => linear([-max, max], [0, 100]),
+    () => computeScales(buildChartData({ ...initialState, rows: [[-max, 0, 0], [max, 1, 1]] }).columns),
+  ]) {
+    assert.throws(calculate, Float64OverflowError)
+  }
+})
+
+test('large finite ranges avoid avoidable tick overflow and keep coordinate endpoints', () => {
+  const max = Number.MAX_VALUE
+  const values = ticks(0, max)
+  assert.ok(values.every(Number.isFinite))
+  assert.equal(values[0], 0)
+  assert.equal(values.at(-1), max)
+  const toPixel = scale(0, max, 0, 100)
+  const fromPixel = invert(0, max, 0, 100)
+  assert.equal(toPixel(max), 100)
+  assert.equal(fromPixel(100), max)
+})
+
+test('trend calculation overflow throws rather than producing a nonfinite fit', () => {
+  for (const points of [
+    [{ x: 1e308, y: 1 }, { x: 1.1e308, y: 2 }],
+    [{ x: -1e200, y: -1e200 }, { x: 1e200, y: 1e200 }],
+  ]) {
+    assert.throws(() => trendLine(points), Float64OverflowError)
+  }
+  assert.deepEqual(trendLine([{ x: 1, y: 3 }, { x: 2, y: 5 }, { x: 3, y: 7 }]), { slope: 2, startHeight: 1 })
+})
+
+test('large negative nice-axis ranges produce a bounded set of finite ticks', () => {
+  const { columns } = buildChartData({ ...initialState, rows: [[1, -1e100, 0], [2, -2e100, 0]] })
+  const scales = computeScales(columns)
+  assert.ok(scales.y.ticks.length < 20)
+  assert.ok(scales.y.ticks.every(Number.isFinite))
 })

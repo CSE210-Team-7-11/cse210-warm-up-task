@@ -6,6 +6,27 @@ const NUMERIC_PUNCTUATION = /^[+-]?[\d.,]+(?:[eE][+-]?\d+)?$/
 export const isEmptyCell = (value) =>
   value === null || value === undefined || String(value).trim() === ''
 
+export function normalizeNumberText(text, decimalSeparator) {
+  const grouping = decimalSeparator === '.' ? ',' : '.'
+  const groupingPattern = decimalSeparator === '.' ? DOT_GROUPING : COMMA_GROUPING
+  if (text.includes(grouping) && !groupingPattern.test(text)) return null
+  return text.replaceAll(grouping, '').replace(decimalSeparator, '.')
+}
+
+function numericValue(text, decimalSeparator) {
+  const normalized = normalizeNumberText(text, decimalSeparator)
+  return normalized === null ? NaN : Number(normalized)
+}
+
+// Literal Infinity is invalid text; numeric input such as 1e309 is overflow.
+export function isNumericOverflow(value, decimalSeparator) {
+  if (isEmptyCell(value)) return false
+  const text = String(value).trim()
+  if (/^[+-]?Infinity$/.test(text)) return false
+  const number = numericValue(text, decimalSeparator)
+  return number === Infinity || number === -Infinity
+}
+
 // Parse a number or missing-value marker. Returns null if invalid.
 export function parseCell(value, decimalSeparator = '.') {
   if (decimalSeparator !== '.' && decimalSeparator !== ',') {
@@ -14,11 +35,7 @@ export function parseCell(value, decimalSeparator = '.') {
   if (isEmptyCell(value)) return Infinity
   const text = String(value).trim()
   if (text === '#N/A') return -Infinity
-  const grouping = decimalSeparator === '.' ? ',' : '.'
-  const groupingPattern = decimalSeparator === '.' ? DOT_GROUPING : COMMA_GROUPING
-  if (text.includes(grouping) && !groupingPattern.test(text)) return null
-  const normalized = text.replaceAll(grouping, '').replace(decimalSeparator, '.')
-  const number = Number(normalized)
+  const number = numericValue(text, decimalSeparator)
   return Number.isFinite(number) ? number : null
 }
 
@@ -32,8 +49,8 @@ export function resolveNumberFormat(rows, width, requested) {
       for (let c = 0; c < Math.min(width, row.length); c++) {
         const text = row[c].trim()
         if (!text.includes('.') || !text.includes(',') || !NUMERIC_PUNCTUATION.test(text)) continue
-        const dot = Number.isFinite(parseCell(text, '.'))
-        const comma = Number.isFinite(parseCell(text, ','))
+        const dot = Number.isFinite(parseCell(text, '.')) || isNumericOverflow(text, '.')
+        const comma = Number.isFinite(parseCell(text, ',')) || isNumericOverflow(text, ',')
         let format = null
         if (dot !== comma) format = dot ? '.' : ','
         visit(format, c, r, row[c])

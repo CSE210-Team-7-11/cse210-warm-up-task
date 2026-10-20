@@ -2,7 +2,7 @@ import { buildChartData } from './chartUtils.js'
 
 // Keep the editor-to-chart conversion outside the preview component.
 export function prepareChart(state, options) {
-  const { columns, series } = buildChartData(state, options)
+  const { columns, series, warnings } = buildChartData(state, options)
   let pointCount = 0
   // TODO: The SVG renderer still needs point objects, remove on Canvas migration.
   const graphSeries = series.map((oneSeries, s) => {
@@ -23,8 +23,10 @@ export function prepareChart(state, options) {
   })
 
   return {
+    warnings,
     pointCount,
     graphProps: {
+      xColumnName: state.columns[0]?.name ?? 'X',
       columns,
       series: graphSeries,
       type: state.chartType,

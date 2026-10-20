@@ -1,5 +1,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { parseDelimited } from '../state.js'
+import { isNumericOverflowError } from '../numericErrors.js'
+import NumericOverflowAlert from './NumericOverflowAlert.jsx'
+import PrecisionWarnings from './PrecisionWarnings.jsx'
+import { precisionWarning } from '../precision.js'
 import {
   checkFile,
   checkParsed,
@@ -30,7 +34,9 @@ export default function DataPanel({ state, onImport }) {
     [columns, rows, parseIssues],
   )
   const warnings = issues.filter(isWarning)
-  const notes = issues.filter((issue) => !isWarning(issue))
+  const notes = issues.filter((issue) => !isWarning(issue) && issue[0] !== 'precision-loss')
+  const precisionWarnings = issues.filter(([type]) => type === 'precision-loss')
+    .flatMap(([, cells]) => cells.map(([c, r, text, stored]) => precisionWarning(text, stored, columns[c].name, 64, r)))
 
   const readFile = useCallback(
     (file) => {
@@ -42,7 +48,14 @@ export default function DataPanel({ state, onImport }) {
       }
       const reader = new FileReader()
       reader.onload = () => {
-        const parsed = parseDelimited(String(reader.result ?? ''))
+        let parsed
+        try {
+          parsed = parseDelimited(String(reader.result ?? ''))
+        } catch (error) {
+          if (!isNumericOverflowError(error)) throw error
+          setFileError(error)
+          return
+        }
         const parseProblem = checkParsed(parsed, file.name)
         if (parseProblem) {
           setFileError(parseProblem)
@@ -120,11 +133,15 @@ export default function DataPanel({ state, onImport }) {
             }}
           />
         </div>
-        {fileError && (
+        {fileError && (typeof fileError === 'string' ? (
           <p className="data-panel-error" role="alert">
             {fileError} Your current data is unchanged.
           </p>
-        )}
+        ) : (
+          <NumericOverflowAlert error={fileError} className="data-panel-error">
+            The file was not imported. Your current data is unchanged.
+          </NumericOverflowAlert>
+        ))}
 
         <p className="data-panel-caption data-panel-summary">
           {`${summary.sourceName} · ${summary.rowCount} ${summary.rowCount === 1 ? 'row' : 'rows'} · ${summary.seriesCount} series`}
@@ -134,7 +151,7 @@ export default function DataPanel({ state, onImport }) {
 
         {/* ---- validation ---- */}
         <div className="data-panel-feedback" role="status">
-          {warnings.length === 0 ? (
+          {warnings.length === 0 && precisionWarnings.length === 0 ? (
             <p className="data-panel-status">
               <span className="data-panel-status-icon">
                 <CheckCircleIcon size={14} />
@@ -156,6 +173,7 @@ export default function DataPanel({ state, onImport }) {
               {describeIssue(issue, { columns, rows })}
             </p>
           ))}
+          <PrecisionWarnings warnings={precisionWarnings} />
         </div>
       </div>
     </section>

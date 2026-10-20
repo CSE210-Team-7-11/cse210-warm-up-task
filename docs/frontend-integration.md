@@ -4,7 +4,7 @@ Keep the existing demo working while the chart library evolves. The first change
 
 ## Current boundary
 
-`prepareChart(state)` returns `{ graphProps, pointCount }`. `ChartPreview` uses the count for its existing empty state and passes `graphProps` through `GraphView` to `createChart`.
+`prepareChart(state)` returns `{ graphProps, pointCount, warnings }`. `ChartPreview` displays non-blocking precision warnings, uses the count for its existing empty state, and passes `graphProps` through `GraphView` to `createChart`.
 
 ```js
 {

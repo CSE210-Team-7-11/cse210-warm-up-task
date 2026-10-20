@@ -71,6 +71,36 @@ test('sorting before float32 rounding preserves order when distinct x values rou
   assert.deepEqual(columns.ys[0], new Float32Array([1, 2]))
 })
 
+test('rejects finite X and Y values that overflow float32 without changing the input', () => {
+  for (const value of [1e40, -1e40, 3.4028235677973366e38, -3.4028235677973366e38]) {
+    for (const columnIndex of [0, 1, 2]) {
+      const state = importedState('X,A,B\n2,20,200\n1,10,100')
+      state.rows[0][columnIndex] = value
+      state.series.reverse()
+      const before = structuredClone(state)
+      for (const chartType of ['line', 'scatter']) {
+        assert.throws(() => prepareChart({ ...state, chartType }, { precision: 'float32' }), {
+          name: 'Float32OverflowError',
+          message: `The value ${value} in "${state.columns[columnIndex].name}" is too large for 32-bit precision. Switch to 64-bit mode.`,
+        })
+      }
+      assert.deepEqual(state, before)
+      const { columns } = buildChartData(state)
+      assert.ok(columns.x.every(Number.isFinite))
+      assert.ok(columns.ys.every((y) => y.every(Number.isFinite)))
+    }
+  }
+})
+
+test('accepts finite float32 boundary values and preserves real gap and skip markers', () => {
+  const max = 3.4028234663852886e38
+  const state = importedState(`X,A,B\n${max},${max},#N/A\n${-max},${-max},\n0,3.4028235e38,0`)
+  const { columns } = buildChartData(state, { precision: 'float32' })
+
+  assert.deepEqual(columns.x, new Float32Array([-max, 0, max]))
+  assert.deepEqual(columns.ys, [new Float32Array([-max, max, max]), new Float32Array([Infinity, 0, -Infinity])])
+})
+
 test('does not mutate input rows or metadata and owns its numeric storage', () => {
   const state = importedState('X,A,B\n2,20,200\n1,10,100')
   const before = structuredClone(state)
