@@ -77,10 +77,14 @@ export function invert(domainMin, domainMax, rangeMin, rangeMax, columnName = 'a
   }
 }
 
-export function findNearest(columns, layout, px, py, maxDistance, { radiusAt, maxRadius = maxDistance } = {}) {
+export function findNearest(columns, layout, px, py, maxDistance, {
+  radiusAt, maxRadius = maxDistance, hitTest, maxHitRadius = maxRadius,
+  isAbove = (s, i, otherSeries, otherIndex) => s < otherSeries || (s === otherSeries && i > otherIndex),
+} = {}) {
   if (!columns.length || !Number.isFinite(px) || !Number.isFinite(py) ||
     !Number.isFinite(maxDistance) || maxDistance < 0 ||
-    !Number.isFinite(maxRadius) || maxRadius < 0) return null
+    !Number.isFinite(maxRadius) || maxRadius < 0 ||
+    !Number.isFinite(maxHitRadius) || maxHitRadius < 0) return null
 
   const inverseX = layout.fromX(Math.max(layout.left, Math.min(px, layout.right)))
   const x = Math.max(layout.xMin, Math.min(inverseX, layout.xMax))
@@ -93,16 +97,25 @@ export function findNearest(columns, layout, px, py, maxDistance, { radiusAt, ma
   }
 
   let nearest = null
+  let hit = null
   let distance = Math.max(maxDistance, maxRadius)
   function check(index) {
     // Missing-only rows can lie outside the plotted domain. Do not project them.
     if (columns.x[index] < layout.xMin || columns.x[index] > layout.xMax) return false
     const dx = layout.toX(columns.x[index]) - px
-    if (Math.abs(dx) > distance) return false
+    // Keep overlapping markers in range even after finding a closer centre.
+    if (Math.abs(dx) > Math.max(distance, hitTest ? maxHitRadius : 0)) return false
     for (let seriesIndex = 0; seriesIndex < columns.ys.length; seriesIndex++) {
       const y = columns.ys[seriesIndex][index]
       if (!Number.isFinite(y)) continue
-      const nextDistance = Math.hypot(dx, layout.toY(y) - py)
+      const dy = layout.toY(y) - py
+      if (hitTest?.(seriesIndex, index, dx, dy)) {
+        if (!hit || isAbove(seriesIndex, index, hit.seriesIndex, hit.index)) hit = { seriesIndex, index }
+        distance = 0
+        continue
+      }
+      if (hit) continue
+      const nextDistance = Math.hypot(dx, dy)
       const targetRadius = Math.max(maxDistance, radiusAt?.(seriesIndex, index) ?? 0)
       if (nextDistance > targetRadius) continue
       if (nextDistance < distance || (nextDistance === distance && (!nearest ||
@@ -120,7 +133,7 @@ export function findNearest(columns, layout, px, py, maxDistance, { radiusAt, ma
   for (let i = low - 1; i >= 0; i--) {
     if (!check(i)) break
   }
-  return nearest
+  return hit ?? nearest
 }
 
 export function computeLayout({ xMin, xMax, yMin, yMax, xColumnName = 'X', yColumnName = 'Y' }) {
@@ -142,6 +155,8 @@ export function computeLayout({ xMin, xMax, yMin, yMax, xColumnName = 'X', yColu
   return {
     xMin,
     xMax,
+    yMin,
+    yMax,
     left,
     right,
     top,

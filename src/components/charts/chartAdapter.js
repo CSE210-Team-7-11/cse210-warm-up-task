@@ -34,12 +34,6 @@ export function prepareChart(state, options) {
       showPoints: state.showPoints,
       pointSize: state.pointSize,
       showTrendLine: true,
-      colors: {
-        tooltipBackground: '#ffffff',
-        tooltipBorder: '#eaede3',
-        tooltipText: '#20382c',
-        tooltipMuted: '#8a968c',
-      },
       labels: {
         title: state.title,
         subtitle: state.showSubtitle ? state.subtitle : '',

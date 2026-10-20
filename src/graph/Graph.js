@@ -2,9 +2,12 @@ import { el } from './svg.js'
 import { WIDTH, HEIGHT, PADDING, TEXT_SIZE, TITLE_TEXT_SIZE, TICK_SIZE, computeLayout, findNearest, trendLine, minMax } from './scale.js'
 import legend from './Legend.js'
 import { marker } from './Marker.js'
-import lineGraph from './LineGraph.js'
 import tooltip from './Tooltip.js'
+import { drawFrame, drawLegend, drawLines, drawMarker, drawTooltip as drawCanvasTooltip, formatTicks } from './canvas.js'
 import { withSeriesColors } from './colors.js'
+import { themeProperties } from './theme.js'
+import { columnsFromPoints } from './pointColumns.js'
+import { containsMarker } from './markerHit.js'
 import { collectOverflowErrors, finiteCalculation } from '../numericErrors.js'
 import './Graph.css'
 
@@ -21,8 +24,6 @@ const MAX_RADIUS = 100
 const HOVER_DISTANCE = 10
 const HOVER_EXTRA_RADIUS = 1.5
 
-const round = (v) => Math.abs(v) >= 1e21 ? v : Math.round(v * 10) / 10
-
 let nextChartId = 0
 
 // Draws `points` ([{ x, y }, ...]) as a scatter or line plot.
@@ -31,20 +32,30 @@ let nextChartId = 0
 export function createChart(container, options) {
   const chartId = nextChartId++
   const plotAreaId = `plot-area-${chartId}`
-  const gradientId = `line-fill-${chartId}`
 
   const svg = el('svg', { class: 'graph', viewBox: `0 0 ${WIDTH} ${HEIGHT}`, role: 'img' })
+  for (const [name, value] of Object.entries(themeProperties())) svg.style.setProperty(name, value)
+  const canvas = document.createElement('canvas')
+  canvas.className = 'graph'
+  canvas.setAttribute('role', 'img')
+  const ctx = canvas.getContext('2d')
+  const saved = document.createElement('canvas')
   const sizeWarning = document.createElement('p')
   sizeWarning.className = 'graph-size-warning'
   sizeWarning.setAttribute('role', 'status')
   sizeWarning.hidden = true
-  container.append(sizeWarning, svg)
+  container.append(sizeWarning)
+
+  const resizeObserver = new ResizeObserver(() => {
+    if (view?.type === 'line') drawCanvas()
+  })
+  resizeObserver.observe(container)
 
   let view = null
   // the hovered point, as { seriesNumber, pointNumber }
   let hovered = null
 
-  function update({ points, series, columns, xColumnName, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true, pointSize = 7, colors = {} }) {
+  function update({ points, series, columns, xColumnName, type = 'scatter', labels = {}, showTrendLine = false, showPoints = true, pointSize = 7 }) {
     hovered = null
 
     const { title, subtitle, x_axis_label, y_axis_label } = { ...DEFAULT_LABELS, ...labels }
@@ -59,31 +70,43 @@ export function createChart(container, options) {
     // TODO: Remove point-object fallback on Canvas migration.
     let hoverPoints
     if (!columns) {
-      hoverPoints = []
-      shownSeries.forEach((oneSeries, seriesNumber) => {
-        oneSeries.points.forEach((point, pointNumber) => {
-          if (Number.isFinite(point.x) && Number.isFinite(point.y)) {
-            hoverPoints.push({ ...point, seriesNumber, pointNumber })
-          }
-        })
-      })
-      hoverPoints.sort((a, b) => a.x - b.x)
-      columns = { length: hoverPoints.length, x: hoverPoints.map((point) => point.x), ys: [hoverPoints.map((point) => point.y)] }
+      ;({ columns, hoverPoints } = columnsFromPoints(shownSeries))
     }
     const xName = xColumnName ?? x_axis_label
     const yName = shownSeries.map((oneSeries) => oneSeries.name || y_axis_label).join(', ')
 
+    // TODO: remove points when scatter plots move to Canvas
     const shownPoints = []
-    for (const oneSeries of shownSeries) {
-      for (const point of oneSeries.points) {
-        if (Number.isFinite(point.y)) shownPoints.push(point)
+    let pointCount = 0
+    let xMin = Infinity
+    let xMax = -Infinity
+    let yMin = Infinity
+    let yMax = -Infinity
+    if (type === 'line') {
+      for (let i = 0; i < columns.length; i++) {
+        let shown = false
+        for (const ys of columns.ys) {
+          const y = ys[i]
+          if (!Number.isFinite(y)) continue
+          shown = true
+          pointCount++
+          if (y < yMin) yMin = y
+          if (y > yMax) yMax = y
+        }
+        if (!shown) continue
+        if (columns.x[i] < xMin) xMin = columns.x[i]
+        if (columns.x[i] > xMax) xMax = columns.x[i]
       }
+    } else {
+      for (const oneSeries of shownSeries) {
+        for (const point of oneSeries.points) {
+          if (Number.isFinite(point.y)) shownPoints.push(point)
+        }
+      }
+      pointCount = shownPoints.length
+      ;({ min: xMin, max: xMax } = minMax(shownPoints.map((p) => p.x)))
+      ;({ min: yMin, max: yMax } = minMax(shownPoints.map((p) => p.y)))
     }
-
-    const xs = shownPoints.map((p) => p.x)
-    const ys = shownPoints.map((p) => p.y)
-    const { min: xMin, max: xMax } = minMax(xs)
-    const { min: yMin, max: yMax } = minMax(ys)
 
     const sizes = shownPoints.map((p) => p.z).filter((size) => Number.isFinite(size) && size > 0)
     const { min: sizeMin } = minMax(sizes)
@@ -101,7 +124,7 @@ export function createChart(container, options) {
     if (nonfiniteCount) sizeWarnings.push(`${nonfiniteCount} ${nonfiniteCount === 1 ? 'bubble has a NaN or infinite size' : 'bubbles have NaN or infinite sizes'}, clamped to minimum size`)
     if (oversizedCount) sizeWarnings.push(`${oversizedCount} ${oversizedCount === 1 ? 'bubble exceeds' : 'bubbles exceed'} the maximum display size, clamped to maximum size`)
     const markerRadius = (seriesIndex, index) => {
-      const point = hoverPoints?.[index] ?? shownSeries[seriesIndex].points[index]
+      const point = hoverPoints?.[index].point ?? shownSeries[seriesIndex].points[index]
       return type === 'line' ? (showPoints ? pointSize / 2 : 0) : toRadius(point.z)
     }
     const maxRadius = type === 'line' ? (showPoints ? pointSize / 2 : 0) : toRadius(minMax(sizes).max)
@@ -122,11 +145,42 @@ export function createChart(container, options) {
       })) : [],
     ])
     const { left, right, top, bottom, toX, toY, xTicks, yTicks, xGridlines, yGridlines } = layout
-
     // Overlapping white outlines can hide every series on dense plots.
-    svg.classList.toggle('dense', shownPoints.length > right - left)
+    const dense = pointCount > right - left
+    const outline = dense ? 0 : type === 'line' ? 0.75 : 0.5
+    const maxHitRadius = maxRadius + 0.5 + 2 * outline
+    const hitTest = (s, i, dx, dy) => {
+      if (type === 'line') {
+        if (!showPoints) return false
+        if (view.markerRows && !(view.markerRows[s][i >> 3] & (1 << (i & 7)))) return false
+      }
+      return containsMarker(shownSeries[s].marker, -dx, -dy, markerRadius(s, i), type === 'line', outline)
+    }
+    const isAbove = (s, i, otherSeries, otherIndex) => {
+      if (type === 'line') return s < otherSeries || (s === otherSeries && i > otherIndex)
+      const point = hoverPoints?.[i] ?? { seriesNumber: s, pointNumber: i }
+      const other = hoverPoints?.[otherIndex] ?? { seriesNumber: otherSeries, pointNumber: otherIndex }
+      return point.seriesNumber > other.seriesNumber || (point.seriesNumber === other.seriesNumber && point.pointNumber > other.pointNumber)
+    }
+    const chart = type === 'line' ? canvas : svg
+    chart.setAttribute('aria-label', `${type} plot of ${pointCount} points`)
+    if (!chart.isConnected) {
+      container.append(chart)
+      ;(chart === canvas ? svg : canvas).remove()
+    }
+    sizeWarning.hidden = sizeWarnings.length === 0
+    sizeWarning.textContent = sizeWarnings.join(' ')
 
-    svg.setAttribute('aria-label', `${type} plot of ${shownPoints.length} points`)
+    if (type === 'line') {
+      view = { columns, layout, hoverPoints, markerRadius, maxRadius, hitTest: showPoints ? hitTest : undefined, maxHitRadius, isAbove, shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom },
+        labels: { title, subtitle, x_axis_label, y_axis_label }, showPoints, pointSize, dense }
+      drawCanvas()
+      return
+    }
+
+    svg.classList.toggle('dense', dense)
+    const xLabels = formatTicks(xTicks)
+    const yLabels = formatTicks(yTicks)
 
     const children = [
       // HEADER
@@ -149,16 +203,16 @@ export function createChart(container, options) {
       ),
 
       // TICKS
-      ...xTicks.map((v) =>
+      ...xTicks.map((v, i) =>
         el('g', {}, [
           el('line', { class: 'ticks', x1: toX(v), y1: bottom, x2: toX(v), y2: bottom + TICK_SIZE }),
-          el('text', { class: 'label', x: toX(v), y: bottom + TEXT_SIZE + PADDING + TICK_SIZE, 'text-anchor': 'middle', text: round(v) }),
+          el('text', { class: 'label', x: toX(v), y: bottom + TEXT_SIZE + PADDING + TICK_SIZE, 'text-anchor': 'middle', text: xLabels[i] }),
         ])
       ),
-      ...yTicks.map((v) =>
+      ...yTicks.map((v, i) =>
         el('g', {}, [
           el('line', { class: 'ticks', x1: left - TICK_SIZE, y1: toY(v), x2: left, y2: toY(v) }),
-          el('text', { class: 'label', x: left - TICK_SIZE - PADDING, y: toY(v) + 4, 'text-anchor': 'end', text: round(v) }),
+          el('text', { class: 'label', x: left - TICK_SIZE - PADDING, y: toY(v) + 4, 'text-anchor': 'end', text: yLabels[i] }),
         ])
       ),
 
@@ -196,39 +250,22 @@ export function createChart(container, options) {
 
     // POINTS
     // hovering only redraws the markers that changed
-    let markers
-    if (type === 'line') {
-      const drawn = lineGraph({
-        series: shownSeries,
-        xPos: toX,
-        yPos: toY,
-        showPoints,
-        pointSize,
-        clipPathId: plotAreaId,
-        gradientId,
-        top,
-        bottom,
-      })
-      markers = drawn.markers
-      children.push(drawn.group)
-    } else {
-      markers = new Map()
-      shownSeries.forEach((oneSeries, seriesNumber) => {
-        oneSeries.points.forEach((point, pointNumber) => {
-          if (!Number.isFinite(point.y)) return
-          const make = (isHovered) => {
-            let radius = toRadius(point.z)
-            if (isHovered) {
-              radius += HOVER_EXTRA_RADIUS
-            }
-            return marker({ shape: oneSeries.marker, color: oneSeries.color, cx: toX(point.x), cy: toY(point.y), r: radius })
+    const markers = new Map()
+    shownSeries.forEach((oneSeries, seriesNumber) => {
+      oneSeries.points.forEach((point, pointNumber) => {
+        if (!Number.isFinite(point.y)) return
+        const make = (isHovered) => {
+          let radius = toRadius(point.z)
+          if (isHovered) {
+            radius += HOVER_EXTRA_RADIUS
           }
-          const element = make(false)
-          markers.set(`${seriesNumber}-${pointNumber}`, { element, make })
-          children.push(element)
-        })
+          return marker({ shape: oneSeries.marker, color: oneSeries.color, cx: toX(point.x), cy: toY(point.y), r: radius })
+        }
+        const element = make(false)
+        markers.set(`${seriesNumber}-${pointNumber}`, { element, make })
+        children.push(element)
       })
-    }
+    })
 
     // TOOLTIP
     const tooltipLayer = el('g')
@@ -240,19 +277,67 @@ export function createChart(container, options) {
       fragment.append(child)
     }
     svg.replaceChildren(fragment)
-    sizeWarning.hidden = sizeWarnings.length === 0
-    sizeWarning.textContent = sizeWarnings.join(' ')
-    view = { columns, layout, hoverPoints, markerRadius, maxRadius, shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom }, markers, tooltipLayer, colors }
+    view = { columns, layout, hoverPoints, markerRadius, maxRadius, hitTest, maxHitRadius, isAbove, shownSeries, type, x_axis_label, toX, toY, toRadius, bounds: { left, right, top, bottom }, markers, tooltipLayer }
+  }
+
+  function drawCanvas() {
+    const cssWidth = container.clientWidth
+    if (!cssWidth) return
+    const ratio = window.devicePixelRatio || 1
+    const width = Math.round(cssWidth * ratio)
+    const height = Math.round(cssWidth * HEIGHT / WIDTH * ratio)
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = saved.width = width
+      canvas.height = saved.height = height
+    }
+    ctx.setTransform(width / WIDTH, 0, 0, height / HEIGHT, 0, 0)
+    ctx.clearRect(0, 0, WIDTH, HEIGHT)
+    const { columns, layout, shownSeries, labels, showPoints, pointSize, dense } = view
+    drawFrame(ctx, layout, labels)
+    drawLegend(ctx, shownSeries, layout)
+    view.markerRows = drawLines(ctx, columns, shownSeries, layout, { showPoints, pointSize, dense })
+    const savedCtx = saved.getContext('2d')
+    savedCtx.clearRect(0, 0, width, height)
+    savedCtx.drawImage(canvas, 0, 0)
+    drawCanvasHover()
+  }
+
+  function drawCanvasHover() {
+    ctx.save()
+    ctx.setTransform(1, 0, 0, 1, 0, 0)
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    ctx.drawImage(saved, 0, 0)
+    ctx.restore()
+    if (!hovered) return
+    const { shownSeries, showPoints, pointSize, dense, x_axis_label, toX, toY, toRadius, bounds } = view
+    const hoveredSeries = shownSeries[hovered.seriesNumber]
+    const point = hoveredSeries?.points[hovered.pointNumber]
+    if (!point) return
+    if (showPoints) {
+      drawMarker(ctx, hoveredSeries.marker, toX(point.x), toY(point.y), pointSize + 3, hoveredSeries.color, { outline: !dense })
+    }
+    drawCanvasTooltip(ctx, {
+      point,
+      name: hoveredSeries.name,
+      color: hoveredSeries.color,
+      marker: hoveredSeries.marker,
+      xLabel: x_axis_label,
+      toX,
+      toY,
+      gap: toRadius(point.z) + 6,
+      bounds,
+    })
   }
 
   function pointerMove(event) {
     if (!view) return
-    const rect = svg.getBoundingClientRect()
+    const rect = event.currentTarget.getBoundingClientRect()
     if (!rect.width || !rect.height) return
     const px = (event.clientX - rect.left) * WIDTH / rect.width
     const py = (event.clientY - rect.top) * HEIGHT / rect.height
     const nearest = findNearest(view.columns, view.layout, px, py, HOVER_DISTANCE, {
       radiusAt: view.markerRadius, maxRadius: view.maxRadius,
+      hitTest: view.hitTest, maxHitRadius: view.maxHitRadius, isAbove: view.isAbove,
     })
     if (!nearest) return setHovered(null)
     const { seriesNumber, pointNumber } = view.hoverPoints?.[nearest.index] ?? {
@@ -265,14 +350,21 @@ export function createChart(container, options) {
     setHovered(null)
   }
 
-  svg.addEventListener('pointermove', pointerMove)
-  svg.addEventListener('pointerleave', pointerLeave)
+  for (const chart of [svg, canvas]) {
+    chart.addEventListener('pointermove', pointerMove)
+    chart.addEventListener('pointerleave', pointerLeave)
+  }
 
   function setHovered(next) {
     const sameAsBefore = next && hovered &&
       next.seriesNumber === hovered.seriesNumber && next.pointNumber === hovered.pointNumber
     if (sameAsBefore || next === hovered) return
 
+    if (view.type === 'line') {
+      hovered = next
+      drawCanvasHover()
+      return
+    }
     redrawMarker(hovered, false)
     hovered = next
     redrawMarker(hovered, true)
@@ -289,16 +381,14 @@ export function createChart(container, options) {
   }
 
   function drawTooltip() {
-    const { shownSeries, type, x_axis_label, toX, toY, toRadius, bounds, tooltipLayer, colors } = view
+    const { shownSeries, toX, toY, toRadius, bounds, tooltipLayer } = view
 
     // only show the series name when theres more than one
     let hoveredPoint = null
     let hoveredName
-    let hoveredStyle
     if (hovered && shownSeries[hovered.seriesNumber]) {
       const hoveredSeries = shownSeries[hovered.seriesNumber]
       hoveredPoint = hoveredSeries.points[hovered.pointNumber]
-      hoveredStyle = hoveredSeries
       if (shownSeries.length > 1) {
         hoveredName = hoveredSeries.name
       }
@@ -306,25 +396,22 @@ export function createChart(container, options) {
 
     const box = tooltip({
       point: hoveredPoint,
-      name: type === 'line' ? hoveredStyle?.name : hoveredName,
-      color: hoveredStyle?.color,
-      marker: hoveredStyle?.marker,
-      xLabel: x_axis_label,
-      type,
-      showHoverMarker: false,
+      name: hoveredName,
       toX,
       toY,
       toRadius,
       bounds,
-      colors,
     })
     tooltipLayer.replaceChildren(...(box ? [box] : []))
   }
 
   function destroy() {
-    svg.removeEventListener('pointermove', pointerMove)
-    svg.removeEventListener('pointerleave', pointerLeave)
-    svg.remove()
+    for (const chart of [svg, canvas]) {
+      chart.removeEventListener('pointermove', pointerMove)
+      chart.removeEventListener('pointerleave', pointerLeave)
+      chart.remove()
+    }
+    resizeObserver.disconnect()
     sizeWarning.remove()
     hovered = null
     view = null
