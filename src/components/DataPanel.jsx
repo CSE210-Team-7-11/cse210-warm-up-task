@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
-import { parseDelimited } from '../state.js'
+import { importFile } from '../state.js'
 import { isNumericOverflowError } from '../numericErrors.js'
 import NumericOverflowAlert from './NumericOverflowAlert.jsx'
 import PrecisionWarnings from './PrecisionWarnings.jsx'
@@ -27,14 +27,15 @@ const EMPTY_CELL_OPTIONS = [
  * drop/browse a new CSV or TSV file.
  */
 export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
-  const { sourceName, rows, columns, parseIssues, series, emptyCells } = state
+  const { sourceName, rows, numericColumns, columns, parseIssues, series, emptyCells } = state
   const fileInputRef = useRef(null)
+  const readId = useRef(0)
   const [dragging, setDragging] = useState(false)
   const [fileError, setFileError] = useState('')
 
   const summary = useMemo(
-    () => summarizeData({ sourceName, columns, rows }),
-    [sourceName, columns, rows],
+    () => summarizeData({ sourceName, columns, rows, numericColumns }),
+    [sourceName, columns, rows, numericColumns],
   )
   const issues = useMemo(
     () => findIssues({ parseIssues, series }),
@@ -48,23 +49,17 @@ export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
   const precisionCount = precisionWarnings.length + (issues.find(([type]) => type === 'precision-loss-truncated')?.[1] ?? 0)
 
   const readFile = useCallback(
-    (file) => {
+    async (file) => {
       if (!file) return
+      const id = ++readId.current
       const fileProblem = checkFile(file)
       if (fileProblem) {
         setFileError(fileProblem)
         return
       }
-      const reader = new FileReader()
-      reader.onload = () => {
-        let parsed
-        try {
-          parsed = parseDelimited(String(reader.result ?? ''), { emptyCells: 'mark' })
-        } catch (error) {
-          if (!isNumericOverflowError(error)) throw error
-          setFileError(error)
-          return
-        }
+      try {
+        const parsed = await importFile(file, { emptyCells: 'mark' })
+        if (id !== readId.current) return
         const parseProblem = checkParsed(parsed, file.name)
         if (parseProblem) {
           setFileError(parseProblem)
@@ -72,9 +67,9 @@ export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
         }
         onImport({ ...parsed, sourceName: file.name })
         setFileError('')
+      } catch (error) {
+        if (id === readId.current) setFileError(isNumericOverflowError(error) ? error : `Couldn’t read ${file.name}. Try choosing it again.`)
       }
-      reader.onerror = () => setFileError(`Couldn’t read ${file.name}. Try choosing it again.`)
-      reader.readAsText(file)
     },
     [onImport],
   )

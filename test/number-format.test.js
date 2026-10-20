@@ -115,6 +115,15 @@ test('decimal commas and decimal points in one file are reported as mixed', () =
   ])
 })
 
+test('conflicting evidence includes grouped dot-only values', () => {
+  const parsed = parseDelimited('X;A;B\n1;1.234.567;1,5\n2;1.5;4')
+  assert.equal(parsed.numberFormat, '.')
+  assert.deepEqual(parsed.issues, [
+    ['number-format', [[1, 0, '1.234.567'], [2, 0, '1,5'], [1, 1, '1.5']]],
+    ['invalid-number', [[1, 0, '1.234.567'], [2, 0, '1,5']]],
+  ])
+})
+
 test('detected format applies to X as well as every series', () => {
   const parsed = parseDelimited('X;A\n1,5;2,5\n1.010,5;3,5')
   assert.deepEqual(parsed.rows, [[1.5, 2.5], [1010.5, 3.5]])
