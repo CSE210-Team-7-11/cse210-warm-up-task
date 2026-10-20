@@ -121,7 +121,7 @@ export default function DataPanel({ state, onImport }) {
             <UploadIcon size={18} />
           </span>
           <span className="data-panel-dropzone-title">Drop a file or browse</span>
-          <span className="data-panel-dropzone-hint">CSV or TSV · up to 10 MB</span>
+          <span className="data-panel-dropzone-hint">CSV or TSV</span>
           <input
             ref={fileInputRef}
             type="file"

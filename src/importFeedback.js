@@ -16,7 +16,6 @@
 
 import { MAX_SERIES } from './state.js'
 
-export const MAX_FILE_BYTES = 10 * 1024 * 1024
 const ACCEPTED_EXT = /\.(csv|tsv|txt)$/i
 const INFO_TYPES = new Set(['empty-cell', 'ignored-columns', 'precision-loss', 'precision-loss-truncated'])
 const MAX_LISTED = 3
@@ -29,15 +28,11 @@ export const isValidCellValue = (value, columnIndex) =>
     (typeof value === 'string' && value.trim() === '#N/A')))
 
 /** Why a file can't be imported, or '' when it's worth reading. */
-export function checkFile({ name, size }) {
+export function checkFile({ name }) {
   if (/\.xlsx?$/i.test(name)) {
     return `${name} is an Excel file. Save it as CSV, then drop the CSV here.`
   }
   if (!ACCEPTED_EXT.test(name)) return `${name} isn’t a CSV, TSV or TXT file.`
-  if (size > MAX_FILE_BYTES) {
-    const mb = Math.ceil((size / 1024 / 1024) * 10) / 10
-    return `${name} is ${mb} MB; the limit is 10 MB.`
-  }
   return ''
 }
 

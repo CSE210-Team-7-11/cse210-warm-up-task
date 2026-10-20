@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
 import {
-  MAX_FILE_BYTES,
   checkFile,
   checkParsed,
   describeIssue,
@@ -30,8 +29,8 @@ test('reports rows the parser padded or cut, but not empty trailing fields', () 
 test('explains why a file is rejected before reading it', () => {
   assert.match(checkFile({ name: 'data.xlsx', size: 10 }), /data\.xlsx is an Excel file\. Save it as CSV/)
   assert.equal(checkFile({ name: 'notes.pdf', size: 10 }), 'notes.pdf isn’t a CSV, TSV or TXT file.')
-  assert.equal(checkFile({ name: 'big.csv', size: MAX_FILE_BYTES + 1 }), 'big.csv is 10.1 MB; the limit is 10 MB.')
-  assert.equal(checkFile({ name: 'ok.TSV', size: MAX_FILE_BYTES }), '')
+  assert.equal(checkFile({ name: 'big.csv', size: 1024 ** 3 }), '')
+  assert.equal(checkFile({ name: 'ok.TSV', size: 10 }), '')
 })
 
 test('explains why parsed text is rejected', () => {
