@@ -14,25 +14,27 @@
         <link href="/home.css" rel="stylesheet">
     </head>
     <body>
-        <nav>
-            <a href="/home.html">
-                <img class="nav-logo" src="/public/78js_logo_white.svg" alt="78 js logo">
-            </a>
-            <a href="">API</a>
-            <a href="/examples.html">Examples</a>
-            <a href="/index.html">Demo</a>
-            <a href="https://github.com/CSE210-Team-7-11/cse210-warm-up-task">GitHub</a>
-        </nav>
-        <main>
-            <h3>Scatter Plot</h3>
-            <section id="code-demo">
-                <canvas id="scatter-a"></canvas>
-                <canvas id="scatter-b"></canvas>
+        <header>
+            <nav>
+                <a href="/home.html">
+                    <img class="nav-logo" src="/public/78js_logo_white.svg" alt="78 js logo">
+                </a>
+                <a href="">API</a>
+                <a href="/examples.html">Examples</a>
+                <a href="/index.html">Demo</a>
+                <a href="https://github.com/CSE210-Team-7-11/cse210-warm-up-task">GitHub</a>
+            </nav>
+        </header>
+        <main id="examples-content">
+            <section class="example-section" id="scatter-charts">
+                <h1>Scatter Plot</h1>
+                <canvas class="example-canvas" id="scatter-a"></canvas>
+                <canvas class="example-canvas" id="scatter-b"></canvas>
             </section>
-            <h3>Line Graph</h3>
-            <section>
-                <canvas id="line-a"></canvas>
-                <canvas id="line-b"></canvas>
+            <section class="example-section" id="line-charts">
+                <h1>Line Graph</h1>
+                <canvas class="example-canvas" id="line-a"></canvas>
+                <canvas class="example-canvas" id="line-b"></canvas>
             </section>
         </main>
         <footer>
