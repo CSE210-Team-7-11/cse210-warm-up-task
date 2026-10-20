@@ -1,4 +1,13 @@
 /* graph styles, moved from the test page's App.css */
+.graph-size-warning {
+  padding: 12px;
+  border: 1px solid #8a5a18;
+  border-radius: 6px;
+  background: #fff8e8;
+  color: #68420f;
+  font-size: 12px;
+}
+
 .graph {
   width: 100%;
   height: auto;
@@ -55,10 +64,6 @@
     fill: #256b47;
     stroke: #fff;
     stroke-width: 1;
-  }
-
-  .hit {
-    fill: transparent;
   }
 
   &.dense > .point,

@@ -44,15 +44,22 @@ test('preserves empty-cell gaps and #N/A skips independently in line series', ()
   ])
 })
 
-test('omits gaps, skips, and invalid scatter samples without counting them as zero', () => {
+test('keeps scatter indexes aligned with columns without counting missing values as points', () => {
   const rows = [[1, 0, 10], [2, '', '#N/A'], [3, 3, 'bad'], ['bad', 99, 99]]
   const scatter = prepareChart(editorState(rows, { chartType: 'scatter' }))
 
   assert.equal(scatter.pointCount, 3)
   assert.deepEqual(scatter.graphProps.series.map((series) => series.points), [
-    [{ x: 1, y: 0 }, { x: 3, y: 3 }],
-    [{ x: 1, y: 10 }],
+    [{ x: 1, y: 0 }, { x: 2, y: Infinity }, { x: 3, y: 3 }],
+    [{ x: 1, y: 10 }, { x: 2, y: -Infinity }, { x: 3, y: Infinity }],
   ])
+  for (const [s, series] of scatter.graphProps.series.entries()) {
+    assert.equal(series.points.length, scatter.graphProps.columns.length)
+    for (const [i, point] of series.points.entries()) {
+      assert.equal(point.x, scatter.graphProps.columns.x[i])
+      assert.equal(point.y, scatter.graphProps.columns.ys[s][i])
+    }
+  }
 })
 
 test('retains leading, trailing, and consecutive gaps and skips after sorting', () => {
@@ -87,7 +94,7 @@ test('carries CSV empty cells and #N/A through the existing importer to the char
   assert.equal(pointCount, 4)
   assert.equal(graphProps.series[0].points[1].y, Infinity)
   assert.equal(graphProps.series[1].points[1].y, -Infinity)
-  assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.series.map(s => s.points.length), [2, 2])
+  assert.deepEqual(prepareChart({ ...state, chartType: 'scatter' }).graphProps.series.map(s => s.points.length), [3, 3])
 })
 
 test('keeps invalid values as breaks instead of treating them as #N/A or zero', () => {
