@@ -97,23 +97,31 @@ test('describes issues with row numbers from 1, column names and offending value
 
   assert.equal(
     describeIssue(['invalid-number', [[1, 0], [1, 1], [1, 2], [1, 3]]], data),
-    '4 values aren’t numbers and won’t be plotted: “abc” in row 1 (Owned), “n/a” in row 2 (Owned), “x” in row 3 (Owned) and 1 more.',
+    '4 nonnumeric values: "abc" in row 1 (Owned), "n/a" in row 2 (Owned), "x" in row 3 (Owned) and 1 more. Replace with numbers.',
   )
   assert.equal(
     describeIssue(['invalid-number', [[1, 3]]], data),
-    '1 value isn’t a number and won’t be plotted: “a very long value t…” in row 4 (Owned).',
+    '1 nonnumeric value: "a very long value t…" in row 4 (Owned). Replace with numbers.',
   )
-  assert.equal(describeIssue(['empty-cell', [[2, 0]]], data), '1 empty cell won’t be plotted: row 1 (Funds).')
+  assert.equal(describeIssue(['empty-cell', [[2, 0]]], data), '1 empty cell: row 1 (Funds).')
   assert.equal(
     describeIssue(['invalid-x', [4]], data),
-    'Row 5 was skipped because its Month value is missing or isn’t a number.',
+    'Row 5: Month must be a number.',
   )
   assert.equal(
     describeIssue(['TooManyFields', [0, 1, 2, 3, 4]], data),
-    '5 rows (1, 2, 3 and 2 more) have more values than there are columns, so the extras were dropped. A comma inside a value (like 1,000) can cause this.',
+    '5 rows (1, 2, 3 and 2 more) have more values than there are columns',
   )
-  assert.equal(describeIssue(['ignored-columns', 2], data), 'Only the first 3 series are plotted (2 columns ignored).')
-  assert.equal(describeIssue(['UndetectableDelimiter', 1], data), 'UndetectableDelimiter: 1.')
+  assert.equal(describeIssue(['ignored-columns', 2], data), '2 extra columns ignored. Limit: 3 series.')
+  assert.equal(describeIssue(['UndetectableDelimiter', 1], data), 'Column separator not detected. Use commas or tabs.')
+})
+
+test('quote feedback counts distinct source rows without changing parser diagnostics', () => {
+  const parsed = parseDelimited('X,Y\n\n1,"a"b\n2,"c"d')
+  const issue = parsed.issues.find(([type]) => type === 'InvalidQuotes')
+  assert.equal(describeIssue(issue, parsed), 'Invalid quotes: Row 1. Escape quotes inside fields as "".')
+  assert.deepEqual(issue, ['InvalidQuotes', [0, 0, 0]])
+  assert.equal(describeIssue(['MissingQuotes', [1, 1, 3, 3]], parsed), 'Missing closing quote: 2 rows (2, 4).')
 })
 
 test('summarizes the source, counts and X range, ignoring invalid X values', () => {

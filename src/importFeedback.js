@@ -102,6 +102,10 @@ function rowList(rowIndexes) {
   return `${rowIndexes.length} rows (${listed.join(', ')}${more(rowIndexes)})`
 }
 
+const quoteLocations = (data) => Array.isArray(data)
+  ? rowList([...new Set(data)])
+  : count(data, 'field')
+
 function shortValue(v) {
   const s = String(v)
   return s.length > MAX_VALUE_CHARS ? `${s.slice(0, MAX_VALUE_CHARS - 1)}…` : s
@@ -110,36 +114,42 @@ function shortValue(v) {
 function cellList(cells, columns, rows) {
   const listed = cells.slice(0, MAX_LISTED).map(([c, r, text]) => {
     const where = `row ${r + 1} (${columns[c]?.name ?? `column ${c + 1}`})`
-    return text !== undefined || rows ? `“${shortValue(text ?? rows?.[r]?.[c])}” in ${where}` : where
+    return text !== undefined || rows ? `"${shortValue(text ?? rows?.[r]?.[c])}" in ${where}` : where
   })
   return listed.join(', ') + more(cells)
 }
 
-/** One plain-language sentence for an issue from findIssues(). */
+/** Compact data problem, location, and correction where needed. */
 export function describeIssue([type, data], { columns, rows }) {
   const plural = Array.isArray(data) && data.length !== 1
   const xName = columns[0]?.name || 'X'
   switch (type) {
     case 'TooFewFields':
-      return `${rowList(data)} ${plural ? 'have' : 'has'} fewer values than there are columns; the missing ones are left empty.`
+      return `${rowList(data)} ${plural ? 'have' : 'has'} fewer values than there are columns.`
     case 'TooManyFields':
-      return `${rowList(data)} ${plural ? 'have' : 'has'} more values than there are columns, so the extras were dropped. A comma inside a value (like 1,000) can cause this.`
+      return `${rowList(data)} ${plural ? 'have' : 'has'} more values than there are columns`
     case 'invalid-x':
-      return `${rowList(data)} ${plural ? 'were' : 'was'} skipped because ${plural ? 'their' : 'its'} ${xName} value is missing or isn’t a number.`
+      return `${rowList(data)}: ${xName} must be a number.`
     case 'invalid-number':
-      return `${count(data.length, 'value isn’t a number', 'values aren’t numbers')} and won’t be plotted: ${cellList(data, columns, rows)}.`
+      return `${count(data.length, 'nonnumeric value')}: ${cellList(data, columns, rows)}. Replace with numbers.`
     case 'empty-cell':
-      return `${count(data.length, 'empty cell')} won’t be plotted: ${cellList(data, columns)}.`
+      return `${count(data.length, 'empty cell')}: ${cellList(data, columns)}.`
     case 'precision-loss':
-      return `${count(data.length, 'value was', 'values were')} rounded for 64-bit precision: ${cellList(data, columns, rows)}.`
+      return `Rounded for 64-bit precision: ${cellList(data, columns, rows)}.`
     case 'precision-loss-truncated':
-      return `List truncated. ${count(data, 'additional precision warning')} omitted.`
+      return `${count(data, 'more precision warning')}.`
     case 'ignored-columns':
-      return `Only the first ${MAX_SERIES} series are plotted (${count(data, 'column')} ignored).`
+      return `${count(data, 'extra column')} ignored. Limit: ${MAX_SERIES} series.`
     case 'duplicate-header':
-      return `Repeated column names: ${data.map((c) => `“${columns[c].name}” (column ${c + 1})`).join(', ')}.`
+      return `Duplicate column names: ${data.map((c) => `"${columns[c].name}" (column ${c + 1})`).join(', ')}. Use unique names.`
     case 'number-format':
-      return `Number separators are ambiguous or conflicting: ${cellList(data, columns, rows)}. Using comma thousands separators and decimal points.`
+      return `Invalid or mixed number formats: ${cellList(data, columns, rows)}. Use 1,234.56.`
+    case 'UndetectableDelimiter':
+      return 'Column separator not detected. Use commas or tabs.'
+    case 'MissingQuotes':
+      return `Missing closing quote: ${quoteLocations(data)}.`
+    case 'InvalidQuotes':
+      return `Invalid quotes: ${quoteLocations(data)}. Escape quotes inside fields as "".`
     default:
       return `${type}: ${Array.isArray(data) ? count(data.length, 'place') : data}.`
   }

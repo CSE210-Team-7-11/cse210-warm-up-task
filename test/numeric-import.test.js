@@ -38,7 +38,7 @@ test('parser and quote-error positions stay in source data rows after invalid X 
     ['invalid-number', [[1, 1, 'first\nsecond'], [1, 3, 'broken']]], ['empty-cell', [[2, 3]]],
   ])
   assert.equal(describeIssue(parsed.issues[3], parsed),
-    '2 values aren’t numbers and won’t be plotted: “first\nsecond” in row 2 (A), “broken” in row 4 (A).')
+    '2 nonnumeric values: "first\nsecond" in row 2 (A), "broken" in row 4 (A). Replace with numbers.')
 })
 
 test('headers retain distinct keys and report every repeated name, including blank names', () => {
@@ -59,7 +59,7 @@ test('feedback keeps original diagnostic text even when source row indexes excee
   const parsed = parseDelimited('X,A\nbad,10\n,20\n3,"<script>bad</script>"')
   assert.deepEqual(parsed.rows, [[3, Infinity]])
   assert.equal(describeIssue(parsed.issues[1], parsed),
-    '1 value isn’t a number and won’t be plotted: “<script>bad</script>” in row 3 (A).')
+    '1 nonnumeric value: "<script>bad</script>" in row 3 (A). Replace with numbers.')
 })
 
 test('locale conversion round-trips a deterministic range without silently scaling values', () => {

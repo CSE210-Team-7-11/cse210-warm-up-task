@@ -140,7 +140,6 @@ test('passes one shared x column to both chart modes and builds matching legacy 
     for (let s = 0; s < series.length; s++) {
       assert.equal(columns.ys[s].length, columns.x.length)
       const expected = Array.from(columns.x, (x, i) => ({ x, y: columns.ys[s][i] }))
-        .filter((point) => chartType === 'line' || Number.isFinite(point.y))
       assert.deepEqual(series[s].points, expected)
       assert.equal(Object.hasOwn(series[s], 'x'), false)
     }

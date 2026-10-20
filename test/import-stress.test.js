@@ -5,6 +5,7 @@ import { prepareChart } from '../src/components/charts/chartAdapter.js'
 import { describeIssue, findIssues } from '../src/importFeedback.js'
 import { buildChartData } from '../src/components/charts/chartUtils.js'
 import { Float32OverflowError, Float64OverflowError, NumericOverflowErrors } from '../src/numericErrors.js'
+import { computeLayout, findNearest } from '../src/graph/scale.js'
 
 test('1M points survive CSV conversion and both chart adapters', (t) => {
   const started = performance.now()
@@ -33,6 +34,10 @@ test('1M points survive CSV conversion and both chart adapters', (t) => {
       assert.equal(points[i].y, length - i - 0.5)
       assert.equal(columns.x[i], points[i].x)
       assert.equal(columns.ys[0][i], points[i].y)
+    }
+    const layout = computeLayout({ xMin: 1, xMax: length, yMin: 0.5, yMax: length - 0.5 })
+    for (const index of [0, Math.floor(length / 2), length - 1]) {
+      assert.deepEqual(findNearest(columns, layout, layout.toX(columns.x[index]), layout.toY(columns.ys[0][index]), 10), { seriesIndex: 0, index })
     }
   }
 
@@ -65,10 +70,13 @@ test('1M invalid cells retain every diagnostic and produce bounded feedback text
   assert.equal(issues.length, 1)
   assert.equal(issues[0][1], cells)
   const message = describeIssue(issues[0], state)
-  assert.match(message, /^1000000 values aren’t numbers/)
+  assert.match(message, /^1000000 nonnumeric values/)
   assert.match(message, /999997 more/)
   assert.ok(message.length < 300)
-  assert.equal(prepareChart(state).pointCount, 0)
+  const chart = prepareChart(state)
+  assert.equal(chart.pointCount, 0)
+  const layout = computeLayout({ xMin: 0, xMax: length - 1, yMin: 0, yMax: 100 })
+  assert.equal(findNearest(chart.graphProps.columns, layout, layout.toX(length / 2), layout.toY(50), 10), null)
 
   t.diagnostic(JSON.stringify({ rows: length, errors: cells.length, messageCharacters: message.length, milliseconds: performance.now() - started, maxRssMiB: process.resourceUsage().maxRSS / 1024 }))
 })
