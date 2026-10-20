@@ -53,27 +53,32 @@ export function resolveNumberFormat(rows, width, requested) {
   if (requested !== 'auto') return { numberFormat: requested, issues: [] }
   const formats = new Set()
   let ambiguous = false
-  function scan(visit) {
+  function scan(visit, includeDotOnly) {
     rows.forEach((row, r) => {
       for (let c = 0; c < Math.min(width, row.length); c++) {
         const text = row[c].trim()
-        if (!text.includes('.') || !text.includes(',') || !NUMERIC_PUNCTUATION.test(text)) continue
+        const hasComma = text.includes(',')
+        const hasDot = text.includes('.')
+        if (!(hasComma || (includeDotOnly && hasDot)) || !NUMERIC_PUNCTUATION.test(text)) continue
         const dot = Number.isFinite(parseCell(text, '.')) || isNumericOverflow(text, '.')
         const comma = Number.isFinite(parseCell(text, ',')) || isNumericOverflow(text, ',')
         let format = null
         if (dot !== comma) format = dot ? '.' : ','
+        else if (!hasDot || !hasComma) continue
         visit(format, c, r, row[c])
       }
     })
   }
-  scan((format) => {
+  const record = (format) => {
     if (format === null) ambiguous = true
     else formats.add(format)
-  })
+  }
+  scan(record, false)
+  if (formats.has(',')) scan(record, true)
   if (!ambiguous && formats.size <= 1) {
     return { numberFormat: formats.values().next().value ?? '.', issues: [] }
   }
   const cells = []
-  scan((_, c, r, text) => cells.push([c, r, text]))
+  scan((_, c, r, text) => cells.push([c, r, text]), formats.has(','))
   return { numberFormat: '.', issues: [['number-format', cells]] }
 }

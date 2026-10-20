@@ -1,0 +1,52 @@
+{
+  "delimiter": ",",
+  "numberFormat": ".",
+  "columns": [
+    "X",
+    "A",
+    "B"
+  ],
+  "issues": [
+    [
+      "TooFewFields",
+      [
+        1
+      ]
+    ],
+    [
+      "TooManyFields",
+      [
+        2
+      ]
+    ],
+    [
+      "empty-cell",
+      [
+        [
+          2,
+          1
+        ]
+      ]
+    ]
+  ],
+  "x": [
+    1,
+    2,
+    3,
+    4
+  ],
+  "ys": [
+    [
+      10,
+      11,
+      12,
+      13
+    ],
+    [
+      20,
+      "Infinity",
+      22,
+      23
+    ]
+  ]
+}

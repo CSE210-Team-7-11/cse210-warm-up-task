@@ -1,0 +1,24 @@
+{
+  "delimiter": ",",
+  "numberFormat": ".",
+  "columns": [
+    "X",
+    "The \"best\" series",
+    "Plain"
+  ],
+  "issues": [],
+  "x": [
+    1,
+    2
+  ],
+  "ys": [
+    [
+      10,
+      11
+    ],
+    [
+      20,
+      21
+    ]
+  ]
+}
