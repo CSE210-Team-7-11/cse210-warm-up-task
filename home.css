@@ -234,26 +234,24 @@ h1 {
 .example-section {
     display: grid;
     row-gap: 2vh;
-    grid-template-rows: auto 1fr 1fr;
+    grid-template-rows: auto auto auto;
+    align-content: start;
     justify-content: center;
     box-sizing: border-box;
 }
 
 .example-canvas {
     width: 45vw;
-    height: 35vh;
-}
-
-.example-canvas:has(+ .example-canvas) {
-    padding-top: 2vh;
-    padding-bottom: 2vh;
+    padding: 2vh;
+    border: 2px solid var(--canvas-border);
+    border-radius: var(--radius-lg);
     box-sizing: border-box;
 }
 
-.example-canvas + .example-canvas {
-    padding-top: 2vh;
-    padding-bottom: 2vh;
-    box-sizing: border-box;
+.example-canvas canvas {
+    display: block;
+    border: 0;
+    border-radius: 0;
 }
 
 /* Footer */
