@@ -3,12 +3,19 @@
 import { LineChartIcon, ScatterIcon } from './ui/Icons.jsx'
 import './ChartTypePicker.css'
 
+/** @type {Array<{value: 'scatter'|'line', label: string, Icon: typeof LineChartIcon}>} */
 const OPTIONS = [
 	{ value: 'scatter', label: 'Scatter plot', Icon: ScatterIcon },
 	{ value: 'line', label: 'Line graph', Icon: LineChartIcon },
 ]
 
-/** Step 01 — pick the graph type. `value` is 'scatter' | 'line'. */
+/**
+ * Select the chart type without replacing the dataset or series settings.
+ * @param {Object} props - Controlled selection and callback.
+ * @param {string} props.value - Currently selected chart type.
+ * @param {(value: string) => void} props.onChange - Receives scatter or line.
+ * @returns {React.ReactElement} Buttons exposing the selected type with aria-pressed.
+ */
 export default function ChartTypePicker({ value, onChange }) {
 	return (
 		<section className="panel chart-type-picker" aria-labelledby="chart-type-picker-heading">
