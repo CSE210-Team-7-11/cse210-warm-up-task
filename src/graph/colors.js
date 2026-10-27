@@ -1,3 +1,8 @@
+/**
+ * Automatic series colors chosen by normalized OKLab separation under ordinary,
+ * protan, and deutan viewing simulations.
+ * @module graph/colors
+ */
 import { DEFAULT_COLOR } from './theme.js'
 
 const MIN_NORMAL_DIFFERENCE = 15
@@ -15,17 +20,35 @@ const DEUTAN = [
 	[-0.01182, 0.04294, 0.968881],
 ]
 
+/**
+ * Convert one encoded sRGB channel to linear-light RGB. Expects an 8-bit value
+ * in [0, 255].
+ * @param {number} channel Encoded sRGB channel.
+ * @returns {number} Linear-light channel, normally in [0, 1].
+ */
 function toLinear(channel) {
 	const c = channel / 255
 	return c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4
 }
 
+/**
+ * Apply a color-vision simulation matrix to linear RGB, returning channels
+ * clamped to the displayable [0, 1] range.
+ * @param {Array<Array<number>>} matrix Three rows of three coefficients.
+ * @param {Array<number>} rgb Linear [red, green, blue] channels.
+ * @returns {Array<number>} Three clamped linear RGB channels.
+ */
 function transform(matrix, rgb) {
 	return matrix.map((row) =>
 		Math.min(1, Math.max(0, row[0] * rgb[0] + row[1] * rgb[1] + row[2] * rgb[2])),
 	)
 }
 
+/**
+ * Convert linear RGB to perceptual OKLab coordinates.
+ * @param {Array<number>} rgb Linear [red, green, blue] channels.
+ * @returns {Array<number>} [L, a, b] coordinates for perceptual distance calculations.
+ */
 function oklab([r, g, b]) {
 	const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
 	const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
@@ -37,11 +60,19 @@ function oklab([r, g, b]) {
 	]
 }
 
+/**
+ * Represent a six-digit hex color under normal, protan, and deutan viewing
+ * conditions. Unsupported syntax returns null, including other valid CSS colors.
+ * @param {string} [hex] Six-digit #RRGGBB string, case-insensitive.
+ * @returns {ColorAppearance|null} Appearances, or null for missing/unsupported syntax.
+ */
 function appearance(hex) {
 	const match = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(hex ?? '')
 	if (!match) {
 		return null
 	}
+	/* Simulation matrices operate on linear light, so decode the sRGB bytes before
+	 * applying them. Encoded channel values would give different appearances. */
 	const rgb = match.slice(1).map((pair) => toLinear(parseInt(pair, 16)))
 	return {
 		hex,
@@ -51,10 +82,24 @@ function appearance(hex) {
 	}
 }
 
+/**
+ * Measure Euclidean OKLab distance on a scale where full lightness spans 100.
+ * @param {Array<number>} a First [L, a, b] triple.
+ * @param {Array<number>} b Second [L, a, b] triple.
+ * @returns {number} Non-negative scaled perceptual distance.
+ */
 const distance = (a, b) => 100 * Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2])
 
-// 1 or more means the two colors are far enough apart for everyone
+/**
+ * Score the separation of two colors in their least-separated viewing condition.
+ * A score of one meets all three configured distance thresholds.
+ * @param {ColorAppearance} a First color.
+ * @param {ColorAppearance} b Second color.
+ * @returns {number} Minimum normalized separation across viewing conditions.
+ */
 function separation(a, b) {
+	/* Normalize each viewing condition by its own threshold. Taking the minimum
+	 * prevents a large normal-vision difference from hiding a simulated collision. */
 	return Math.min(
 		distance(a.normal, b.normal) / MIN_NORMAL_DIFFERENCE,
 		distance(a.protan, b.protan) / MIN_COLORBLIND_DIFFERENCE,
@@ -62,14 +107,32 @@ function separation(a, b) {
 	)
 }
 
-// Nine OKLab values per candidate: normal, protan, then deutan.
+/** Shared, read-only search table populated on first use.
+ * @type {ColorCandidates|null}
+ */
 let candidates = null
 
+/**
+ * Determine whether a color meets the lightness and chroma limits for automatic
+ * palette assignment.
+ * @param {Array<number>} lab Normal-vision [L, a, b] coordinates.
+ * @returns {boolean} Whether lightness is in [0.43, 0.77] and chroma is at least 0.1.
+ */
 function isAllowed([lightness, a, b]) {
 	return lightness >= 0.43 && lightness <= 0.77 && Math.hypot(a, b) >= 0.1
 }
 
+/**
+ * Convert linear RGB to OKLab and write the triple at the specified buffer offset.
+ * @param {Float64Array} out Destination coordinate buffer, mutated in place.
+ * @param {number} offset Index of the first of three available output slots.
+ * @param {number} r Linear red channel.
+ * @param {number} g Linear green channel.
+ * @param {number} b Linear blue channel.
+ */
 function oklabInto(out, offset, r, g, b) {
+	/* Keep this conversion identical to oklab. Writing directly avoids allocating
+	 * a temporary array for each appearance of every candidate in the RGB grid. */
 	const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * g + 0.0514459929 * b)
 	const m = Math.cbrt(0.2119034982 * r + 0.6806995451 * g + 0.1073969566 * b)
 	const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * g + 0.6299787005 * b)
@@ -78,7 +141,19 @@ function oklabInto(out, offset, r, g, b) {
 	out[offset + 2] = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s
 }
 
+/**
+ * Convert a simulated linear RGB color to OKLab and write it at the specified
+ * buffer offset. Simulated channels are clamped to [0, 1] before conversion.
+ * @param {Float64Array} out Destination coordinate buffer, mutated in place.
+ * @param {number} offset Index of the first of three available output slots.
+ * @param {Array<Array<number>>} matrix Three-by-three linear RGB simulation matrix.
+ * @param {number} r Linear red channel.
+ * @param {number} g Linear green channel.
+ * @param {number} b Linear blue channel.
+ */
 function simulatedInto(out, offset, matrix, r, g, b) {
+	/* Match transform followed by oklab without intermediate arrays, keeping table
+	 * candidates comparable with the separately decoded explicit colors. */
 	oklabInto(
 		out,
 		offset,
@@ -88,10 +163,17 @@ function simulatedInto(out, offset, matrix, r, g, b) {
 	)
 }
 
+/**
+ * Return automatic-color candidates within the allowed lightness/chroma band.
+ * The returned table is shared across calls and must be treated as read-only.
+ * @returns {ColorCandidates} Candidate hex strings and packed OKLab coordinates.
+ */
 function getCandidates() {
 	if (candidates) {
 		return candidates
 	}
+	/* Sample 32 levels per channel to bound the grid search, and precompute all
+	 * three appearances so series assignment does not repeatedly convert colors. */
 	const steps = Array.from({ length: 32 }, (_, step) => Math.round((step * 255) / 31))
 	const linear = steps.map(toLinear)
 	const pairs = steps.map((value) => value.toString(16).padStart(2, '0'))
@@ -123,8 +205,16 @@ function getCandidates() {
 const NORMAL_SCALE = (100 / MIN_NORMAL_DIFFERENCE) ** 2
 const COLORBLIND_SCALE = (100 / MIN_COLORBLIND_DIFFERENCE) ** 2
 
-// Squared distances preserve ordering without a square root per candidate.
+/**
+ * Return the squared normalized separation of a table candidate from a color.
+ * @param {Float64Array} labs Packed nine-coordinate candidate records.
+ * @param {number} i Zero-based candidate index, locating its record at offset i * 9.
+ * @param {ColorAppearance} color Color to compare against.
+ * @returns {number} Squared minimum normalized separation across viewing conditions.
+ */
 function separationSquaredAt(labs, i, { normal, protan, deutan }) {
+	/* The search only needs score ordering. Squaring the normalized distances
+	 * preserves that ordering while avoiding a square root per candidate. */
 	const o = i * 9
 	const n0 = labs[o] - normal[0]
 	const n1 = labs[o + 1] - normal[1]
@@ -142,6 +232,12 @@ function separationSquaredAt(labs, i, { normal, protan, deutan }) {
 	)
 }
 
+/**
+ * Return an independent color-appearance record for the indexed candidate.
+ * @param {ColorCandidates} table Cached search table.
+ * @param {number} i Valid candidate index.
+ * @returns {ColorAppearance} Independent color record with copied coordinate arrays.
+ */
 function candidateAt({ hex, labs }, i) {
 	const values = Array.from(labs.subarray(i * 9, i * 9 + 9))
 	return {
@@ -152,7 +248,20 @@ function candidateAt({ hex, labs }, i) {
 	}
 }
 
+/**
+ * Improve a candidate's separation from the used palette while keeping it within
+ * the allowed lightness/chroma band. The result is a local optimum and may miss a
+ * better color elsewhere in RGB space.
+ * @param {ColorAppearance} color Initial candidate, treated as read-only.
+ * @param {Array<ColorAppearance>} used Existing colors that constrain the search, treated as read-only.
+ * @returns {ColorAppearance} Best color reached, possibly the original record.
+ */
 function refine(color, used) {
+	/**
+	 * Score a candidate against its closest existing color in any viewing condition.
+	 * @param {ColorAppearance} candidate Color being considered.
+	 * @returns {number} Weakest separation, or Infinity when no colors are in use.
+	 */
 	const closestTo = (candidate) => {
 		let closest = Infinity
 		for (const other of used) {
@@ -163,6 +272,8 @@ function refine(color, used) {
 	let best = color
 	let bestSeparation = closestTo(color)
 	let improved = true
+	/* Refine the coarse grid choice with single-step changes to 8-bit RGB channels.
+	 * Accept only strictly better scores to prevent cycles among equivalent colors. */
 	while (improved) {
 		improved = false
 		const rgb = best.hex
@@ -190,11 +301,25 @@ function refine(color, used) {
 	return best
 }
 
-// Past this many colors, some pair falls below the separation that red-green
-// colorblind viewers need, so further series must be given a color.
+/** Budget for six-digit explicit colors and automatically assigned series colors.
+ * Repeated explicit colors consume separate slots. Series with explicit colors
+ * remain usable after the budget is exhausted.
+ * @type {number}
+ */
 export const MAX_AUTO_COLORS = 11
 
-// Pick the color with the greatest separation from those already in use.
+/**
+ * Assign missing series colors while preserving explicit choices. All six-digit
+ * hex colors in the input constrain selection and capacity, including duplicates.
+ * Other CSS color formats are preserved as given and may coincide with automatic
+ * choices. The first automatic color is DEFAULT_COLOR
+ * when no recognized colors are in use. Assignment stops at MAX_AUTO_COLORS and
+ * leaves any remaining missing colors unset. Automatic choices may fall below the
+ * configured separation thresholds.
+ * @param {Array<SeriesStyle>} series Requested styles, treated as read-only.
+ * @returns {Array<SeriesStyle>} Original array when all colors are set or capacity is
+ * already reached. Otherwise returns a new array, copying only styles that receive a color.
+ */
 export function withSeriesColors(series) {
 	if (series.every((oneSeries) => oneSeries.color)) {
 		return series
@@ -206,6 +331,8 @@ export function withSeriesColors(series) {
 	const table = getCandidates()
 	const { labs } = table
 	const count = table.hex.length
+	/* Keep each candidate's separation from its closest used color. Updating this
+	 * minimum after each assignment avoids comparing the whole palette again. */
 	const closest = new Float64Array(count).fill(Infinity)
 	for (const color of used) {
 		for (let i = 0; i < count; i++) {

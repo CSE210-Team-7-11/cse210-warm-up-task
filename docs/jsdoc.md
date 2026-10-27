@@ -20,3 +20,17 @@ Type annotations should be accurate and specific, including optional and nullabl
 Documentation should explain important assumptions, limitations, side effects, and edge cases. It should _**not**_ simply restate the process of the code, what variable names show, or what the code otherwise already makes obvious. Existing documentation must be updated when behaviour changes.
 
 For syntax and examples, a guide has been created in Slack under `#guides`.
+
+## Generating the reference
+
+From the repository root, run:
+
+```sh
+npm run docs:jsdoc
+```
+
+Open `docs/jsdoc/index.html` in a browser. The output is generated locally and ignored by Git.
+
+[`jsdoc.json`](../jsdoc.json) selects `src/graph/*.js`, `src/numericErrors.js`, and `src/diagnostics.js`. JSDoc uses its built-in HTML template and Markdown support for descriptions. Annotation and parsing warnings fail the command so incomplete output is not mistaken for a successful build.
+
+JSDoc comments provide the reference's descriptions and type information. Shared chart contracts are defined in `src/graph/types.js`, which contains comments only and is included in generation alongside the implementation modules.

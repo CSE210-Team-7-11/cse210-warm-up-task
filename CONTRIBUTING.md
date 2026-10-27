@@ -41,6 +41,8 @@ The build runs Vite first, producing the website in `dist/`, then Astro, produci
 
 For a documentation-only change, `npm run docs:build` builds just the user guide and `npm run docs:preview` previews it.
 
+Generate the library reference with `npm run docs:jsdoc`, then open `docs/jsdoc/index.html` in a browser. See [Generating the reference](docs/jsdoc.md#generating-the-reference) for its scope and configuration.
+
 ## Making a code change
 
 For chart changes, start with the [rendering pipeline](docs/architecture.md#from-options-to-a-drawing). For import or demo changes, see [Import and application integration](docs/architecture.md#import-and-application-integration).

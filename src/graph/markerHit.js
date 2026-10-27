@@ -1,4 +1,22 @@
+/**
+ * Geometric hit testing for the marker paths used by the canvas renderer.
+ * @module graph/markerHit
+ */
+
+/**
+ * Determine whether a point lies inside a marker, including optional outline
+ * expansion. Unknown or omitted shapes use a circle. Returns false for 'none'
+ * or a non-positive radius.
+ * @param {MarkerShape|undefined} shape Marker geometry.
+ * @param {number} dx Pointer X minus marker center X in logical chart units.
+ * @param {number} dy Pointer Y minus marker center Y, increasing downward.
+ * @param {number} radius Half the nominal marker size.
+ * @param {number} [outline=0] Non-negative outward hit tolerance in logical units.
+ * @returns {boolean} Whether the pointer is inside the expanded footprint.
+ */
 export function containsMarker(shape, dx, dy, radius, outline = 0) {
+	/* Match markerPath's rounded corners and triangle offsets. A circular-radius
+	 * test would include empty space near a triangle and miss a square's corners. */
 	if (!(radius > 0) || shape === 'none') {
 		return false
 	}
