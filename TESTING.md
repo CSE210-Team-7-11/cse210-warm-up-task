@@ -111,3 +111,24 @@ The report covers `src/graph/*.js` and its shared `src/numericErrors.js` and `sr
 The chart lifecycle test in `test/chart-lifecycle.test.js` imports `Graph.js` directly through Node, with an empty-module loader hook for `Graph.css`. Node omits execution through Vite's SSR loader from the report, so coverage can undercount code exercised by those tests. The chart tests use mocked canvas and browser objects; check rendering and interactions in the browser as well.
 
 Coverage records execution. Use uncovered paths to identify missing cases, and review assertions to ensure the tests check the intended behavior.
+
+## CI reports
+
+Open the **Check and deploy** run under the repository's Actions tab. Reports are attached as artifacts and retained for 30 days:
+
+| Artifact            | Contents                                                                |
+| ------------------- | ----------------------------------------------------------------------- |
+| `library-coverage`  | `lcov.info` from the unit-test run                                      |
+| `browser-results`   | Playwright HTML report, axe attachments, and failure screenshots/traces |
+| `typecheck-results` | Full JavaScript type diagnostics                                        |
+| `jsdoc-reference`   | Generated library reference, starting at `index.html`                   |
+
+The run summary shows the type-diagnostic count. Type errors produce a warning while checking remains advisory. The browser report contains axe findings. Scan errors and failing smoke or keyboard assertions fail the browser job.
+
+After downloading and extracting `browser-results`, open its report with:
+
+```sh
+npx playwright show-report /path/to/browser-results/playwright-report --port 0
+```
+
+Replace the path with the report's extracted location. Library coverage also appears in the check job's log. Failure artifacts are uploaded when available, including after a test failure.

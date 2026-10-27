@@ -102,4 +102,8 @@ Every pull request requires an approving review from someone other than its auth
 
 ## CI and deployment
 
-GitHub Actions checks formatting, lint, tests, and the combined production build for every pull request and pushes to `main`. The separate deployment workflow repeats these checks before deploying `main` to GitHub Pages. Both workflows use Node 24.
+GitHub Actions runs the checks in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for every pull request and pushes to `main` and `docs/jsdoc`. The workflow uses Node 24 and runs formatting, lint, unit tests with library coverage, Chromium and Firefox tests, JSDoc generation, JavaScript type checking, and the combined production build.
+
+Type diagnostics are advisory and axe findings are report-only while existing issues are addressed. Formatting, lint, unit tests, browser smoke and keyboard tests, documentation generation, and the production build must pass. Reports are available as workflow artifacts for 30 days; see [CI reports](TESTING.md#ci-reports).
+
+Successful pushes to `main` deploy the checked build to GitHub Pages. The workflow can also be run manually on `main`. Pull requests and `docs/jsdoc` builds produce check results and reports.
