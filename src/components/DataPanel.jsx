@@ -97,7 +97,6 @@ export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
           className={`data-panel-dropzone${dragging ? ' is-dragging' : ''}`}
           role="button"
           tabIndex={0}
-          aria-label="Upload a data file"
           onClick={openFilePicker}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
