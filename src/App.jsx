@@ -14,17 +14,21 @@ export default function App() {
 	const update = useCallback((patch) => setState((s) => ({ ...s, ...patch })), [])
 
 	/** Replace the whole dataset (file drop). Rebuilds series from the new columns. */
-	const importData = useCallback(({ columns, numericColumns, issues = [], sourceName }) => {
-		setState((s) => ({
-			...s,
-			sourceName,
-			columns,
-			rows: undefined,
-			numericColumns,
-			series: seriesFromColumns(columns),
-			parseIssues: issues,
-		}))
-	}, [])
+	const importData = useCallback(
+		/** @param {NonNullable<Awaited<ReturnType<typeof import('./fileImport.js').importFile>>> & {sourceName: string}} result Accepted upload. */
+		({ columns, numericColumns, issues = [], sourceName }) => {
+			setState((s) => ({
+				...s,
+				sourceName,
+				columns,
+				rows: undefined,
+				numericColumns,
+				series: seriesFromColumns(columns),
+				parseIssues: issues,
+			}))
+		},
+		[],
+	)
 
 	const resetSpecs = useCallback(() => update({ ...DEFAULT_SPECS }), [update])
 

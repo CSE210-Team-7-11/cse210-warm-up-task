@@ -18,6 +18,11 @@
 
 import { MAX_AUTO_COLORS } from './graph/colors.js'
 
+/**
+ * Parser diagnostics retain their existing contract from state.js.
+ * @typedef {NonNullable<ReturnType<typeof import('./state.js').parseDelimited>>['issues']} ImportIssues
+ */
+
 const ACCEPTED_EXT = /\.(csv|tsv|txt)$/i
 const INFO_TYPES = new Set(['empty-cell', 'precision-loss', 'precision-loss-truncated'])
 const MAX_LISTED = 3
@@ -25,7 +30,14 @@ const MAX_VALUE_CHARS = 20
 
 const isNumber = (v) => typeof v === 'number' && Number.isFinite(v)
 
-/** Why a file can't be imported, or '' when it's worth reading. */
+/**
+ * Check the file extension before reading its contents. This does not parse
+ * the file or impose a size limit; a supported extension can still contain
+ * invalid data and must pass checkParsed after import.
+ * @param {Object} file - Browser File or an object with a filename.
+ * @param {string} file.name - Filename, including its extension.
+ * @returns {string} A rejection message, or an empty string to continue reading.
+ */
 export function checkFile({ name }) {
 	if (/\.xlsx?$/i.test(name)) {
 		return `${name} is an Excel file. Save it as CSV, then drop the CSV here.`
@@ -36,7 +48,16 @@ export function checkFile({ name }) {
 	return ''
 }
 
-/** Why a parseDelimited() result can't be imported, or '' when it can. */
+/**
+ * Decide whether a parsed dataset can replace the editor's current data.
+ * Accepts both parseDelimited rows and importFile numeric columns. Missing
+ * closing quotes, fewer than two columns, or no usable X rows reject the
+ * result. Other diagnostics remain available as non-blocking feedback.
+ * @param {{columns: Array<{key: string, name: string}>, issues: ImportIssues, rows?: number[][], numericColumns?: NumericColumns}|null} parsed
+ *   Parser result with either legacy rows or typed numericColumns, or null for empty input.
+ * @param {string} name - Filename used in rejection messages.
+ * @returns {string} A rejection message, or an empty string for an accepted result.
+ */
 export function checkParsed(parsed, name) {
 	if (!parsed) {
 		return `${name} is empty.`
@@ -50,7 +71,7 @@ export function checkParsed(parsed, name) {
 	if (parsed.columns.length < 2) {
 		return `${name} has only one column. Separate columns with commas or tabs: X first, then at least one series.`
 	}
-	if ((parsed.numericColumns?.length ?? parsed.rows.length) === 0) {
+	if ((parsed.numericColumns?.length ?? /** @type {number[][]} */ (parsed.rows).length) === 0) {
 		if (parsed.issues.some(([type]) => type === 'invalid-x')) {
 			return `${name} has no valid X values.`
 		}
@@ -59,7 +80,15 @@ export function checkParsed(parsed, name) {
 	return ''
 }
 
-/** Every issue with the current data: what the parser found, then series colors. */
+/**
+ * Combine parser diagnostics with the editor's missing-color warning.
+ * Returns a new outer array; diagnostic entries are shared and must be treated
+ * as read-only. Raw cells are not scanned again, preserving source locations.
+ * @param {Object} input - Current editor diagnostics and series styles.
+ * @param {ImportIssues} [input.parseIssues=[]] - Parser [type, data] entries.
+ * @param {Array<SeriesStyle>} [input.series=[]] - Series with an optional color.
+ * @returns {ImportIssues} Parser issues followed by needs-color when applicable.
+ */
 export function findIssues({ parseIssues = [], series = [] }) {
 	const issues = [...parseIssues]
 	const uncolored = series.filter((oneSeries) => !oneSeries.color).length
@@ -69,7 +98,12 @@ export function findIssues({ parseIssues = [], series = [] }) {
 	return issues
 }
 
-/** Warnings change or drop data the user gave us; the rest are just notes. */
+/**
+ * Classify diagnostics for the import panel. Empty-cell and precision entries
+ * are notes; DataPanel presents precision details through PrecisionWarnings.
+ * @param {ImportIssues[number]} issue - A [type, data] diagnostic entry.
+ * @returns {boolean} Whether to show this issue as a general import warning.
+ */
 export const isWarning = ([type]) => !INFO_TYPES.has(type)
 
 const count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
@@ -102,7 +136,15 @@ function cellList(cells, columns) {
 	return listed.join(', ') + more(cells)
 }
 
-/** Compact data problem, location, and correction where needed. */
+/**
+ * Describe one diagnostic using column names and one-based source data rows.
+ * Source rows exclude the header and blank records; they are not sorted chart
+ * indexes or physical text-file line numbers. Long cell lists are abbreviated.
+ * @param {ImportIssues[number]} issue - A [type, data] entry from the parser or findIssues.
+ * @param {Object} context - Column metadata for the imported file.
+ * @param {Array<{key: string, name: string}>} context.columns - Columns in their original order.
+ * @returns {string} Plain text for React to render, not an HTML fragment.
+ */
 export function describeIssue([type, data], { columns }) {
 	const plural = Array.isArray(data) && data.length !== 1
 	const xName = columns[0]?.name || 'X'
@@ -138,13 +180,24 @@ export function describeIssue([type, data], { columns }) {
 	}
 }
 
-/** Compact facts about the loaded data, for a one- or two-line summary. */
+/**
+ * Summarize the loaded dataset without modifying it. Typed columns take
+ * precedence over legacy rows. Row count describes retained rows; series
+ * count includes all Y columns, even those awaiting a manual color.
+ * @param {Object} input - Current dataset and filename.
+ * @param {string} input.sourceName - Display name of the sample or imported file.
+ * @param {Array<{key: string, name: string}>} input.columns - X column followed by Y column metadata.
+ * @param {number[][]} [input.rows] - Sample/legacy rows when no typed data exists.
+ * @param {NumericColumns} [input.numericColumns] - Typed data with length and x properties.
+ * @returns {{sourceName: string, rowCount: number, seriesCount: number, xName: string, xRange: Array<number>|null}}
+ *   Finite X bounds, or null when no finite X value exists, plus dataset counts.
+ */
 export function summarizeData({ sourceName, columns, rows, numericColumns }) {
 	let xMin = Infinity
 	let xMax = -Infinity
-	const length = numericColumns?.length ?? rows.length
+	const length = numericColumns?.length ?? /** @type {number[][]} */ (rows).length
 	for (let i = 0; i < length; i++) {
-		const x = numericColumns ? numericColumns.x[i] : rows[i][0]
+		const x = numericColumns ? numericColumns.x[i] : /** @type {number[][]} */ (rows)[i][0]
 		if (!isNumber(x)) {
 			continue
 		}
@@ -157,7 +210,7 @@ export function summarizeData({ sourceName, columns, rows, numericColumns }) {
 	}
 	return {
 		sourceName,
-		rowCount: numericColumns?.length ?? rows.length,
+		rowCount: numericColumns?.length ?? /** @type {number[][]} */ (rows).length,
 		seriesCount: Math.max(0, columns.length - 1),
 		xName: columns[0]?.name ?? '',
 		xRange: xMin <= xMax ? [xMin, xMax] : null,
