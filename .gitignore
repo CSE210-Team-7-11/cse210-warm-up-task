@@ -25,3 +25,6 @@ dist-ssr
 
 # Astro documentation cache and generated types
 .astro/
+
+# Generated test coverage reports
+/coverage/

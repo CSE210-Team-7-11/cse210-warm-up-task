@@ -8,6 +8,7 @@
     "build": "vite build && npm run docs:build",
     "lint": "oxlint",
     "test": "node --test",
+    "test:coverage": "bash scripts/test-coverage.sh",
     "preview": "vite preview",
     "docs:dev": "astro dev --root docs",
     "docs:build": "astro build --root docs",

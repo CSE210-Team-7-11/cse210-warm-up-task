@@ -79,11 +79,9 @@ npm test
 npm run build
 ```
 
-Oxlint checks the source code. The Node test suite covers imports, data preparation, chart calculations, drawing, and demo components. The build checks the website and public documentation.
+Check the affected behavior in the browser. For documentation changes, review the rendered page, links, and examples.
 
-For renderer or demo changes, check the affected behavior in the browser, including hover, resizing, chart switching, controls, and import feedback as applicable. For documentation changes, check the rendered page, links, and any affected examples.
-
-To run one test file, use a command such as `node --test test/chart-adapter.test.js`. Import fixtures in `test/fixtures/` pair each CSV/TSV with expected JSON. When deliberately changing those expectations, run `UPDATE_FIXTURES=1 node --test test/import-fixtures.test.js` and review the generated diff.
+See [Testing](TESTING.md) for individual test runs, import fixtures, and library coverage reporting.
 
 ## Prepare a review
 
