@@ -8,7 +8,7 @@ import {
 	isWarning,
 	summarizeData,
 } from '../src/importFeedback.js'
-import { initialState, parseDelimited } from '../src/state.js'
+import { initialState, parseDelimited, importFile } from '../src/state.js'
 
 const columns = [
 	{ key: 'c0', name: 'Month' },
@@ -190,4 +190,11 @@ test('summarizes the source, counts and X range, ignoring invalid X values', () 
 		summarizeData({ sourceName: 'a.csv', columns, rows: [['bad', 1, 1]] }).xRange,
 		null,
 	)
+})
+
+test('typed file imports reject an all-invalid X dataset with an actionable reason', async () => {
+	const parsed = await importFile(new File(['X,Y\nbad,2\n#N/A,3\n,4'], 'invalid-x.csv'))
+	assert.equal('rows' in parsed, false)
+	assert.equal(parsed.numericColumns.length, 0)
+	assert.equal(checkParsed(parsed, 'invalid-x.csv'), 'invalid-x.csv has no valid X values.')
 })
