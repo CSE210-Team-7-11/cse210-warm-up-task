@@ -9,8 +9,11 @@
 		"lint": "oxlint",
 		"format": "oxfmt",
 		"format:check": "oxfmt --check",
-		"test": "node --test",
+		"test": "node --test \"test/*.test.js\"",
 		"test:coverage": "bash scripts/test-coverage.sh",
+		"test:e2e": "playwright test",
+		"test:e2e:chromium": "playwright test --project=chromium",
+		"test:e2e:firefox": "playwright test --project=firefox",
 		"preview": "vite preview",
 		"docs:dev": "astro dev --root docs",
 		"docs:build": "astro build --root docs",
@@ -23,6 +26,7 @@
 		"react-dom": "^19.2.8"
 	},
 	"devDependencies": {
+		"@playwright/test": "1.64.1",
 		"@types/react": "^19.2.18",
 		"@types/react-dom": "^19.2.7",
 		"@vitejs/plugin-react": "^6.1.1",

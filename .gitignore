@@ -28,3 +28,7 @@ dist-ssr
 
 # Generated test coverage reports
 /coverage/
+
+# Generated browser test results and reports
+/test-results/
+/playwright-report/
