@@ -1,0 +1,49 @@
+---
+import ChartExamples from '../components/ChartExamples.astro'
+import '../styles.css'
+
+const { title, name, headings } = Astro.props
+const base = import.meta.env.BASE_URL.replace(/\/?$/, '/')
+const navigation = [
+  { name: 'index', label: 'Introduction', href: base },
+  { name: 'getting-started', label: 'Getting started', href: `${base}getting-started.html` },
+  { name: 'api', label: 'API reference', href: `${base}api.html` },
+]
+const sections = headings.filter(({ depth }) => depth === 2)
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="78js documentation: line and scatter charts, configuration, and API reference." />
+    <title>{title === '78js' ? '78js documentation' : `${title} | 78js`}</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#content">Skip to content</a>
+    <header>
+      <a class="site-title" href={base}>78js documentation</a>
+      <a href="https://github.com/CSE210-Team-7-11/cse210-warm-up-task">GitHub</a>
+    </header>
+    <div class="docs-layout">
+      <aside>
+        <nav aria-label="Documentation">
+          <ul>
+            {navigation.map((item) => (
+              <li><a href={item.href} aria-current={item.name === name ? 'page' : undefined}>{item.label}</a></li>
+            ))}
+          </ul>
+        </nav>
+        {sections.length > 0 && (
+          <nav aria-label="On this page">
+            <p>On this page</p>
+            <ul>{sections.map(({ slug, text }) => <li><a href={`#${slug}`}>{text}</a></li>)}</ul>
+          </nav>
+        )}
+      </aside>
+      <main id="content"><slot /></main>
+    </div>
+    {name === 'getting-started' && <ChartExamples />}
+  </body>
+</html>

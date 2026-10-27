@@ -1,0 +1,44 @@
+<script>
+  import { createChart } from '../../../src/graph/Graph.js'
+  import { salesOptions, comparisonOptions } from '../examples/sales.js'
+
+  /** Mounts a live chart in place of its static image and cleans it up on removal. */
+  class ChartExample extends HTMLElement {
+    /** @type {ReturnType<typeof createChart> | undefined} */
+    chart
+
+    /** @type {HTMLDivElement | undefined} */
+    container
+
+    /** Create the documented example after the element is attached to the page. */
+    connectedCallback() {
+      if (this.chart) return
+      this.container = document.createElement('div')
+      this.prepend(this.container)
+      this.chart = createChart(this.container, salesOptions)
+      const options = this.dataset.example === 'comparison' ? comparisonOptions : salesOptions
+      if (this.dataset.example === 'comparison') this.chart.update(options)
+      if (this.dataset.type === 'scatter') {
+        this.chart.update({ ...options, type: 'scatter' })
+      }
+      const fallback = this.querySelector('img')
+      if (fallback) (fallback.closest('p') ?? fallback).hidden = true
+      this.dataset.ready = 'true'
+    }
+
+    /** Release the canvas, listeners, and observer when this example is removed. */
+    disconnectedCallback() {
+      this.chart?.destroy()
+      this.chart = undefined
+      this.container?.remove()
+      this.container = undefined
+      const fallback = this.querySelector('img')
+      if (fallback) (fallback.closest('p') ?? fallback).hidden = false
+      delete this.dataset.ready
+    }
+  }
+
+  if (!customElements.get('chart-example')) {
+    customElements.define('chart-example', ChartExample)
+  }
+</script>
