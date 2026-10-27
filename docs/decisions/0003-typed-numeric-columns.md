@@ -12,9 +12,9 @@ The inherited pipeline creates an object per row (`{ x, s1, s2 }`) and then anot
 
 ## Considered Options
 
-* Keep arrays of point objects
-* Migrate Part 1's `PointSet`
-* Typed numeric columns
+- Keep arrays of point objects
+- Migrate Part 1's `PointSet`
+- Typed numeric columns
 
 ## Decision Outcome
 
@@ -26,5 +26,5 @@ Migrating Part 1's `PointSet` was considered but not chosen: the assignment is t
 
 ### Consequences
 
-* Good: far less memory and allocation, and X is stored once.
-* Bad: code that reads points has to change; the old renderer needs a conversion step until it is replaced.
+- Good: far less memory and allocation, and X is stored once.
+- Bad: code that reads points has to change; the old renderer needs a conversion step until it is replaced.

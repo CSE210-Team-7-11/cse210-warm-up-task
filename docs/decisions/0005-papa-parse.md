@@ -12,18 +12,18 @@ The inherited parser splits every line on every comma, so quoted fields such as 
 
 ## Considered Options
 
-* Papa Parse
-* Fix the in-house parser
+- Papa Parse
+- Fix the in-house parser
 
 ## Decision Outcome
 
 Chosen option: **[Papa Parse](https://www.papaparse.com/)**, a small, dependency-free library that handles quoted fields, delimiter detection, streaming, and workers.
 
-* Papa Parse only splits fields. Our own adapter converts and validates the values (ADR-0006) and fills the numeric columns (ADR-0003).
-* `dynamicTyping` stays off, so our conversion sees the original text.
-* Papa Parse's reported errors are checked, not ignored.
+- Papa Parse only splits fields. Our own adapter converts and validates the values (ADR-0006) and fills the numeric columns (ADR-0003).
+- `dynamicTyping` stays off, so our conversion sees the original text.
+- Papa Parse's reported errors are checked, not ignored.
 
 ### Consequences
 
-* Good: correct quoting and streaming without writing our own CSV parser.
-* Bad: one runtime dependency, requiring reading docs and maintaining.
+- Good: correct quoting and streaming without writing our own CSV parser.
+- Bad: one runtime dependency, requiring reading docs and maintaining.

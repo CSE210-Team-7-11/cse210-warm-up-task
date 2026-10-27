@@ -1,0 +1,21 @@
+---
+import Docs from '../layouts/Docs.astro'
+
+/** Build routes only for the public user guide; contributor docs stay in Git. */
+export function getStaticPaths() {
+	const pages = import.meta.glob('../../user-guide/*.md', { eager: true })
+	return Object.entries(pages).map(([path, page]) => {
+		const name = path.split('/').at(-1).replace(/\.md$/, '')
+		return { params: { page: name === 'index' ? undefined : name }, props: { page, name } }
+	})
+}
+
+const { page, name } = Astro.props
+const { Content, getHeadings } = page
+const headings = getHeadings()
+const title = headings.find(({ depth }) => depth === 1)?.text ?? '78js'
+---
+
+<Docs title={title} name={name} headings={headings}>
+	<Content />
+</Docs>

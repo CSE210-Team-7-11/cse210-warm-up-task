@@ -1,86 +1,86 @@
 .app {
-  min-height: 100vh;
-  display: flex;
-  flex-direction: column;
+	min-height: 100vh;
+	display: flex;
+	flex-direction: column;
 }
 
 .page {
-  flex: 1;
-  width: 100%;
-  max-width: 1440px;
-  margin: 0 auto;
-  padding: 20px 32px 24px;
+	flex: 1;
+	width: 100%;
+	max-width: 1440px;
+	margin: 0 auto;
+	padding: 20px 32px 24px;
 }
 
 .workspace {
-  display: grid;
-  grid-template-columns: 236px minmax(0, 1fr) 252px;
-  gap: 16px;
-  /* All three columns share a bottom edge in the mockup. */
-  align-items: stretch;
+	display: grid;
+	grid-template-columns: 236px minmax(0, 1fr) 252px;
+	gap: 16px;
+	/* All three columns share a bottom edge in the mockup. */
+	align-items: stretch;
 }
 
 .column {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 16px;
+	min-width: 0;
 }
 
 /* The last panel in each column absorbs the extra row height. */
 .column > :last-child {
-  flex: 1 1 auto;
+	flex: 1 1 auto;
 }
 
 /* Steps 01 and 02 read as one white card with an inner divider. */
 .column-left {
-  gap: 0;
+	gap: 0;
 }
 
 .column-left > .panel:first-child {
-  border-bottom: 0;
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  box-shadow: none;
+	border-bottom: 0;
+	border-bottom-left-radius: 0;
+	border-bottom-right-radius: 0;
+	box-shadow: none;
 }
 
 .column-left > .panel + .panel {
-  border-top: 1px solid var(--border-soft);
-  border-top-left-radius: 0;
-  border-top-right-radius: 0;
+	border-top: 1px solid var(--border-soft);
+	border-top-left-radius: 0;
+	border-top-right-radius: 0;
 }
 
 .page-footer {
-  padding: 16px 32px;
-  border-top: 1px solid var(--border);
-  background: var(--bg-surface);
-  font-size: var(--font-md);
-  text-align: center;
+	padding: 16px 32px;
+	border-top: 1px solid var(--border);
+	background: var(--bg-surface);
+	font-size: var(--font-md);
+	text-align: center;
 }
 
 .page-footer a {
-  color: var(--green-700);
-  text-underline-offset: 3px;
+	color: var(--green-700);
+	text-underline-offset: 3px;
 }
 
 /* Three columns hold down to ~1000px; below that the specs column drops under. */
 @media (max-width: 1000px) {
-  .workspace {
-    grid-template-columns: 220px minmax(0, 1fr);
-  }
-  .column-right {
-    grid-column: 1 / -1;
-  }
+	.workspace {
+		grid-template-columns: 220px minmax(0, 1fr);
+	}
+	.column-right {
+		grid-column: 1 / -1;
+	}
 }
 
 @media (max-width: 760px) {
-  .page {
-    padding: 16px;
-  }
-  .workspace {
-    grid-template-columns: minmax(0, 1fr);
-  }
-  .column-right {
-    grid-column: auto;
-  }
+	.page {
+		padding: 16px;
+	}
+	.workspace {
+		grid-template-columns: minmax(0, 1fr);
+	}
+	.column-right {
+		grid-column: auto;
+	}
 }

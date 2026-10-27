@@ -1,0 +1,109 @@
+# Contributing
+
+## Local setup
+
+Install Node.js >=22.23.4.
+
+From the repository root, install the dependencies:
+
+```sh
+npm ci
+```
+
+### Work on the website or library
+
+```sh
+npm run dev
+```
+
+Open the URL printed by Vite.
+
+### Work on the documentation
+
+```sh
+npm run docs:dev
+```
+
+Astro serves the public documentation. In local builds, open the URL printed by this command.
+
+The source files and live-example setup are described under [Documentation site](#documentation-site).
+
+### Build and preview
+
+Build the complete site, then preview the result:
+
+```sh
+npm run build
+npm run preview
+```
+
+The build runs Vite first, producing the website in `dist/`, then Astro, producing the documentation in `dist/docs/`. This ordering matters because Vite clears `dist/`. The GitHub Pages artifact includes both outputs.
+
+For a documentation-only change, `npm run docs:build` builds just the user guide and `npm run docs:preview` previews it.
+
+Generate the library reference with `npm run docs:jsdoc`, then open `docs/jsdoc/index.html` in a browser. See [Generating the reference](docs/jsdoc.md#generating-the-reference) for its scope and configuration.
+
+## Making a code change
+
+For chart changes, start with the [rendering pipeline](docs/architecture.md#from-options-to-a-drawing). For import or demo changes, see [Import and application integration](docs/architecture.md#import-and-application-integration).
+
+Before changing shared data structures, check the [library interfaces](docs/interfaces.md). Agree shared interface changes with the leads, as recorded in [ADR-0007](docs/decisions/0007-data-contract.md), and update the modules that produce and consume the changed data together.
+
+Update JSDoc annotations and relevant documentation when behavior changes. Follow the [JSDoc conventions](docs/jsdoc.md).
+
+Run `npm run typecheck` for JavaScript type diagnostics. See [Checking JavaScript types](docs/jsdoc.md#checking-javascript-types) for scope and watch mode.
+
+Run `npm run format` to apply the shared formatting conventions. Oxfmt settings are in `.oxfmtrc.json`, editor defaults are in `.editorconfig`, and code rules are in `.oxlintrc.json`.
+
+## Documentation site
+
+Edit the public documentation in `docs/user-guide/`:
+
+- `index.md`: documentation landing page.
+- `getting-started.md`: walkthrough with live chart examples.
+- `api.md`: chart inputs, configuration, and methods.
+
+### Rendering and links
+
+Astro builds the Markdown files directly inside `docs/user-guide/` with the shared layout in `docs/site/layouts/Docs.astro`. The layout supplies navigation and links to the page's sections. `docs/site/middleware.js` converts local `.md` links into `.html` links in rendered pages, preserving source links for GitHub readers.
+
+The site uses static HTML and ordinary browser JavaScript. Its generated `.astro/` files and build output are ignored by Git.
+
+### Live chart examples
+
+`docs/site/components/ChartExamples.astro` registers a browser custom element for each example in the getting-started guide. The element calls the chart library, hides its fallback image after mounting, and destroys the chart when removed. The images remain available with JavaScript disabled and in repository Markdown views.
+
+The example configurations are in `docs/site/examples/sales.js`. Keep them consistent with the displayed code and data tables when changing an example. Verify the live result, hover, resizing, and static image fallback; regenerate the images from the library output when the result changes.
+
+## Check a change
+
+Before requesting review, run:
+
+```sh
+npm run format:check
+npm run lint
+npm test
+npm run build
+```
+
+Check the affected behavior in the browser. For documentation changes, review the rendered page, links, and examples.
+
+See [Testing](TESTING.md) for individual test runs, import fixtures, and library coverage reporting.
+
+## Prepare a review
+
+Use [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). For example, `docs: describe the chart lifecycle` or `fix: preserve gaps after sorting`.
+
+For bug fixes, include a small input example and the expected behavior in the pull request.
+
+Record agreed technical decisions in an [ADR](docs/decisions/README.md), using the lightweight MADR format established in ADR-0001, and add it to the decision index. Include the rationale and alternatives considered. Discuss changes to an accepted decision with the team before updating its record.
+
+Every pull request requires an approving review from someone other than its author before merging. Authors must understand, explain, and be able to build on their contributed code, including AI-assisted code, under [ADR-0002](docs/decisions/0002-ai-usage.md). The same policy excludes AI use for visual or UI design.
+
+## CI and deployment
+
+GitHub Actions runs the checks in [`.github/workflows/ci.yml`](.github/workflows/ci.yml) for every pull request and pushes to `main` and `docs/jsdoc`. The workflow uses Node 24 and runs formatting, lint, unit tests with library coverage, Chromium and Firefox tests, JSDoc generation, JavaScript type checking, and the combined production build.
+
+Type diagnostics are advisory and axe findings are report-only while existing issues are addressed. Formatting, lint, unit tests, browser smoke and keyboard tests, documentation generation, and the production build must pass. Reports are available as workflow artifacts for 30 days; see [CI reports](TESTING.md#ci-reports).
+
+Successful pushes to `main` deploy the checked build to GitHub Pages. The workflow can also be run manually on `main`. Pull requests and `docs/jsdoc` builds produce check results and reports.

@@ -10,12 +10,12 @@ Seven of ten members were present. The policy stands pending an objection raised
 
 ## Decision Outcome
 
-* AI may be used for code, provided the author fully understands what they
+- AI may be used for code, provided the author fully understands what they
   contribute and can explain it and build on it without losing the theory of
   it (Naur).
-* AI is not used for visual or UI design.
+- AI is not used for visual or UI design.
 
 ### Rationale
 
-* Unexplained code adds bloat and technical debt.
-* AI-generated designs tend to be poorly structured, generic, and cluttered.
+- Unexplained code adds bloat and technical debt.
+- AI-generated designs tend to be poorly structured, generic, and cluttered.

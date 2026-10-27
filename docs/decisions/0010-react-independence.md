@@ -12,8 +12,8 @@ The chart is a React component, so any application that wants to show it must al
 
 ## Considered Options
 
-* Keep the chart as a React component
-* Make the library plain JavaScript, with React only in the demo
+- Keep the chart as a React component
+- Make the library plain JavaScript, with React only in the demo
 
 ## Decision Outcome
 
@@ -21,8 +21,8 @@ Remove React as a dependency of the charting library while keeping the existing 
 
 ### Consequences
 
-* Good: chart work uses familiar JavaScript, without requiring the team to learn React.
-* Good: chart interactions no longer incur React's component-update overhead.
-* Good: the library works in applications regardless of their framework. Users don't need to download or maintain React for the chart, or match its React version.
-* Bad: removing the framework takes a one-time effort to move existing component logic to native browser APIs and JavaScript.
-* Bad: React's default text escaping no longer protects the chart. CSV text must be drawn or inserted as text, never interpreted as HTML.
+- Good: chart work uses familiar JavaScript, without requiring the team to learn React.
+- Good: chart interactions no longer incur React's component-update overhead.
+- Good: the library works in applications regardless of their framework. Users don't need to download or maintain React for the chart, or match its React version.
+- Bad: removing the framework takes a one-time effort to move existing component logic to native browser APIs and JavaScript.
+- Bad: React's default text escaping no longer protects the chart. CSV text must be drawn or inserted as text, never interpreted as HTML.

@@ -1,68 +1,68 @@
 .chart-preview {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
+	display: flex;
+	flex-direction: column;
+	min-width: 0;
 }
 
 .chart-preview-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 12px 16px;
-  border-bottom: 1px solid var(--border-soft);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-strong);
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 12px 16px;
+	border-bottom: 1px solid var(--border-soft);
+	font-size: 12px;
+	font-weight: 600;
+	color: var(--text-strong);
 }
 
 .chart-preview-header-icon {
-  display: inline-flex;
-  color: var(--green-600);
+	display: inline-flex;
+	color: var(--green-600);
 }
 
 .chart-preview-body {
-  flex: 1; /* push the footer to the bottom of the stretched panel */
-  padding: 20px 16px;
+	flex: 1; /* push the footer to the bottom of the stretched panel */
+	padding: 20px 16px;
 }
 
 .chart-preview-empty {
-  height: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius-md);
-  background: var(--bg-muted);
-  font-size: 12px;
-  color: var(--text-muted);
-  text-align: center;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 16px;
+	border: 1px dashed var(--border);
+	border-radius: var(--radius-md);
+	background: var(--bg-muted);
+	font-size: 12px;
+	color: var(--text-muted);
+	text-align: center;
 }
 
 .chart-preview-error {
-  padding: 16px;
-  border-radius: var(--radius-md);
-  background: var(--danger-bg);
-  color: var(--danger);
-  overflow-wrap: anywhere;
+	padding: 16px;
+	border-radius: var(--radius-md);
+	background: var(--danger-bg);
+	color: var(--danger);
+	overflow-wrap: anywhere;
 }
 
 .chart-preview-footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px;
-  border-top: 1px solid var(--border-soft);
-  border-radius: 0 0 var(--radius-lg) var(--radius-lg);
-  background: var(--bg-muted);
-  font-size: 10.5px;
-  line-height: 1.4;
-  color: var(--text-muted);
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 12px;
+	padding: 10px 16px;
+	border-top: 1px solid var(--border-soft);
+	border-radius: 0 0 var(--radius-lg) var(--radius-lg);
+	background: var(--bg-muted);
+	font-size: 10.5px;
+	line-height: 1.4;
+	color: var(--text-muted);
 }
 
 .series-key {
-  display: block;
-  flex-shrink: 0;
-  overflow: visible;
+	display: block;
+	flex-shrink: 0;
+	overflow: visible;
 }

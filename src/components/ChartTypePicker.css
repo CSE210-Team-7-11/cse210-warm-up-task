@@ -1,69 +1,69 @@
 /* ChartTypePicker — step 01 "Choose your graph" */
 
 .chart-type-picker-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 12px;
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 8px;
+	margin-top: 12px;
 }
 
 .chart-type-picker-card {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 72px;
-  padding: 8px 6px;
-  background: var(--bg-surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  color: var(--text-muted);
-  transition:
-    background-color 120ms ease,
-    border-color 120ms ease,
-    color 120ms ease;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	height: 72px;
+	padding: 8px 6px;
+	background: var(--bg-surface);
+	border: 1px solid var(--border);
+	border-radius: var(--radius-md);
+	color: var(--text-muted);
+	transition:
+		background-color 120ms ease,
+		border-color 120ms ease,
+		color 120ms ease;
 }
 
 .chart-type-picker-card:hover {
-  background: var(--bg-muted);
-  border-color: var(--green-200);
+	background: var(--bg-muted);
+	border-color: var(--green-200);
 }
 
 .chart-type-picker-card:focus-visible {
-  outline: 2px solid var(--green-300);
-  outline-offset: 2px;
+	outline: 2px solid var(--green-300);
+	outline-offset: 2px;
 }
 
 .chart-type-picker-icon {
-  display: inline-flex;
-  line-height: 0;
-  color: var(--text-muted);
+	display: inline-flex;
+	line-height: 0;
+	color: var(--text-muted);
 }
 
 .chart-type-picker-label {
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1;
-  color: var(--text-strong);
-  white-space: nowrap;
+	font-size: 12px;
+	font-weight: 500;
+	line-height: 1;
+	color: var(--text-strong);
+	white-space: nowrap;
 }
 
 /* selected state */
 .chart-type-picker-card.is-selected {
-  background: var(--bg-tint);
-  border-color: var(--green-600);
+	background: var(--bg-tint);
+	border-color: var(--green-600);
 }
 
 .chart-type-picker-card.is-selected:hover {
-  background: var(--bg-tint);
+	background: var(--bg-tint);
 }
 
 .chart-type-picker-card.is-selected .chart-type-picker-icon,
 .chart-type-picker-card.is-selected .chart-type-picker-label {
-  color: var(--green-600);
+	color: var(--green-600);
 }
 
 .chart-type-picker-card.is-selected .chart-type-picker-label {
-  font-weight: 600;
+	font-weight: 600;
 }

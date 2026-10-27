@@ -1,0 +1,12 @@
+{
+	"source": {
+		"include": ["src/graph", "src/numericErrors.js", "src/diagnostics.js"],
+		"includePattern": "\\.js$"
+	},
+	"plugins": ["plugins/markdown"],
+	"opts": {
+		"destination": "docs/jsdoc",
+		"recurse": true,
+		"pedantic": true
+	}
+}

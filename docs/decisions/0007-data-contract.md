@@ -26,8 +26,8 @@ Series styles (name, color, dash, marker) stay as plain objects in the same orde
 
 ### Missing values
 
-* `-Infinity`: the series has no point at this X. The line connects across it.
-* `+Infinity`: an intentional break. The line stops and restarts.
+- `-Infinity`: the series has no point at this X. The line connects across it.
+- `+Infinity`: an intentional break. The line stops and restarts.
 
 Both fail `Number.isFinite`, so bounds, trend lines, and hit testing skip them with one check. Only line drawing tells them apart.
 
@@ -36,7 +36,16 @@ Both fail `Number.isFinite`, so bounds, trend lines, and hit testing skip them w
 A list of `[type, data]` entries. `data` depends on the type: a count, or a list of `[column, row]` cell positions.
 
 ```js
-[['invalid-number', [[2, 11], [2, 40]]], ['TooFewFields', [57]]]
+;[
+	[
+		'invalid-number',
+		[
+			[2, 11],
+			[2, 40],
+		],
+	],
+	['TooFewFields', [57]],
+]
 ```
 
 Papa Parse error codes are used as types for parse errors. The full list of types is documented with the import code.
@@ -47,5 +56,5 @@ Papa Parse error codes are used as types for parse errors. The full list of type
 
 ### Consequences
 
-* Good: subteams can build against the contract in parallel.
-* Bad: changing it means changing both sides; changes go through the leads.
+- Good: subteams can build against the contract in parallel.
+- Bad: changing it means changing both sides; changes go through the leads.
