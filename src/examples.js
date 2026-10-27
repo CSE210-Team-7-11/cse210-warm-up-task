@@ -1,7 +1,24 @@
+/**
+ * @file Renders the chart examples in /examples.html
+ */
 import { createChart } from './graph/Graph.js'
 
+/**
+ * @constant
+ * @type {Float64Array}
+ */
 const days = Float64Array.of(1, 2, 3, 4, 5, 6, 7)
 
+/**
+ * Plots a graph with the given dataset and chart options using {@link module:graph/Graph.createChart|createChart}.
+ * 
+ * @param {string} id - DOM element id of the container to plot the graph in
+ * @param {string} type - chart type 'scatter'|'line'
+ * @param {Object.<symbol, string>} labels - the chart title, subtitle, and y_axis_label
+ * @param {Array.<Object.<symbol, string>} series - list of series name, color, and marker shape
+ * @param {Array.<Number>} ys - list of dataset y-values
+ * @param {Object.<symbol, boolean>} options - chart customization options
+ */
 function plot(id, type, labels, series, ys, options = {}) {
   createChart(document.getElementById(id), {
     type, labels: { x_axis_label: 'Day', ...labels }, series,
@@ -9,6 +26,7 @@ function plot(id, type, labels, series, ys, options = {}) {
     ...options,
   })
 }
+
 
 plot('scatter-a', 'scatter', {
   title: 'Daily foot traffic', subtitle: 'A scatter plot with a trend line', y_axis_label: 'Visitors',
