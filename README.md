@@ -1,68 +1,23 @@
-# CSE 210 Warm-up Task
+<p align="center">
+  <img src="public/78js_logo.svg" alt="78js" width="200">
+</p>
 
-**Live site:** https://www.maxwei.io/cse210-warm-up-task-public/
+[Documentation](docs/user-guide/index.md) · [Getting started](docs/user-guide/getting-started.md) · [API reference](docs/user-guide/api.md) · [Contributing](CONTRIBUTING.md)
 
-## Team Introduction & Warm-up Task Presentation
+# 78js
 
-**Due:** Tuesday by 11:59am | **Points:** 3 | **Submission:** a website URL (one per team)
+78js is a JavaScript charting library for line and scatter plots. It supports multiple series, interactive tooltips, configurable colors and markers, and scatter trend lines.
 
-### Overview
+## Getting started
 
-First impressions are important. Teams have just formed, and now it's time to get to know each other: what does the team stand for, who is in it, what is the culture like, and what values does the group share?
+Start with the [getting-started guide](docs/user-guide/getting-started.md).
 
-For this assignment, the team creates a **video** that introduces itself and presents its work on the warm-up task (the graphing tool discussed in lecture).
+A packaged release is not available.
 
-### Video Ideas
+![A line chart of daily sales: 24, 31, 28, and 42 dollars on days 1 through 4.](docs/user-guide/assets/getting-started-line.png)
 
-The video is open-ended. Some ideas for what to include:
+See the [example code](docs/user-guide/getting-started.md#create-a-chart), or consult the [API reference](docs/user-guide/api.md) for data formats, styling options, and chart updates.
 
-- **Team Introduction:** Team members, team name, culture, goals, or anything you'd like the class to know about the team.
-- **Warm-up Task Approach:** How the team planned and approached the graphing tool task.
-- **Results:** A demonstration of what the team built and a discussion of the results.
+## Contributing
 
-Be creative! Everyone on the team should participate.
-
-### Submission Requirements
-
-- One submission per team containing a **YouTube link** to the video.
-- The video must be set to **public** or **unlisted** so it can be accessed.
-- The video must be **no longer than 10 minutes**.
-- Be prepared to answer a few questions about the team's work.
-
----
-
-## Team
-
-| Name | Role |
-| ---- | ---- |
-| Jason Kong | |
-| Anna He | Co-Lead |
-| Maximilian Wei | |
-|  | |
-
-## Warm-up Task: Graphing Tool
-
-**Smitski Graph Studio** is a browser-based tool that turns a CSV/TSV file into a line graph or scatter plot with a custom title, subtitle, and axis labels. It is built with React 19 + Vite on the `vibe-code` branch.
-
-> **No Recharts.** All Recharts references have been removed: the dependency is gone from `package.json` / `package-lock.json`, and nothing in `src/` imports it. Charts are plain SVG drawn by our own code in `src/components/charts/`.
-
-```bash
-npm install
-npm run dev   # http://localhost:5173
-```
-
-See [docs/HOW_IT_WORKS.md](docs/HOW_IT_WORKS.md) for how the app is structured and the open `TODO(...)` items.
-
-For Part 2, see the [frontend integration notes](docs/frontend-integration.md) for the current chart boundary and checks. Run `npm test` for the adapter regression checks, including empty-cell gaps and `#N/A` connections.
-
-### Approach
-
-_How the team planned and divided the work._
-
-### Results
-
-_What was built and what was learned._
-
-## Video
-
-_Add the YouTube link here once uploaded._
+For local setup, development commands, and review requirements, see [Contributing](CONTRIBUTING.md), the [architecture guide](docs/architecture.md), and the [decision records](docs/decisions/README.md).
