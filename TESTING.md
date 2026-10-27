@@ -70,6 +70,18 @@ npx playwright show-report --port 0
 
 The report viewer also chooses an available port. Replace `0` with a specific port when needed.
 
+## Accessibility tests
+
+```sh
+npm run test:a11y
+```
+
+This runs the accessibility baseline scan and keyboard example in Chromium and Firefox. Select one browser with `-- --project=chromium` or `-- --project=firefox`. These tests also run as part of the browser suite.
+
+The axe scan checks the loaded demo with its default rules and attaches the full results as `axe-results` in the HTML report. Results include affected elements, explanations, help links, and inconclusive checks requiring manual review. The baseline is report-only while existing violations are reviewed; a completed scan is not a zero-violation result. No rules are disabled or findings excluded.
+
+The keyboard example in `e2e/accessibility.spec.js` uses Tab, Enter, and Space to change chart types, asserting focus, selection, and the rendered chart type. Use this pattern when adding tests for other controls. Chart-point exploration and screen-reader usability need further testing; axe cannot inspect the contents drawn on the canvas.
+
 ## Import fixtures
 
 Each CSV or TSV in `test/fixtures/` is paired with a `<name>.expected.json` file. Run the fixture tests with:
