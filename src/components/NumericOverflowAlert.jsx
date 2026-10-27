@@ -1,3 +1,5 @@
+// @ts-check
+
 import { NumericOverflowErrors } from '../numericErrors.js'
 import './NumericOverflowAlert.css'
 

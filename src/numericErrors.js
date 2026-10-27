@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Numeric overflow diagnostics and aggregation for independent calculations.
  * @module numericErrors
@@ -85,8 +87,9 @@ export const isNumericOverflowError = (error) =>
  * aggregate for several. Returns normally when the failure count is zero.
  * @param {DiagnosticBuffer<Error>} diagnostics Collected failures with at least one
  * retained error whenever count is positive.
- * @throws {Error} The original retained failure when count is one.
- * @throws {module:numericErrors.NumericOverflowErrors} Multiple failures occurred.
+ * @throws The original retained error when count is one.
+ * @throws A {@link module:numericErrors.NumericOverflowErrors|NumericOverflowErrors}
+ * when multiple failures occur.
  */
 export function throwOverflowErrors({ items, count }) {
 	if (count === 1) {
@@ -103,12 +106,15 @@ export function throwOverflowErrors({ items, count }) {
  * numeric failures produce an aggregate with the complete count even when some
  * details were omitted from nested aggregates.
  * @template T
- * @param {Array<function(): T>} calculations Lazy calculations to attempt.
+ * @param {Array<ValueFactory<T>>} calculations Lazy calculations to attempt.
  * @returns {Array<T>} Results in input order, only when all calculations succeeded.
- * @throws {module:numericErrors.Float32OverflowError} The only failure was a 32-bit overflow.
- * @throws {module:numericErrors.Float64OverflowError} The only failure was a 64-bit overflow.
- * @throws {module:numericErrors.NumericOverflowErrors} More than one numeric failure was recorded.
- * @throws {Error} An unrelated exception from a calculation is rethrown unchanged.
+ * @throws A {@link module:numericErrors.Float32OverflowError|Float32OverflowError}
+ * when the only failure is a 32-bit overflow.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when the only failure is a 64-bit overflow.
+ * @throws A {@link module:numericErrors.NumericOverflowErrors|NumericOverflowErrors}
+ * when more than one numeric failure is recorded.
+ * @throws An unrelated exception from a calculation, rethrown unchanged.
  */
 export function collectOverflowErrors(calculations) {
 	const errors = createDiagnostics()
@@ -141,11 +147,12 @@ export function collectOverflowErrors(calculations) {
  * to zero pass the check.
  * @param {number} result Calculated value to check.
  * @param {string} columnName Column identified in the failure message.
- * @param {number|string|function(): (number|string)} input Value or lazy description
+ * @param {number|string|ValueFactory<(number|string)>} input Value or lazy description
  * used to explain the failing calculation. A function is evaluated only on failure.
  * @param {string} calculation Calculation name for the diagnostic message.
  * @returns {number} The validated finite result.
- * @throws {module:numericErrors.Float64OverflowError} The result is NaN or infinite.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when the result is NaN or infinite.
  */
 export function finiteCalculation(result, columnName, input, calculation) {
 	if (!Number.isFinite(result)) {

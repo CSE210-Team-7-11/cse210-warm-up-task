@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Canvas drawing primitives, dense-series reduction, and chart annotations.
  * Coordinates and sizes are logical chart units unless noted otherwise. Most
@@ -95,7 +97,8 @@ function line(ctx, x1, y1, x2, y2, color) {
  * @param {CanvasRenderingContext2D} ctx Context scaled to logical chart coordinates.
  * @param {ChartLayout} layout Domain, plot edges, ticks, and coordinate mappings.
  * @param {ChartLabels} labels Resolved text. Use empty strings to omit individual labels.
- * @throws {module:numericErrors.Float64OverflowError} An axis value projects to a non-finite drawing coordinate.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when an axis value projects to a non-finite drawing coordinate.
  */
 export function drawFrame(ctx, layout, { title, subtitle, x_axis_label, y_axis_label }) {
 	const { left, right, top, bottom, toX, toY, xTicks, yTicks, xGridlines, yGridlines } = layout
@@ -446,7 +449,8 @@ export function drawLines(
  * @param {CanvasRenderingContext2D} ctx Context in logical chart coordinates.
  * @param {Array<RenderedTrend>} trends Fits evaluated at their usable endpoints.
  * @param {ChartLayout} layout Clipping rectangle and coordinate mappings.
- * @throws {module:numericErrors.Float64OverflowError} A trend endpoint projects to a non-finite drawing coordinate.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when a trend endpoint projects to a non-finite drawing coordinate.
  */
 export function drawTrendLines(ctx, trends, layout) {
 	const { left, right, top, bottom, toX, toY } = layout
@@ -568,7 +572,8 @@ function drawDot(ctx, shape, x, y, r, color) {
  * Wide glyphs or long numeric strings can render beyond the box's estimated width.
  * @param {CanvasRenderingContext2D} ctx Context in logical chart coordinates.
  * @param {TooltipOptions} options Hovered values, series style, mappings, and plot bounds.
- * @throws {module:numericErrors.Float64OverflowError} The hovered point projects to a non-finite drawing coordinate.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when the hovered point projects to a non-finite drawing coordinate.
  */
 export function drawTooltip(
 	ctx,

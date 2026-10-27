@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Geometric hit testing for the marker paths used by the canvas renderer.
  * @module graph/markerHit

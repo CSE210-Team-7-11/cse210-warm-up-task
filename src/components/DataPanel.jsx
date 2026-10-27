@@ -1,3 +1,5 @@
+// @ts-check
+
 import { useCallback, useMemo, useRef, useState } from 'react'
 import { importFile } from '../state.js'
 import { isNumericOverflowError } from '../numericErrors.js'

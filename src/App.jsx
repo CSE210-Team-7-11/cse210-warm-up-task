@@ -1,3 +1,5 @@
+// @ts-check
+
 import { useCallback, useState } from 'react'
 import ChartTypePicker from './components/ChartTypePicker.jsx'
 import DataPanel from './components/DataPanel.jsx'

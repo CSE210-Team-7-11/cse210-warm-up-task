@@ -1,3 +1,5 @@
+// @ts-check
+
 // Single source of truth for the graph editor. App.jsx owns this state and
 // passes slices + handlers down to the panels.
 //

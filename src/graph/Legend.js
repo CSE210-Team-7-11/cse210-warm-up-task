@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Legend dimensions and entry positions.
  * @module graph/Legend
@@ -32,7 +34,7 @@ const DOT_RADIUS = 3
  * @param {Array<SeriesStyle>} options.series Styles in legend display order.
  * @param {number} options.left Left edge of the full legend span.
  * @param {number} options.right Right edge of the full legend span.
- * @param {function(string): number} options.measureText Label width in logical chart units.
+ * @param {TextMeasure} options.measureText Label width in logical chart units.
  * @param {number} [options.headerRight] Right edge of header text, defaulting to left.
  * @returns {LegendLayout} Positioned entries, extra height, and omitted-entry warnings.
  */

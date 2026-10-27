@@ -51,6 +51,8 @@ Before changing shared data structures, check the [library interfaces](docs/inte
 
 Update JSDoc annotations and relevant documentation when behavior changes. Follow the [JSDoc conventions](docs/jsdoc.md).
 
+Run `npm run typecheck` for JavaScript type diagnostics. See [Checking JavaScript types](docs/jsdoc.md#checking-javascript-types) for scope and watch mode.
+
 Run `npm run format` to apply the shared formatting conventions. Oxfmt settings are in `.oxfmtrc.json`, editor defaults are in `.editorconfig`, and code rules are in `.oxlintrc.json`.
 
 ## Documentation site

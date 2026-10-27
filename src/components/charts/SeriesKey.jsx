@@ -1,3 +1,5 @@
+// @ts-check
+
 import Marker from './Marker.jsx'
 import { shownMarker } from '../../graph/series.js'
 

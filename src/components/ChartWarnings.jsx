@@ -1,3 +1,5 @@
+// @ts-check
+
 import './PrecisionWarnings.css'
 
 export default function ChartWarnings({ warnings }) {

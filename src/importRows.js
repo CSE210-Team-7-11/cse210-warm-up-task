@@ -1,3 +1,5 @@
+// @ts-check
+
 import { isEmptyCell, isNumericOverflow, parseCell } from './numberFormat.js'
 import { Float64OverflowError, throwOverflowErrors } from './numericErrors.js'
 import { losesFloat64Precision } from './precision.js'

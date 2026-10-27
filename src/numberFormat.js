@@ -1,3 +1,5 @@
+// @ts-check
+
 // Spreadsheet number formats.
 const DOT_GROUPING = /^[+-]?\d{1,3}(?:,\d{3})+(?:\.\d*)?(?:[eE][+-]?\d+)?$/
 const COMMA_GROUPING = /^[+-]?\d{1,3}(?:\.\d{3})+(?:,\d*)?(?:[eE][+-]?\d+)?$/

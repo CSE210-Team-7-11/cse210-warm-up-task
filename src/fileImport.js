@@ -1,3 +1,5 @@
+// @ts-check
+
 import Papa from 'papaparse'
 import { createNumberFormatDetector } from './numberFormat.js'
 import { readHeader } from './importRows.js'

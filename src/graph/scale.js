@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Axis geometry, regression, and point lookup in logical chart coordinates.
  * @module graph/scale
@@ -61,7 +63,8 @@ export function minMax(values) {
  * @param {number} rangeMax Drawing coordinate for domainMax.
  * @param {string} [columnName='axis'] Column identified in numeric diagnostics.
  * @returns {CoordinateMap} Mapping from data values to logical drawing coordinates.
- * @throws {module:numericErrors.Float64OverflowError} The domain span is non-finite, or a later mapping
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when the domain span is non-finite, or a later mapping
  * produces a non-finite difference or position.
  */
 export function scale(domainMin, domainMax, rangeMin, rangeMax, columnName = 'axis') {
@@ -97,7 +100,8 @@ export function scale(domainMin, domainMax, rangeMin, rangeMax, columnName = 'ax
  * @param {number} [count=5] Number of intervals between ticks.
  * @param {string} [columnName='axis'] Column identified in numeric diagnostics.
  * @returns {Array<number>} count + 1 evenly spaced values for a valid count.
- * @throws {module:numericErrors.Float64OverflowError} The span or a generated tick is non-finite.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when the span or a generated tick is non-finite.
  */
 export function ticks(min, max, count = 5, columnName = 'axis') {
 	const describeRange = () => `${min} to ${max}`
@@ -115,7 +119,8 @@ export function ticks(min, max, count = 5, columnName = 'axis') {
  * @param {number} [count=5] Positive integer number of intervals.
  * @param {string} [columnName='axis'] Column identified in numeric diagnostics.
  * @returns {Array<number>} Interior tick values, empty when there is one interval.
- * @throws {module:numericErrors.Float64OverflowError} The span or a generated tick is non-finite.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when the span or a generated tick is non-finite.
  */
 export function gridlines(min, max, count = 5, columnName = 'axis') {
 	return ticks(min, max, count, columnName).slice(1, -1)
@@ -178,7 +183,8 @@ export function bounds(columns) {
  * @param {string} [yColumnName='Y'] Y name in numeric diagnostics.
  * @returns {TrendFit|null} Fit and usable X extent, or null with fewer than two
  * usable observations or zero computed X variance.
- * @throws {module:numericErrors.Float64OverflowError} A sum, product, slope, or intercept is non-finite.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when a sum, product, slope, or intercept is non-finite.
  */
 export function trendLine(x, y, length, xColumnName = 'X', yColumnName = 'Y') {
 	let count = 0
@@ -256,7 +262,8 @@ export function trendLine(x, y, length, xColumnName = 'X', yColumnName = 'Y') {
  * @param {number} rangeMax Drawing coordinate for domainMax.
  * @param {string} [columnName='axis'] Column identified in numeric diagnostics.
  * @returns {CoordinateMap} Mapping from logical drawing coordinates to data values.
- * @throws {module:numericErrors.Float64OverflowError} The domain span or a later mapped value is non-finite.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when the domain span or a later mapped value is non-finite.
  */
 export function invert(domainMin, domainMax, rangeMin, rangeMax, columnName = 'axis') {
 	const span = finiteCalculation(
@@ -297,7 +304,8 @@ export function invert(domainMin, domainMax, rangeMin, rangeMax, columnName = 'a
  * @param {NearestOptions} [options] Marker geometry, radius bounds, and draw order.
  * @returns {PointIndex|null} Selected observation, or null for empty data, no target,
  * non-finite pointer coordinates, or negative/non-finite distance bounds.
- * @throws {module:numericErrors.Float64OverflowError} Converting coordinates produces a non-finite value.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when converting coordinates produces a non-finite value.
  */
 export function findNearest(
 	columns,
@@ -351,7 +359,8 @@ export function findNearest(
 	 * position proves that later rows in this scan direction cannot be candidates.
 	 * @param {number} index Candidate row.
 	 * @returns {boolean} Whether the outward scan may continue in this direction.
-	 * @throws {module:numericErrors.Float64OverflowError} A candidate projects to a non-finite drawing coordinate.
+	 * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+	 * when a candidate projects to a non-finite drawing coordinate.
 	 */
 	function check(index) {
 		// Missing-only rows can lie outside the plotted domain. Do not project them.
@@ -425,8 +434,10 @@ export function findNearest(
  * @param {string} [options.yColumnName='Y'] Y name in numeric diagnostics.
  * @param {number} [options.extraHeight=0] Extra logical height reserved for the legend.
  * @returns {ChartLayout} Plot edges, total height, mappings, and axis values.
- * @throws {module:numericErrors.Float64OverflowError} One axis has a non-finite span or tick.
- * @throws {module:numericErrors.NumericOverflowErrors} Both axes fail independent calculations.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when one axis has a non-finite span or tick.
+ * @throws A {@link module:numericErrors.NumericOverflowErrors|NumericOverflowErrors}
+ * when both axes fail independent calculations.
  */
 export function computeLayout({
 	xMin,
@@ -451,7 +462,8 @@ export function computeLayout({
 	 * @param {string} columnName Name in numeric diagnostics.
 	 * @returns {{toPixel: CoordinateMap, fromPixel: CoordinateMap, ticks: Array<number>, gridlines: Array<number>}}
 	 * Mappings and endpoint/interior tick values.
-	 * @throws {module:numericErrors.Float64OverflowError} The span or a generated tick is non-finite.
+	 * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+	 * when the span or a generated tick is non-finite.
 	 */
 	function axis(min, max, start, end, columnName) {
 		const toPixel = scale(min, max, start, end, columnName)

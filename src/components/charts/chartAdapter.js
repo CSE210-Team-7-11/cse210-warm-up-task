@@ -1,3 +1,5 @@
+// @ts-check
+
 import { buildChartData } from './chartUtils.js'
 
 // Keep the editor-to-chart conversion outside the preview component.

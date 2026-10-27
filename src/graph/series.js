@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Resolve styles and retain aligned Y columns for the plotted series.
  * @module graph/series

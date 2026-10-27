@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * @file Shared chart contracts for documentation and editor type information.
  */
@@ -79,8 +81,10 @@
  * @callback ChartUpdate
  * @param {ChartOptions} options Complete chart configuration.
  * @returns {ChartUpdateResult} Warnings from the new legend layout.
- * @throws {module:numericErrors.Float64OverflowError} A numeric calculation is non-finite.
- * @throws {module:numericErrors.NumericOverflowErrors} Independent calculations overflowed.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when a numeric calculation is non-finite.
+ * @throws A {@link module:numericErrors.NumericOverflowErrors|NumericOverflowErrors}
+ * when independent calculations overflow.
  */
 
 /**
@@ -103,6 +107,55 @@
  * @callback CoordinateMap
  * @param {number} value Value in the mapping's input coordinate system.
  * @returns {number} Corresponding value in its output coordinate system.
+ */
+
+/**
+ * Produce a value on demand.
+ * @template T
+ * @callback ValueFactory
+ * @returns {T} Produced value.
+ */
+
+/**
+ * Measure a label's width.
+ * @callback TextMeasure
+ * @param {string} label Text to measure.
+ * @returns {number} Width in logical chart units.
+ */
+
+/**
+ * Return the marker radius for one plotted series.
+ * @callback SeriesMarkerRadius
+ * @param {number} seriesIndex Plotted series index.
+ * @returns {number} Radius in logical chart units.
+ */
+
+/**
+ * Return the hover radius for an observation.
+ * @callback PointRadius
+ * @param {number} seriesIndex Plotted series index.
+ * @param {number} index Row index.
+ * @returns {number} Radius in logical chart units.
+ */
+
+/**
+ * Determine whether a marker contains the pointer.
+ * @callback MarkerHitTest
+ * @param {number} seriesIndex Plotted series index.
+ * @param {number} index Row index.
+ * @param {number} dx Marker center X minus pointer X in logical chart units.
+ * @param {number} dy Marker center Y minus pointer Y in logical chart units.
+ * @returns {boolean} Whether this marker contains the pointer.
+ */
+
+/**
+ * Determine whether one observation is painted above another.
+ * @callback PointOrderTest
+ * @param {number} seriesIndex First observation's plotted series index.
+ * @param {number} index First observation's row index.
+ * @param {number} otherSeries Second observation's plotted series index.
+ * @param {number} otherIndex Second observation's row index.
+ * @returns {boolean} Whether the first observation is painted above the second.
  */
 
 /**
@@ -207,15 +260,14 @@
 /**
  * Additional geometry and ordering rules for point lookup.
  * @typedef {Object} NearestOptions
- * @property {function(number, number): number} [radiusAt] Marker radius for a series
- * and row, in logical chart units. Used in addition to the minimum hover distance.
+ * @property {PointRadius} [radiusAt] Per-observation marker radius in logical chart
+ * units. Distance fallback uses the larger of this radius and maxDistance.
  * @property {number} [maxRadius] Upper bound on radiusAt, defaulting to maxDistance.
- * @property {function(number, number, number, number): boolean} [hitTest] Test a series,
- * row, and marker-center-minus-pointer offsets (dx, dy) against the actual marker.
+ * @property {MarkerHitTest} [hitTest] Check whether a marker contains the pointer.
  * A true result takes priority over center distance. False still allows distance-based selection.
  * @property {number} [maxHitRadius] Horizontal search bound for hitTest, defaulting to maxRadius.
- * @property {function(number, number, number, number): boolean} [isAbove] Whether the
- * first series/row is drawn above the second. Defaults to lower series index, then higher row.
+ * @property {PointOrderTest} [isAbove] Draw-order comparison for overlapping marker
+ * hits. Defaults to lower series index, then higher row index.
  */
 
 /**
@@ -247,12 +299,12 @@
  * @typedef {Object} ChartView
  * @property {NumericColumns} columns Plotted columns after series filtering.
  * @property {ChartLayout} layout Shared coordinate conversions and measured legend.
- * @property {function(number): number} markerRadius Radius for one plotted series index.
+ * @property {SeriesMarkerRadius} markerRadius Radius for one plotted series index.
  * @property {number} maxRadius Upper bound on marker radius.
- * @property {function(number, number, number, number): boolean} [hitTest] Marker geometry
+ * @property {MarkerHitTest} [hitTest] Marker geometry
  * check, restricted to drawn markers when markerRows is present.
  * @property {number} maxHitRadius Horizontal search radius including marker outlines.
- * @property {function(number, number, number, number): boolean} isAbove Drawing-order comparison.
+ * @property {PointOrderTest} isAbove Drawing-order comparison.
  * @property {Array<SeriesStyle>} shownSeries Styles paired with the retained Y columns.
  * @property {('line'|'scatter')} type Resolved plot type.
  * @property {string} x_axis_label X label used by tooltips.

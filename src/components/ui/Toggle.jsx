@@ -1,3 +1,5 @@
+// @ts-check
+
 import './Toggle.css'
 
 /** Pill switch. `label` is used for accessibility only. */

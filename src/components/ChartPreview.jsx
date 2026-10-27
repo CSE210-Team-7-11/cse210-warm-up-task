@@ -1,3 +1,5 @@
+// @ts-check
+
 import { useCallback, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { BarChartIcon } from './ui/Icons.jsx'
 import { createChart } from '../graph/Graph.js'

@@ -1,3 +1,5 @@
+// @ts-check
+
 // Import feedback: why a file can't be imported, what's wrong with imported
 // data, and a compact summary of it. Plain functions with no React, so any
 // import UI can share the same checks and wording.

@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Bounded diagnostic storage for calculations that may report many failures.
  * @module diagnostics
@@ -21,7 +23,7 @@ export const createDiagnostics = () => ({ items: [], count: 0 })
  * has room. The factory is evaluated only for details being retained.
  * @template T
  * @param {DiagnosticBuffer<T>} diagnostics Collection mutated in place.
- * @param {function(): T} create Factory for one detail to retain.
+ * @param {ValueFactory<T>} create Factory for one detail to retain.
  */
 export function addDiagnostic(diagnostics, create) {
 	diagnostics.count++

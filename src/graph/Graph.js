@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Chart lifecycle, prepared drawing state, resizing, and pointer interaction.
  * @module graph/Graph
@@ -42,8 +44,10 @@ const TOOLTIP_GAP = 9
  * @param {HTMLElement} container Element that will contain the canvas.
  * @param {ChartOptions} [options] Initial complete configuration, or omit to defer drawing.
  * @returns {ChartHandle} Operations for redrawing and releasing this instance.
- * @throws {module:numericErrors.Float64OverflowError} A numeric calculation in the initial draw is non-finite.
- * @throws {module:numericErrors.NumericOverflowErrors} Independent calculations in the initial draw overflow.
+ * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+ * when a numeric calculation in the initial draw is non-finite.
+ * @throws A {@link module:numericErrors.NumericOverflowErrors|NumericOverflowErrors}
+ * when independent calculations in the initial draw overflow.
  */
 export function createChart(container, options) {
 	const canvas = document.createElement('canvas')
@@ -71,8 +75,10 @@ export function createChart(container, options) {
 	 * A failed update may leave partial changes to the previous chart.
 	 * @param {ChartOptions} options Complete chart input with defaults applied to omitted fields.
 	 * @returns {ChartUpdateResult} Legend omissions from the prepared layout.
-	 * @throws {module:numericErrors.Float64OverflowError} One checked calculation is non-finite.
-	 * @throws {module:numericErrors.NumericOverflowErrors} Multiple checked calculations overflow.
+	 * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+	 * when one checked calculation is non-finite.
+	 * @throws A {@link module:numericErrors.NumericOverflowErrors|NumericOverflowErrors}
+	 * when multiple checked calculations overflow.
 	 */
 	function update({
 		series,
@@ -218,7 +224,8 @@ export function createChart(container, options) {
 	/**
 	 * Redraw the current chart at the container's width and device pixel ratio.
 	 * Does nothing while the container has zero width.
-	 * @throws {module:numericErrors.Float64OverflowError} A frame or trend projection produces a non-finite coordinate.
+	 * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+	 * when a frame or trend projection produces a non-finite coordinate.
 	 */
 	function drawCanvas() {
 		const cssWidth = container.clientWidth
@@ -258,7 +265,8 @@ export function createChart(container, options) {
 	/**
 	 * Draw the selected point's highlight and tooltip, or clear the overlay when
 	 * no point is selected.
-	 * @throws {module:numericErrors.Float64OverflowError} The hovered point projects to a non-finite coordinate.
+	 * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+	 * when the hovered point projects to a non-finite coordinate.
 	 */
 	function drawHover() {
 		/* The saved image already contains backing pixels. Copy it without the chart
@@ -314,7 +322,8 @@ export function createChart(container, options) {
 	 * Update the hover target at the pointer's position. Ignore events before the
 	 * first update and while the canvas has a zero-sized display rectangle.
 	 * @param {PointerEvent} event Pointer movement dispatched on this canvas.
-	 * @throws {module:numericErrors.Float64OverflowError} Coordinate conversion or hover drawing overflows.
+	 * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+	 * when coordinate conversion or hover drawing overflows.
 	 */
 	function pointerMove(event) {
 		if (!view) {
@@ -351,7 +360,8 @@ export function createChart(container, options) {
 	 * Set the hovered observation, refreshing its highlight and tooltip when the
 	 * selected series/row changes.
 	 * @param {PointIndex|null} next New hover target, or null to clear it.
-	 * @throws {module:numericErrors.Float64OverflowError} Drawing the new target overflows.
+	 * @throws A {@link module:numericErrors.Float64OverflowError|Float64OverflowError}
+	 * when drawing the new target overflows.
 	 */
 	function setHovered(next) {
 		const sameAsBefore =

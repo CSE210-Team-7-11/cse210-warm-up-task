@@ -34,3 +34,13 @@ Open `docs/jsdoc/index.html` in a browser. The output is generated locally and i
 [`jsdoc.json`](../jsdoc.json) selects `src/graph/*.js`, `src/numericErrors.js`, and `src/diagnostics.js`. JSDoc uses its built-in HTML template and Markdown support for descriptions. Annotation and parsing warnings fail the command so incomplete output is not mistaken for a successful build.
 
 JSDoc comments provide the reference's descriptions and type information. Shared chart contracts are defined in `src/graph/types.js`, which contains comments only and is included in generation alongside the implementation modules.
+
+## Checking JavaScript types
+
+```sh
+npm run typecheck
+```
+
+TypeScript checks the `.js` and `.jsx` files under `src/` using their JSDoc annotations and inferred types. [`jsconfig.json`](../jsconfig.json) configures strict checking, browser APIs, and React JSX. The command reports diagnostics and returns a nonzero exit status while errors remain. It produces no compiled output.
+
+Each source file enables checking with `// @ts-check` at the top. Include this directive when adding a source file. For continuous feedback while editing, run `npm run typecheck -- --watch`.

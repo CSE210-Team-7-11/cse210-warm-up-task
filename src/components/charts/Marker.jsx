@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Point marker shapes. Each series gets its own shape (see SERIES_STYLES in
  * state.js) so series stay distinguishable without relying on color.

@@ -1,3 +1,5 @@
+// @ts-check
+
 import { Float32OverflowError, throwOverflowErrors } from '../../numericErrors.js'
 
 import { precisionWarning } from '../../precision.js'

@@ -1,3 +1,5 @@
+// @ts-check
+
 import Prism from 'prismjs'
 import 'prismjs/themes/prism-tomorrow.css'
 import { createChart } from './graph/Graph.js'

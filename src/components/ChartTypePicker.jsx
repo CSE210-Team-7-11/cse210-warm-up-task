@@ -1,3 +1,5 @@
+// @ts-check
+
 import { LineChartIcon, ScatterIcon } from './ui/Icons.jsx'
 import './ChartTypePicker.css'
 

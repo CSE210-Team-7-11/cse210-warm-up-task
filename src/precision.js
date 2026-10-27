@@ -1,3 +1,5 @@
+// @ts-check
+
 import { normalizeNumberText } from './numberFormat.js'
 
 // Compare numeric decimal values, ignoring grouping, notation and trailing zeros.

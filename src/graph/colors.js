@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Automatic series colors chosen by normalized OKLab separation under ordinary,
  * protan, and deutan viewing simulations.

@@ -1,3 +1,5 @@
+// @ts-check
+
 /**
  * Shared visual defaults for the canvas renderer.
  * @module graph/theme

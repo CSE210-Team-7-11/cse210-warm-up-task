@@ -1,3 +1,5 @@
+// @ts-check
+
 import { useState } from 'react'
 import Select from './ui/Select.jsx'
 import Toggle from './ui/Toggle.jsx'

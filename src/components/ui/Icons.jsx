@@ -1,3 +1,5 @@
+// @ts-check
+
 // Small inline SVG icons. All take `size` (px) and inherit `currentColor`.
 const base = (size) => ({
 	width: size,

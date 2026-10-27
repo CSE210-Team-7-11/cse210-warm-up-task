@@ -1,3 +1,5 @@
+// @ts-check
+
 import { ChevronDownIcon } from './Icons.jsx'
 import './Select.css'
 
