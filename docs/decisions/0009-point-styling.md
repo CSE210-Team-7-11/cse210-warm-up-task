@@ -16,5 +16,5 @@ Point markers are configurable: visibility (the existing "Show data points") and
 
 ### Consequences
 
-* Good: dense line charts stay readable without losing the accessibility cues.
-* Bad: one more option to carry through the renderer.
+- Good: dense line charts stay readable without losing the accessibility cues.
+- Bad: one more option to carry through the renderer.

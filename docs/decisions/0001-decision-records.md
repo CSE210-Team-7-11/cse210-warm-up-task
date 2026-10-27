@@ -14,5 +14,5 @@ adding bureaucracy.
 
 ### Consequences
 
-* Bad: records add some writing overhead.
-* Leads write the initial records. Later records come from the discussion that leads to each decision.
+- Bad: records add some writing overhead.
+- Leads write the initial records. Later records come from the discussion that leads to each decision.

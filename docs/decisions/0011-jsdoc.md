@@ -13,8 +13,8 @@ Nathan proposed JSDoc for code comprehension, IntelliSense, and automated docume
 
 ## Considered Options
 
-* Migrate the existing codebase to TypeScript.
-* Keep JavaScript and use JSDoc for documentation and type information.
+- Migrate the existing codebase to TypeScript.
+- Keep JavaScript and use JSDoc for documentation and type information.
 
 ## Decision Outcome
 
@@ -22,7 +22,7 @@ Keep the codebase in JavaScript and adopt JSDoc as a shared documentation standa
 
 ### Consequences
 
-* Good: contributors share a documentation standard that supports comprehension, review, editor assistance, and future generated reference documentation.
-* Good: type information can support checking while retaining JavaScript and avoiding another source-language migration.
-* Bad: contributors must add and maintain accurate annotations as behavior and interfaces change.
-* Bad: additional tooling will be required for documentation generation and CI/CD type checking.
+- Good: contributors share a documentation standard that supports comprehension, review, editor assistance, and future generated reference documentation.
+- Good: type information can support checking while retaining JavaScript and avoiding another source-language migration.
+- Bad: contributors must add and maintain accurate annotations as behavior and interfaces change.
+- Bad: additional tooling will be required for documentation generation and CI/CD type checking.

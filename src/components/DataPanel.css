@@ -2,129 +2,129 @@
 
 /* ---------- heading ---------- */
 .data-panel-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
 }
 
 /* ---------- drop zone ---------- */
 .data-panel-dropzone {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin-top: 12px;
-  padding: 14px 12px 12px;
-  background: var(--bg-muted);
-  border: 1px dashed var(--border);
-  /* a touch darker than the token so the dashes stay visible on 1x screens */
-  border-color: color-mix(in srgb, var(--border) 72%, var(--text-faint));
-  border-radius: var(--radius-md);
-  text-align: center;
-  cursor: pointer;
-  user-select: none;
-  transition:
-    border-color 120ms ease,
-    background-color 120ms ease;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	justify-content: center;
+	margin-top: 12px;
+	padding: 14px 12px 12px;
+	background: var(--bg-muted);
+	border: 1px dashed var(--border);
+	/* a touch darker than the token so the dashes stay visible on 1x screens */
+	border-color: color-mix(in srgb, var(--border) 72%, var(--text-faint));
+	border-radius: var(--radius-md);
+	text-align: center;
+	cursor: pointer;
+	user-select: none;
+	transition:
+		border-color 120ms ease,
+		background-color 120ms ease;
 }
 
 .data-panel-dropzone:hover {
-  border-color: var(--green-300);
+	border-color: var(--green-300);
 }
 
 .data-panel-dropzone:focus-visible {
-  outline: 2px solid var(--green-300);
-  outline-offset: 2px;
+	outline: 2px solid var(--green-300);
+	outline-offset: 2px;
 }
 
 .data-panel-dropzone.is-dragging {
-  border-color: var(--green-600);
-  border-style: solid;
-  background: var(--bg-tint);
+	border-color: var(--green-600);
+	border-style: solid;
+	background: var(--bg-tint);
 }
 
 .data-panel-dropzone-icon {
-  display: inline-flex;
-  line-height: 0;
-  color: var(--green-600);
-  margin-bottom: 7px;
+	display: inline-flex;
+	line-height: 0;
+	color: var(--green-600);
+	margin-bottom: 7px;
 }
 
 .data-panel-dropzone-title {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 16px;
-  color: var(--green-600);
+	font-size: 12px;
+	font-weight: 600;
+	line-height: 16px;
+	color: var(--green-600);
 }
 
 .data-panel-dropzone-hint {
-  margin-top: 3px;
-  font-size: 10.5px;
-  line-height: 14px;
-  color: var(--text-muted);
+	margin-top: 3px;
+	font-size: 10.5px;
+	line-height: 14px;
+	color: var(--text-muted);
 }
 
 .data-panel-file-input {
-  display: none;
+	display: none;
 }
 
 .data-panel-error {
-  margin-top: 6px;
-  font-size: 11px;
-  line-height: 1.35;
-  color: var(--danger-muted);
+	margin-top: 6px;
+	font-size: 11px;
+	line-height: 1.35;
+	color: var(--danger-muted);
 }
 
 .data-panel-caption {
-  margin-top: 12px;
-  font-size: 10.5px;
-  line-height: 14px;
-  color: var(--text-muted);
+	margin-top: 12px;
+	font-size: 10.5px;
+	line-height: 14px;
+	color: var(--text-muted);
 }
 
 /* uploaded file names can be one long unbroken word */
 .data-panel-summary {
-  overflow-wrap: anywhere;
+	overflow-wrap: anywhere;
 }
 
 /* ---------- validation line ---------- */
 .data-panel-status {
-  display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  margin-top: 14px;
-  font-size: 11.5px;
-  line-height: 16px;
-  color: var(--text-muted);
-  overflow-wrap: anywhere;
+	display: flex;
+	align-items: flex-start;
+	gap: 6px;
+	margin-top: 14px;
+	font-size: 11.5px;
+	line-height: 16px;
+	color: var(--text-muted);
+	overflow-wrap: anywhere;
 }
 
 .data-panel-status + .data-panel-status {
-  margin-top: 6px;
+	margin-top: 6px;
 }
 
 .data-panel-feedback .data-panel-caption {
-  margin-top: 8px;
+	margin-top: 8px;
 }
 
 .data-panel-status-icon {
-  display: inline-flex;
-  flex-shrink: 0;
-  margin-top: 1px; /* centers the 14px icon on the first 16px line */
-  line-height: 0;
-  color: var(--green-600);
+	display: inline-flex;
+	flex-shrink: 0;
+	margin-top: 1px; /* centers the 14px icon on the first 16px line */
+	line-height: 0;
+	color: var(--green-600);
 }
 
 .data-panel-status.is-invalid,
 .data-panel-status.is-invalid .data-panel-status-icon {
-  color: var(--danger-muted);
+	color: var(--danger-muted);
 }
 
 .data-panel-option {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  margin-top: 10px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-top: 10px;
 }

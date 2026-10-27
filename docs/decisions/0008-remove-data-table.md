@@ -16,5 +16,5 @@ Remove the full-dataset table from the main workflow. Import errors and dataset 
 
 ### Consequences
 
-* Good: import cost no longer scales with DOM size.
-* Bad: users can't scroll through their raw data in the app; their spreadsheet program does that better anyway.
+- Good: import cost no longer scales with DOM size.
+- Bad: users can't scroll through their raw data in the app; their spreadsheet program does that better anyway.

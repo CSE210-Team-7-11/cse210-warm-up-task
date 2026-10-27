@@ -17,6 +17,6 @@ Additional tags such as `@example` are encouraged when they improve understandin
 
 Type annotations should be accurate and specific, including optional and nullable values as appropriate. Prefer reusable `@typedef` definitions over repeated complex object types.
 
-Documentation should explain important assumptions, limitations, side effects, and edge cases. It should ***not*** simply restate the process of the code, what variable names show, or what the code otherwise already makes obvious. Existing documentation must be updated when behaviour changes.
+Documentation should explain important assumptions, limitations, side effects, and edge cases. It should _**not**_ simply restate the process of the code, what variable names show, or what the code otherwise already makes obvious. Existing documentation must be updated when behaviour changes.
 
 For syntax and examples, a guide has been created in Slack under `#guides`.

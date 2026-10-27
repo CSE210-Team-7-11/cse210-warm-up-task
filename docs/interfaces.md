@@ -8,16 +8,16 @@ Data has one shared X column and one Y column per series:
 
 ```js
 const columns = {
-  length: 4,
-  x: Float64Array.of(1, 2, 3, 4), // Days shared by both series.
-  ys: [
-    Float64Array.of(24, 31, 28, 42), // Sales.
-    Float64Array.of(18, 22, 20, 27), // Costs.
-  ],
+	length: 4,
+	x: Float64Array.of(1, 2, 3, 4), // Days shared by both series.
+	ys: [
+		Float64Array.of(24, 31, 28, 42), // Sales.
+		Float64Array.of(18, 22, 20, 27), // Costs.
+	],
 }
 const series = [
-  { name: 'Sales', color: '#2a78d6' },
-  { name: 'Costs', color: '#eb6834' },
+	{ name: 'Sales', color: '#2a78d6' },
+	{ name: 'Costs', color: '#eb6834' },
 ]
 ```
 
@@ -41,23 +41,23 @@ All subsequent calculations use this prepared result, including bounds, legend m
 
 [`measureLegend(ctx, series, labels)`](../src/graph/canvas.js) measures text and returns a legend layout calculated by [`legendEntries`](../src/graph/Legend.js):
 
-| Field | Meaning |
-| --- | --- |
-| `entries` | Positioned legend items with label, color, shape, radius `r`, coordinates `x` and `y`, and measured width |
-| `extraHeight` | Additional logical height needed for wrapped entries |
-| `warnings` | `[]` or `[['legend-overflow', omittedCount]]` |
+| Field         | Meaning                                                                                                   |
+| ------------- | --------------------------------------------------------------------------------------------------------- |
+| `entries`     | Positioned legend items with label, color, shape, radius `r`, coordinates `x` and `y`, and measured width |
+| `extraHeight` | Additional logical height needed for wrapped entries                                                      |
+| `warnings`    | `[]` or `[['legend-overflow', omittedCount]]`                                                             |
 
 Omitting a legend entry leaves its series in the plotted data. `Graph.js` passes `extraHeight` into `computeLayout` and attaches the measured legend to the result for drawing.
 
 `computeLayout({ xMin, xMax, yMin, yMax, xColumnName, yColumnName, extraHeight })` returns:
 
-| Fields | Meaning |
-| --- | --- |
-| `xMin`, `xMax`, `yMin`, `yMax` | Numeric domain |
-| `left`, `right`, `top`, `bottom`, `height` | Plot edges and total chart height in logical coordinates |
-| `toX`, `toY` | Convert data values to logical drawing coordinates |
-| `fromX`, `fromY` | Convert logical coordinates back to data values |
-| `xTicks`, `yTicks`, `xGridlines`, `yGridlines` | Numeric tick and gridline positions |
+| Fields                                         | Meaning                                                  |
+| ---------------------------------------------- | -------------------------------------------------------- |
+| `xMin`, `xMax`, `yMin`, `yMax`                 | Numeric domain                                           |
+| `left`, `right`, `top`, `bottom`, `height`     | Plot edges and total chart height in logical coordinates |
+| `toX`, `toY`                                   | Convert data values to logical drawing coordinates       |
+| `fromX`, `fromY`                               | Convert logical coordinates back to data values          |
+| `xTicks`, `yTicks`, `xGridlines`, `yGridlines` | Numeric tick and gridline positions                      |
 
 The logical chart width is `WIDTH`, currently 500. Drawing and pointer handling must use the same layout; `Graph.js` handles conversion between logical coordinates and the displayed canvas size.
 
@@ -75,11 +75,11 @@ const markerWasDrawn = Boolean(markerRows[seriesIndex][index >> 3] & (1 << (inde
 
 `findNearest(columns, layout, px, py, maxDistance, options)` in `scale.js` receives pointer coordinates in logical chart units and returns `{ seriesIndex, index }` or `null`. Its options connect the search to marker geometry and draw order:
 
-| Option | Meaning |
-| --- | --- |
-| `radiusAt(seriesIndex, index)`, `maxRadius` | Per-point target radius and its upper bound |
-| `hitTest(seriesIndex, index, dx, dy)`, `maxHitRadius` | Marker containment test and its horizontal search bound |
-| `isAbove(seriesIndex, index, otherSeries, otherIndex)` | Resolve overlapping marker hits in drawing order |
+| Option                                                 | Meaning                                                 |
+| ------------------------------------------------------ | ------------------------------------------------------- |
+| `radiusAt(seriesIndex, index)`, `maxRadius`            | Per-point target radius and its upper bound             |
+| `hitTest(seriesIndex, index, dx, dy)`, `maxHitRadius`  | Marker containment test and its horizontal search bound |
+| `isAbove(seriesIndex, index, otherSeries, otherIndex)` | Resolve overlapping marker hits in drawing order        |
 
 `dx` and `dy` are the marker center's offsets from the pointer. [`containsMarker(shape, dx, dy, radius, outline)`](../src/graph/markerHit.js) tests geometry using offsets from the marker center, so `Graph.js` negates them when calling it. The returned point indexes address the prepared series and columns.
 
@@ -87,13 +87,13 @@ const markerWasDrawn = Boolean(markerRows[seriesIndex][index >> 3] & (1 << (inde
 
 [`importFile(file, options?)`](../src/fileImport.js) reads a browser `File` asynchronously. It returns `null` for empty input or an object with these fields:
 
-| Field | Meaning |
-| --- | --- |
-| `columns` | Source names as `{ key, name }` objects, starting with X |
-| `numericColumns` | Sorted `{ length, x, ys }` numeric data, preserving duplicate-X order |
-| `delimiter`, `numberFormat` | Detected field delimiter and resolved decimal separator |
-| `issues` | Parse and value diagnostics |
-| `warnings`, `warningCount` | First ten Float32 precision-conversion warnings and their total count |
+| Field                       | Meaning                                                               |
+| --------------------------- | --------------------------------------------------------------------- |
+| `columns`                   | Source names as `{ key, name }` objects, starting with X              |
+| `numericColumns`            | Sorted `{ length, x, ys }` numeric data, preserving duplicate-X order |
+| `delimiter`, `numberFormat` | Detected field delimiter and resolved decimal separator               |
+| `issues`                    | Parse and value diagnostics                                           |
+| `warnings`, `warningCount`  | First ten Float32 precision-conversion warnings and their total count |
 
 `numericColumns` supplies the chart's `columns`. The source names supply axis and series labels. For example, an import with two named columns can be mapped directly to chart options:
 
@@ -103,10 +103,10 @@ import { importFile } from './src/fileImport.js'
 const file = new File(['Day,Sales\n2,31\n1,24'], 'sales.csv')
 const imported = await importFile(file)
 const options = {
-  type: 'line',
-  columns: imported.numericColumns, // X: [1, 2], Y: [24, 31].
-  series: imported.columns.slice(1).map(({ name }) => ({ name })),
-  labels: { x_axis_label: imported.columns[0].name },
+	type: 'line',
+	columns: imported.numericColumns, // X: [1, 2], Y: [24, 31].
+	series: imported.columns.slice(1).map(({ name }) => ({ name })),
+	labels: { x_axis_label: imported.columns[0].name },
 }
 ```
 
@@ -114,12 +114,12 @@ These source imports are relative to the repository root. Applications decide ho
 
 ### Import options
 
-| Option | Default | Behavior |
-| --- | --- | --- |
-| `emptyCells` | `'gap'` | `'gap'`, `'zero'`, `'connect'`, or `'mark'` for Y cells |
-| `numberFormat` | `'auto'` | Detect the decimal separator, or explicitly use `'.'` or `','` |
-| `precision` | `'float64'` | `'float64'` or `'float32'` numeric storage |
-| `chunkSize` | `1024 * 1024` | Positive integer bytes per read |
+| Option         | Default       | Behavior                                                       |
+| -------------- | ------------- | -------------------------------------------------------------- |
+| `emptyCells`   | `'gap'`       | `'gap'`, `'zero'`, `'connect'`, or `'mark'` for Y cells        |
+| `numberFormat` | `'auto'`      | Detect the decimal separator, or explicitly use `'.'` or `','` |
+| `precision`    | `'float64'`   | `'float64'` or `'float32'` numeric storage                     |
+| `chunkSize`    | `1024 * 1024` | Positive integer bytes per read                                |
 
 Empty Y cells become `Infinity`, `0`, or `-Infinity` for gap, zero, and connect modes. `'mark'` retains them as `NaN` for later resolution. Empty or invalid X values remove the row. `#N/A` becomes `-Infinity`; other invalid Y text produces a gap and a diagnostic. Invalid option values reject with `TypeError`.
 
@@ -129,15 +129,15 @@ Field delimiters and decimal separators are detected separately. Auto mode recog
 
 `issues` is an array of `[type, data]` entries. Positions are zero-based source data records, excluding headers and blank records. Quoted newlines belong to the same record. Sorting numeric columns preserves these diagnostic source positions.
 
-| Issue type | Data |
-| --- | --- |
-| `TooFewFields`, `TooManyFields`, `invalid-x` | Source row indexes |
-| Papa Parse error codes, such as `MissingQuotes` | Source row indexes, or a count when positions cannot be mapped |
-| `invalid-number`, `number-format` | `[columnIndex, sourceRowIndex, originalText]` entries |
-| `empty-cell` | `[columnIndex, sourceRowIndex]` entries |
-| `duplicate-header` | Column indexes |
-| `precision-loss` | Up to ten `[columnIndex, sourceRowIndex, originalText, storedValue]` entries |
-| `precision-loss-truncated` | Count of additional precision changes |
+| Issue type                                      | Data                                                                         |
+| ----------------------------------------------- | ---------------------------------------------------------------------------- |
+| `TooFewFields`, `TooManyFields`, `invalid-x`    | Source row indexes                                                           |
+| Papa Parse error codes, such as `MissingQuotes` | Source row indexes, or a count when positions cannot be mapped               |
+| `invalid-number`, `number-format`               | `[columnIndex, sourceRowIndex, originalText]` entries                        |
+| `empty-cell`                                    | `[columnIndex, sourceRowIndex]` entries                                      |
+| `duplicate-header`                              | Column indexes                                                               |
+| `precision-loss`                                | Up to ten `[columnIndex, sourceRowIndex, originalText, storedValue]` entries |
+| `precision-loss-truncated`                      | Count of additional precision changes                                        |
 
 Float64 parsing changes are recorded in `issues`. Float32 conversion warnings contain `message`, `value`, `storedValue`, `columnName`, `precision`, and an optional `sourceRow`.
 

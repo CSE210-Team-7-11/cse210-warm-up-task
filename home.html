@@ -1,32 +1,40 @@
 <!doctype html>
 <html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="icon" type="image/svg+xml" href="/78js_logo.svg" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>78js | Charting Library</title>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-        <link href="/home.css" rel="stylesheet">
-    </head>
-    <body>
-        <header>
-            <nav>
-                <a href="./home.html">
-                    <img class="nav-logo" src="/78js_logo_white.svg" alt="78 js logo">
-                </a>
-                <a href="./docs/">Documentation</a>
-                <a href="./examples.html">Examples</a>
-                <a href="./demo.html">Demo</a>
-                <a href="https://github.com/CSE210-Team-7-11/cse210-warm-up-task">GitHub</a>
-            </nav>
-        </header>
-        <main id="home-content">
-            <section id="code-demo">
-                <div id="code-chart"></div>
-                <div class="code-editor">
-                    <pre aria-hidden="true"><code id="code-highlight"></code></pre>
-                    <textarea id="code-editor" aria-label="Live JavaScript chart editor" aria-describedby="code-error" spellcheck="false" autocapitalize="off" wrap="off">// Give the library a try!
+	<head>
+		<meta charset="UTF-8" />
+		<link rel="icon" type="image/svg+xml" href="/78js_logo.svg" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>78js | Charting Library</title>
+		<link rel="preconnect" href="https://fonts.googleapis.com" />
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+		<link href="/home.css" rel="stylesheet" />
+	</head>
+	<body>
+		<header>
+			<nav>
+				<a href="./home.html">
+					<img class="nav-logo" src="/78js_logo_white.svg" alt="78 js logo" />
+				</a>
+				<a href="./docs/">Documentation</a>
+				<a href="./examples.html">Examples</a>
+				<a href="./demo.html">Demo</a>
+				<a href="https://github.com/CSE210-Team-7-11/cse210-warm-up-task">GitHub</a>
+			</nav>
+		</header>
+		<main id="home-content">
+			<section id="code-demo">
+				<div id="code-chart"></div>
+				<div class="code-editor">
+					<pre aria-hidden="true"><code id="code-highlight"></code></pre>
+					<textarea
+						id="code-editor"
+						aria-label="Live JavaScript chart editor"
+						aria-describedby="code-error"
+						spellcheck="false"
+						autocapitalize="off"
+						wrap="off"
+					>
+// Give the library a try!
 // chart is a createChart() instance, edit as you please.
 chart.update({
   type: 'line', // Try 'scatter'
@@ -43,27 +51,29 @@ chart.update({
     ys: [Float64Array.of(7, 11, 8, 15, 18)],
   },
 });</textarea>
-                </div>
-                <output id="code-error" role="status"></output>
-            </section>
-            <section id="promo">
-                <img class="logo" id="main-logo" src="/78js_logo.svg" alt="78 js logo">
-                <p>A canvas-based charting library, for your data visualization needs.</p>
-                <nav id="main-links">
-                    <a href="https://github.com/CSE210-Team-7-11/cse210-warm-up-task">
-                        <img class="nav-logo" src="/GitHub_Invertocat_Black.png">
-                    </a>
-                    <a class="btn-link" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ">Install</a>
-                    <a class="btn-link" href="./demo.html">Demo</a>
-                </nav>
-            </section>
-        </main>
-        <footer>
-            <span>Team7&copy;8</span>
-            <a href="./home.html">
-                <img class="footer-logo" src="/78js_logo_white.svg" alt="78 js logo">
-            </a>
-        </footer>
-        <script type="module" src="./src/home.js"></script>
-    </body>
+				</div>
+				<output id="code-error" role="status"></output>
+			</section>
+			<section id="promo">
+				<img class="logo" id="main-logo" src="/78js_logo.svg" alt="78 js logo" />
+				<p>A canvas-based charting library, for your data visualization needs.</p>
+				<nav id="main-links">
+					<a href="https://github.com/CSE210-Team-7-11/cse210-warm-up-task">
+						<img class="nav-logo" src="/GitHub_Invertocat_Black.png" />
+					</a>
+					<a class="btn-link" href="https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+						>Install</a
+					>
+					<a class="btn-link" href="./demo.html">Demo</a>
+				</nav>
+			</section>
+		</main>
+		<footer>
+			<span>Team7&copy;8</span>
+			<a href="./home.html">
+				<img class="footer-logo" src="/78js_logo_white.svg" alt="78 js logo" />
+			</a>
+		</footer>
+		<script type="module" src="./src/home.js"></script>
+	</body>
 </html>

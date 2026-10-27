@@ -17,39 +17,39 @@ All series share the same X values. Each series has its own Y values and a corre
 For example, these sales and costs use the same four days:
 
 | Day | Sales ($) | Costs ($) |
-| --- | --- | --- |
-| 1 | 24 | 18 |
-| 2 | 31 | 22 |
-| 3 | 28 | 20 |
-| 4 | 42 | 27 |
+| --- | --------- | --------- |
+| 1   | 24        | 18        |
+| 2   | 31        | 22        |
+| 3   | 28        | 20        |
+| 4   | 42        | 27        |
 
 The configuration keeps those columns together and describes each series in the same order:
 
 ```js
 const options = {
-  type: 'line',
-  columns: {
-    length: 4,
-    x: Float64Array.of(1, 2, 3, 4),
-    ys: [
-      Float64Array.of(24, 31, 28, 42), // Sales.
-      Float64Array.of(18, 22, 20, 27), // Costs.
-    ],
-  },
-  series: [
-    { name: 'Sales', color: '#2a78d6' },
-    { name: 'Costs', color: '#eb6834' },
-  ],
+	type: 'line',
+	columns: {
+		length: 4,
+		x: Float64Array.of(1, 2, 3, 4),
+		ys: [
+			Float64Array.of(24, 31, 28, 42), // Sales.
+			Float64Array.of(18, 22, 20, 27), // Costs.
+		],
+	},
+	series: [
+		{ name: 'Sales', color: '#2a78d6' },
+		{ name: 'Costs', color: '#eb6834' },
+	],
 }
 ```
 
 ### Column requirements
 
-| Field | Requirement |
-| --- | --- |
-| `columns.length` | Number of observations in each column |
-| `columns.x` | A `Float64Array` or `Float32Array` of finite X values, sorted ascending |
-| `columns.ys` | One typed Y array per entry in `series` |
+| Field            | Requirement                                                             |
+| ---------------- | ----------------------------------------------------------------------- |
+| `columns.length` | Number of observations in each column                                   |
+| `columns.x`      | A `Float64Array` or `Float32Array` of finite X values, sorted ascending |
+| `columns.ys`     | One typed Y array per entry in `series`                                 |
 
 Every X and Y column must contain `length` values. Duplicate X values are supported. The chart expects numeric data in this order; it does not parse strings or sort columns.
 
@@ -59,11 +59,11 @@ The chart keeps references to these arrays for drawing and hover lookup. Treat t
 
 A missing Y value can either break a line or allow it to connect to the next observation. The input uses two markers to distinguish these cases:
 
-| Y value | Line plot | Scatter plot |
-| --- | --- | --- |
-| Finite number, including zero | Draw the line and, when enabled, a marker | Draw a point |
-| `Infinity` | Break the line | Skip the point |
-| `-Infinity` | Skip the point and connect across it | Skip the point |
+| Y value                       | Line plot                                 | Scatter plot   |
+| ----------------------------- | ----------------------------------------- | -------------- |
+| Finite number, including zero | Draw the line and, when enabled, a marker | Draw a point   |
+| `Infinity`                    | Break the line                            | Skip the point |
+| `-Infinity`                   | Skip the point and connect across it      | Skip the point |
 
 Resolve `NaN` values to a number or one of these markers before supplying the columns. Nonfinite Y values are excluded from bounds, trend lines, and hover targets. X values must always be finite.
 
@@ -71,23 +71,23 @@ Resolve `NaN` values to a number or one of these markers before supplying the co
 
 Once `columns` and `series` define the datasets, the optional fields below configure the chart. Defaults apply both when creating a chart and on every update.
 
-| Field | Default | Description |
-| --- | --- | --- |
-| `type` | `'scatter'` | `'line'` or `'scatter'` |
-| `labels` | See [Labels](#labels) | Title, subtitle, and axis labels |
-| `showPoints` | `true` | Show markers on line charts; scatter plots ignore this setting |
-| `pointSize` | `7` | Marker size in chart coordinates; scales with the displayed chart |
-| `showTrendLine` | `false` | Draw linear trend lines on scatter plots |
-| `xColumnName` | X-axis label | Source column name used in numeric error messages |
+| Field           | Default               | Description                                                       |
+| --------------- | --------------------- | ----------------------------------------------------------------- |
+| `type`          | `'scatter'`           | `'line'` or `'scatter'`                                           |
+| `labels`        | See [Labels](#labels) | Title, subtitle, and axis labels                                  |
+| `showPoints`    | `true`                | Show markers on line charts; scatter plots ignore this setting    |
+| `pointSize`     | `7`                   | Marker size in chart coordinates; scales with the displayed chart |
+| `showTrendLine` | `false`               | Draw linear trend lines on scatter plots                          |
+| `xColumnName`   | X-axis label          | Source column name used in numeric error messages                 |
 
 ### Labels
 
 The `labels` object contains the chart's text. Supply an empty string to omit a label. Text is rendered literally, including characters that would otherwise be interpreted as HTML.
 
-| Field | Default |
-| --- | --- |
-| `title` | `'Your Title'` |
-| `subtitle` | `'Your Subtitle'` |
+| Field          | Default               |
+| -------------- | --------------------- |
+| `title`        | `'Your Title'`        |
+| `subtitle`     | `'Your Subtitle'`     |
 | `x_axis_label` | `'Your X Axis Label'` |
 | `y_axis_label` | `'Your Y Axis Label'` |
 
@@ -95,12 +95,12 @@ The `labels` object contains the chart's text. Supply an empty string to omit a 
 
 Each object in `series` describes the Y column at the same index. Its name appears in the legend and tooltip; the remaining fields control how that dataset is drawn.
 
-| Field | Default | Description |
-| --- | --- | --- |
-| `name` | Omitted | Series label; unnamed series have no legend entry |
-| `color` | Automatic | Series color |
-| `marker` | Circle | `'circle'`, `'square'`, `'triangle'`, or `'none'` |
-| `dash` | Solid | Line dash pattern, such as `'6 4'`; an empty string gives a solid line |
+| Field    | Default   | Description                                                            |
+| -------- | --------- | ---------------------------------------------------------------------- |
+| `name`   | Omitted   | Series label; unnamed series have no legend entry                      |
+| `color`  | Automatic | Series color                                                           |
+| `marker` | Circle    | `'circle'`, `'square'`, `'triangle'`, or `'none'`                      |
+| `dash`   | Solid     | Line dash pattern, such as `'6 4'`; an empty string gives a solid line |
 
 Scatter plots render `marker: 'none'` as a circle. Dash patterns apply to line charts.
 
@@ -131,7 +131,7 @@ const result = chart.update({ ...options, type: 'scatter' })
 `update` returns `{ warnings: [] }` when all named series fit in the legend. Entries that exceed the available width or the four-row layout are omitted, producing a warning such as:
 
 ```js
-[['legend-overflow', 2]] // Two legend entries were omitted.
+;[['legend-overflow', 2]] // Two legend entries were omitted.
 ```
 
 The count refers to legend entries. Their series remain plotted. The application is responsible for presenting the warning.

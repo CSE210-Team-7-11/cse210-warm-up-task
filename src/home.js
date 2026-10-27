@@ -9,22 +9,27 @@ const chart = createChart(document.querySelector('#code-chart'))
 let timer
 
 function run() {
-  try {
-    new Function('chart', '"use strict";\n' + editor.value)(chart)
-    error.textContent = ''
-  } catch (problem) {
-    error.textContent = problem?.message ?? String(problem)
-  }
+	try {
+		// oxlint-disable-next-line no-new-func -- The live editor runs the chart example entered by its user.
+		new Function('chart', '"use strict";\n' + editor.value)(chart)
+		error.textContent = ''
+	} catch (problem) {
+		error.textContent = problem?.message ?? String(problem)
+	}
 }
 
 editor.addEventListener('scroll', () => {
-  highlight.parentElement.scrollTop = editor.scrollTop
-  highlight.parentElement.scrollLeft = editor.scrollLeft
+	highlight.parentElement.scrollTop = editor.scrollTop
+	highlight.parentElement.scrollLeft = editor.scrollLeft
 })
 editor.addEventListener('input', () => {
-  highlight.innerHTML = Prism.highlight(editor.value + '\n', Prism.languages.javascript, 'javascript')
-  clearTimeout(timer)
-  timer = setTimeout(run, 200)
+	highlight.innerHTML = Prism.highlight(
+		editor.value + '\n',
+		Prism.languages.javascript,
+		'javascript',
+	)
+	clearTimeout(timer)
+	timer = setTimeout(run, 200)
 })
 highlight.innerHTML = Prism.highlight(editor.value + '\n', Prism.languages.javascript, 'javascript')
 run()
