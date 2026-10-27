@@ -1,6 +1,12 @@
 import { buildChartData } from './chartUtils.js'
 
-// Keep the editor-to-chart conversion outside the preview component.
+/**
+ * Prepares the chart data for rendering based on the provided state and options.
+ * 
+ * @param {Object} state Current chart editor state containing series, columns, and chart type.
+ * @param {Object} options Precision options for chart rendering. Defaults to 'float64'.
+ * @returns {{ warnings: Object[], warningCount: number, pointCount: number, graphProps: Object }} Render props, finite point count, and precision warnings.
+ */
 export function prepareChart(state, options) {
   const plotted = { ...state, series: state.series.filter((oneSeries) => oneSeries.color) }
   const { columns, series, warnings, warningCount } = buildChartData(plotted, options)

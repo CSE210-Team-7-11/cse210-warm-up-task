@@ -8,6 +8,15 @@ import PrecisionWarnings from './PrecisionWarnings.jsx'
 import ChartWarnings from './ChartWarnings.jsx'
 import './ChartPreview.css'
 
+/**
+ * GraphView is a React component that renders a chart preview based on the provided 
+ * graph properties. It uses the createChart function to initialize and manage the 
+ * chart rendering within a specified container.
+ * 
+ * @param {Object} graphProps Graph rendering properties including series, columns, and labels.
+ * @param {Function} onRenderResult Callback function to handle the result of the chart rendering. 
+ * @returns {JSX.Element} A React component that renders the chart preview based on the provided graph properties.
+ */
 function GraphView({ graphProps, onRenderResult }) {
   const containerRef = useRef(null)
   const chartRef = useRef(null)

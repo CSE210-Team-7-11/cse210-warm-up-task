@@ -17,9 +17,30 @@ const HOVER_DISTANCE = 10
 const HOVER_EXTRA_SIZE = 3
 const TOOLTIP_GAP = 9
 
-// Draws columns ({ length, x, ys }) as a scatter or line plot.
-// series = [{ name, color, dash, marker }] has one entry per ys column
-// Returns { update(options), destroy() }.
+/**
+ * 
+ * @typedef {Object} ChartColumns
+ * @property {number} length
+ * @property {Float32Array | Float64Array} x
+ * @property {(Float32Array | Float64Array)[]} ys
+ * 
+ * @typedef {Object} ChartOptions
+ * @property {ChartColumns} columns
+ * @property {{ name: string, color: string, marker: string, dash: string }[]} series
+ * @property {'line' | 'scatter'} [type='scatter']
+ * @property {string} [xColumnName]
+ * @property {{ title?: string, subtitle?: string, x_axis_label?: string, y_axis_label?: string }} [labels]
+ * @property {boolean} [showTrendLine=false]
+ * @property {boolean} [showPoints=true]
+ * @property {number} [pointSize=7]
+ * 
+ * Creates the chart in a canvas element appended to the specified container with the 
+ * specified options.
+ *
+ * @param {HTMLElement} container The chart will be rendered inside a canvas element appended to this container.
+ * @param {ChartOptions} options Initial chart data and settings.
+ * @returns { update(options): function, destroy(): function } An object with methods to update the chart with new options and to destroy the chart instance.
+ */
 export function createChart(container, options) {
   const canvas = document.createElement('canvas')
   canvas.className = 'graph'

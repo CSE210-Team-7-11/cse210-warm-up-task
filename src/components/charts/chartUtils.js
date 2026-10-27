@@ -5,7 +5,14 @@ import { addDiagnostic, createDiagnostics } from '../../diagnostics.js'
 import { emptyCellValue } from '../../numberFormat.js'
 import { createRowParser } from '../../importRows.js'
 
-// Build sorted numeric columns. Series metadata follows the same order as ys.
+/**
+ * Builds chart data from the provided state and options. 
+ * Builds sorted numeric columns and series metadata follows the same order as ys.
+ * 
+ * @param {Object} state Current chart editor state containing containing series, columns, and rows.
+ * @param {Object} options Precision options for chart rendering. Defaults to 'float64'.
+ * @returns {{ columns: { length: number, x: Float32Array | Float64Array, ys: (Float32Array | Float64Array)[] }, series: Object[], warnings: Object[], warningCount: number }} The built chart data including columns, series, warnings, and warningCount.
+ */
 export function buildChartData(state, { precision = 'float64' } = {}) {
   if (precision !== 'float64' && precision !== 'float32') {
     throw new TypeError('precision must be "float64" or "float32".')
