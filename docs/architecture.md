@@ -55,4 +55,9 @@ Chunked reading limits the size of individual reads; the resulting dataset and d
 
 The [library interface reference](interfaces.md) describes the numeric columns, rendering structures, and import results. The React demo stores imported data and editor settings in [`App`](../src/App.jsx). Its [`chartAdapter.js`](../src/components/charts/chartAdapter.js) selects columns, applies the current empty-cell and precision settings, and produces chart options. `GraphView` in [`ChartPreview`](../src/components/ChartPreview.jsx) calls the chart lifecycle methods and displays feedback.
 
+The [frontend behavior guide](frontend-behavior.md) covers upload acceptance,
+state preservation, missing-value feedback, and editor controls. Its
+[verification checklist](frontend-checks.md) maps those contracts to regression
+tests and repeatable browser checks.
+
 The home page, examples page, and documentation examples call the chart library directly. Their build and documentation setup is covered in [Contributing](../CONTRIBUTING.md).
