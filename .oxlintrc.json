@@ -1,8 +1,32 @@
 {
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "oxc"],
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
+	"$schema": "./node_modules/oxlint/configuration_schema.json",
+	"plugins": ["react", "oxc", "import"],
+	"categories": {
+		"correctness": "error"
+	},
+	"rules": {
+		"array-callback-return": "error",
+		"curly": ["error", "all"],
+		"eqeqeq": "error",
+		"import/first": "error",
+		"import/newline-after-import": "error",
+		"import/no-cycle": "error",
+		"import/no-duplicates": "error",
+		"import/no-self-import": "error",
+		"no-fallthrough": "error",
+		"no-implied-eval": "error",
+		"no-multi-assign": "error",
+		"no-nested-ternary": "error",
+		"no-new-func": "error",
+		"no-promise-executor-return": "error",
+		"no-return-assign": "error",
+		"no-shadow": "error",
+		"no-throw-literal": "error",
+		"no-unmodified-loop-condition": "error",
+		"no-var": "error",
+		"one-var": ["error", "never"],
+		"prefer-const": "error",
+		"react/rules-of-hooks": "error",
+		"react/only-export-components": ["warn", { "allowConstantExport": true }]
+	}
 }

@@ -1,0 +1,16 @@
+{
+	"$schema": "./node_modules/oxfmt/configuration_schema.json",
+	"printWidth": 100,
+	"tabWidth": 4,
+	"useTabs": true,
+	"singleQuote": true,
+	"jsxSingleQuote": false,
+	"semi": false,
+	"trailingComma": "all",
+	"proseWrap": "preserve",
+	"endOfLine": "lf",
+	"sortImports": false,
+	"sortPackageJson": false,
+	"astro": true,
+	"ignorePatterns": ["package-lock.json", "test/fixtures/*.expected.json"]
+}

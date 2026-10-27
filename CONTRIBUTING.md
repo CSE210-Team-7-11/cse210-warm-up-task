@@ -49,6 +49,8 @@ Before changing shared data structures, check the [library interfaces](docs/inte
 
 Update JSDoc annotations and relevant documentation when behavior changes. Follow the [JSDoc conventions](docs/jsdoc.md).
 
+Run `npm run format` to apply the shared formatting conventions. Oxfmt settings are in `.oxfmtrc.json`, editor defaults are in `.editorconfig`, and code rules are in `.oxlintrc.json`.
+
 ## Documentation site
 
 Edit the public documentation in `docs/user-guide/`:
@@ -74,6 +76,7 @@ The example configurations are in `docs/site/examples/sales.js`. Keep them consi
 Before requesting review, run:
 
 ```sh
+npm run format:check
 npm run lint
 npm test
 npm run build
@@ -95,4 +98,4 @@ Every pull request requires an approving review from someone other than its auth
 
 ## CI and deployment
 
-GitHub Actions runs lint, tests, and the combined production build for every pull request and pushes to `main`. The separate deployment workflow repeats these checks before deploying `main` to GitHub Pages. Both workflows use Node 24.
+GitHub Actions checks formatting, lint, tests, and the combined production build for every pull request and pushes to `main`. The separate deployment workflow repeats these checks before deploying `main` to GitHub Pages. Both workflows use Node 24.
