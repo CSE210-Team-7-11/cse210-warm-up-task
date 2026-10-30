@@ -30,10 +30,10 @@ const EMPTY_CELL_OPTIONS = [
  * previous dataset. Empty Y cells are retained as markers so changing their
  * display policy does not require another file read.
  * @param {Object} props - Controlled editor data and callbacks.
- * @param {Omit<typeof import('../state.js').initialState, 'rows'|'parseIssues'> & {rows?: number[][], numericColumns?: NumericColumns, parseIssues: NonNullable<ReturnType<typeof import('../state.js').parseDelimited>>['issues']}} props.state - Dataset, parseIssues, series, and emptyCells policy.
- * @param {(result: NonNullable<Awaited<ReturnType<typeof import('../state.js').importFile>>> & {sourceName: string}) => void} props.onImport - Receives an accepted typed-column
+ * @param {EditorState} props.state - Dataset, parseIssues, series, and emptyCells policy.
+ * @param {(result: AcceptedUpload) => void} props.onImport - Receives an accepted typed-column
  *   import result with sourceName; the parent replaces data and rebuilds styles.
- * @param {(value: string) => void} props.onEmptyCellsChange - Receives gap, zero, or connect.
+ * @param {(value: EmptyCellPolicy) => void} props.onEmptyCellsChange - Receives gap, zero, or connect.
  * @returns {React.ReactElement} Upload controls, summary, and feedback.
  */
 export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
@@ -44,7 +44,12 @@ export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
 	const [fileError, setFileError] = useState('')
 
 	const summary = useMemo(
-		() => summarizeData({ sourceName, columns, rows, numericColumns }),
+		() =>
+			summarizeData(
+				numericColumns
+					? { sourceName, columns, numericColumns }
+					: { sourceName, columns, rows },
+			),
 		[sourceName, columns, rows, numericColumns],
 	)
 	const issues = useMemo(() => findIssues({ parseIssues, series }), [parseIssues, series])

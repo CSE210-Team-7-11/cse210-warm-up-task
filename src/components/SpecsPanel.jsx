@@ -108,8 +108,8 @@ function SeriesShape({ series, chartType, onChange }) {
  * Color and marker edits replace the matching series object. Scatter displays
  * a circle for a saved none marker without changing that saved line preference.
  * @param {Object} props - Controlled editor settings and callbacks.
- * @param {typeof import('../state.js').initialState} props.state - Labels, chart type, series styles, and point settings.
- * @param {(patch: Partial<typeof import('../state.js').initialState>) => void} props.update - Shallow-merges a settings patch in App.
+ * @param {EditorState} props.state - Labels, chart type, series styles, and point settings.
+ * @param {(patch: EditorSettingsPatch) => void} props.update - Shallow-merges presentation settings in App.
  * @param {() => void} props.onReset - Restores DEFAULT_SPECS only; it preserves
  *   the dataset, chart type, empty-cell policy, and per-series colors and markers.
  * @returns {React.ReactElement} Title, axis, series, and reset controls.
