@@ -3,7 +3,7 @@ import test, { after, before } from 'node:test'
 import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { createServer } from 'vite'
-import { initialState, parseDelimited, seriesFromColumns } from '../src/state.js'
+import { initialState, parseDelimited, seriesFromColumns, importFile } from '../src/state.js'
 import { prepareChart } from '../src/components/charts/chartAdapter.js'
 
 let server
@@ -252,4 +252,60 @@ test('clicking a series key offers its shapes, with None only on line charts', (
 		scatter,
 		/<select aria-label="Marker shape for Smitskis owned"[^>]*><option value="circle" selected="">Circle<\/option>/,
 	)
+})
+
+test('typed file feedback preserves source row locations after X sorting', async () => {
+	const parsed = await importFile(new File(['X,A\n3,30\n1,bad\n2,20'], 'source-order.csv'), {
+		emptyCells: 'mark',
+	})
+	const state = {
+		...initialState,
+		...parsed,
+		rows: undefined,
+		sourceName: 'source-order.csv',
+		parseIssues: parsed.issues,
+		series: seriesFromColumns(parsed.columns),
+	}
+	const html = renderToStaticMarkup(createElement(DataPanel, { state, onImport() {} }))
+	assert.deepEqual([...parsed.numericColumns.x], [1, 2, 3])
+	assert.match(html, /source-order\.csv · 3 rows · 1 series/)
+	assert.match(html, /X: X, 1 to 3/)
+	assert.match(html, /&quot;bad&quot; in row 2 \(A\)/)
+	assert.doesNotMatch(html, /All values are valid/)
+})
+
+test('empty-cell feedback changes with policy without mislabeling #N/A or hiding invalid data', async () => {
+	for (const invalid of [false, true]) {
+		const parsed = await importFile(
+			new File([`X,A\n1,2\n2,\n3,#N/A\n4,${invalid ? 'bad' : '5'}`], 'missing.csv'),
+			{ emptyCells: 'mark' },
+		)
+		const originalParsed = structuredClone(parsed)
+		for (const emptyCells of ['gap', 'zero', 'connect']) {
+			const state = {
+				...initialState,
+				...parsed,
+				rows: undefined,
+				sourceName: 'missing.csv',
+				parseIssues: parsed.issues,
+				series: seriesFromColumns(parsed.columns),
+				emptyCells,
+			}
+			const html = renderToStaticMarkup(createElement(DataPanel, { state, onImport() {} }))
+			if (emptyCells === 'zero') {
+				assert.doesNotMatch(html, /1 empty cell: row 2 \(A\)/)
+			} else {
+				assert.match(html, /1 empty cell: row 2 \(A\)/)
+			}
+			if (invalid) {
+				assert.match(html, /1 nonnumeric value: &quot;bad&quot; in row 4 \(A\)/)
+				assert.doesNotMatch(html, /All values are valid/)
+			} else {
+				assert.match(html, /All values are valid/)
+				assert.doesNotMatch(html, /nonnumeric/)
+			}
+			assert.doesNotMatch(html, /#N\/A/)
+		}
+		assert.deepEqual(parsed, originalParsed)
+	}
 })

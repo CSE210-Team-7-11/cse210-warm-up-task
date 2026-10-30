@@ -25,8 +25,16 @@ const EMPTY_CELL_OPTIONS = [
 ]
 
 /**
- * Step 02: load data from a file. The only way to change the data is to
- * drop/browse a new CSV or TSV file.
+ * Import CSV, TSV, or TXT data and display parser diagnostics. A rejected or
+ * superseded asynchronous read never calls onImport, so the parent keeps the
+ * previous dataset. Empty Y cells are retained as markers so changing their
+ * display policy does not require another file read.
+ * @param {Object} props - Controlled editor data and callbacks.
+ * @param {EditorState} props.state - Dataset, parseIssues, series, and emptyCells policy.
+ * @param {(result: AcceptedUpload) => void} props.onImport - Receives an accepted typed-column
+ *   import result with sourceName; the parent replaces data and rebuilds styles.
+ * @param {(value: EmptyCellPolicy) => void} props.onEmptyCellsChange - Receives gap, zero, or connect.
+ * @returns {React.ReactElement} Upload controls, summary, and feedback.
  */
 export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
 	const { sourceName, rows, numericColumns, columns, parseIssues, series, emptyCells } = state
@@ -36,7 +44,12 @@ export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
 	const [fileError, setFileError] = useState('')
 
 	const summary = useMemo(
-		() => summarizeData({ sourceName, columns, rows, numericColumns }),
+		() =>
+			summarizeData(
+				numericColumns
+					? { sourceName, columns, numericColumns }
+					: { sourceName, columns, rows },
+			),
 		[sourceName, columns, rows, numericColumns],
 	)
 	const issues = useMemo(() => findIssues({ parseIssues, series }), [parseIssues, series])
@@ -80,7 +93,10 @@ export default function DataPanel({ state, onImport, onEmptyCellsChange }) {
 					setFileError(parseProblem)
 					return
 				}
-				onImport({ ...parsed, sourceName: file.name })
+				onImport({
+					.../** @type {NonNullable<typeof parsed>} */ (parsed),
+					sourceName: file.name,
+				})
 				setFileError('')
 			} catch (error) {
 				if (id === readId.current) {
