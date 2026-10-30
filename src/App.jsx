@@ -11,11 +11,15 @@ import './App.css'
 export default function App() {
 	const [state, setState] = useState(initialState)
 
-	const update = useCallback((patch) => setState((s) => ({ ...s, ...patch })), [])
+	const update = useCallback(
+		/** @param {EditorSettingsPatch} patch Presentation fields to replace. */
+		(patch) => setState((s) => ({ ...s, ...patch })),
+		[],
+	)
 
 	/** Replace the whole dataset (file drop). Rebuilds series from the new columns. */
 	const importData = useCallback(
-		/** @param {NonNullable<Awaited<ReturnType<typeof import('./fileImport.js').importFile>>> & {sourceName: string}} result Accepted upload. */
+		/** @param {AcceptedUpload} result Validated typed data and its filename. */
 		({ columns, numericColumns, issues = [], sourceName }) => {
 			setState((s) => ({
 				...s,

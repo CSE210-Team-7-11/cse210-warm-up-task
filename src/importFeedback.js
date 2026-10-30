@@ -18,11 +18,6 @@
 
 import { MAX_AUTO_COLORS } from './graph/colors.js'
 
-/**
- * Parser diagnostics retain their existing contract from state.js.
- * @typedef {NonNullable<ReturnType<typeof import('./state.js').parseDelimited>>['issues']} ImportIssues
- */
-
 const ACCEPTED_EXT = /\.(csv|tsv|txt)$/i
 const INFO_TYPES = new Set(['empty-cell', 'precision-loss', 'precision-loss-truncated'])
 const MAX_LISTED = 3
@@ -53,7 +48,7 @@ export function checkFile({ name }) {
  * Accepts both parseDelimited rows and importFile numeric columns. Missing
  * closing quotes, fewer than two columns, or no usable X rows reject the
  * result. Other diagnostics remain available as non-blocking feedback.
- * @param {{columns: Array<{key: string, name: string}>, issues: ImportIssues, rows?: number[][], numericColumns?: NumericColumns}|null} parsed
+ * @param {ParsedDataset|null} parsed
  *   Parser result with either legacy rows or typed numericColumns, or null for empty input.
  * @param {string} name - Filename used in rejection messages.
  * @returns {string} A rejection message, or an empty string for an accepted result.
@@ -71,7 +66,8 @@ export function checkParsed(parsed, name) {
 	if (parsed.columns.length < 2) {
 		return `${name} has only one column. Separate columns with commas or tabs: X first, then at least one series.`
 	}
-	if ((parsed.numericColumns?.length ?? /** @type {number[][]} */ (parsed.rows).length) === 0) {
+	const length = parsed.numericColumns ? parsed.numericColumns.length : parsed.rows.length
+	if (length === 0) {
 		if (parsed.issues.some(([type]) => type === 'invalid-x')) {
 			return `${name} has no valid X values.`
 		}
@@ -184,20 +180,18 @@ export function describeIssue([type, data], { columns }) {
  * Summarize the loaded dataset without modifying it. Typed columns take
  * precedence over legacy rows. Row count describes retained rows; series
  * count includes all Y columns, even those awaiting a manual color.
- * @param {Object} input - Current dataset and filename.
- * @param {string} input.sourceName - Display name of the sample or imported file.
- * @param {Array<{key: string, name: string}>} input.columns - X column followed by Y column metadata.
- * @param {number[][]} [input.rows] - Sample/legacy rows when no typed data exists.
- * @param {NumericColumns} [input.numericColumns] - Typed data with length and x properties.
+ * @param {DatasetSummaryInput} input - Filename, column metadata, and at least one
+ *   data representation. Typed columns take precedence when both are supplied.
  * @returns {{sourceName: string, rowCount: number, seriesCount: number, xName: string, xRange: Array<number>|null}}
  *   Finite X bounds, or null when no finite X value exists, plus dataset counts.
  */
-export function summarizeData({ sourceName, columns, rows, numericColumns }) {
+export function summarizeData(input) {
+	const { sourceName, columns } = input
 	let xMin = Infinity
 	let xMax = -Infinity
-	const length = numericColumns?.length ?? /** @type {number[][]} */ (rows).length
+	const length = input.numericColumns ? input.numericColumns.length : input.rows.length
 	for (let i = 0; i < length; i++) {
-		const x = numericColumns ? numericColumns.x[i] : /** @type {number[][]} */ (rows)[i][0]
+		const x = input.numericColumns ? input.numericColumns.x[i] : input.rows[i][0]
 		if (!isNumber(x)) {
 			continue
 		}
@@ -210,7 +204,7 @@ export function summarizeData({ sourceName, columns, rows, numericColumns }) {
 	}
 	return {
 		sourceName,
-		rowCount: numericColumns?.length ?? /** @type {number[][]} */ (rows).length,
+		rowCount: length,
 		seriesCount: Math.max(0, columns.length - 1),
 		xName: columns[0]?.name ?? '',
 		xRange: xMin <= xMax ? [xMin, xMax] : null,

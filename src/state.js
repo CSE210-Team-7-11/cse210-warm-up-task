@@ -18,6 +18,7 @@ export { importFile } from './fileImport.js'
  * white surface, all pairs, so they also work for scatter plots).
  * Color is never the only cue: each series also gets its own line dash and
  * scatter marker shape, so charts still read in grayscale or for CVD users.
+ * @type {SeriesStyle[]}
  */
 export const SERIES_STYLES = [
 	{ color: '#2a78d6', dash: '', marker: 'circle' }, // blue, solid
@@ -62,7 +63,11 @@ export const DEFAULT_ROWS = [
 	[12, 35, 3],
 ]
 
-/** Build the series list from the table's columns (column 0 is X). */
+/**
+ * Build the series list from the table's columns (column 0 is X).
+ * @param {EditorColumn[]} columns Source column metadata.
+ * @returns {EditorSeries[]} Styles paired with the source Y columns.
+ */
 export function seriesFromColumns(columns) {
 	return columns.slice(1).map((c, i) => ({
 		id: `s${i + 1}`,
@@ -86,6 +91,7 @@ export const DEFAULT_SPECS = {
 	pointSize: 7,
 }
 
+/** @type {EditorState} Sample data and settings before the first upload. */
 export const initialState = {
 	chartType: 'line', // 'line' | 'scatter'
 	sourceName: 'Sample data',
