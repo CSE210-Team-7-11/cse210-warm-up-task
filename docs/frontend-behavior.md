@@ -89,13 +89,14 @@ screen-reader or accessibility audit.
 ## Maintenance boundaries
 
 Parser and rendering semantics are shared contracts described in ADR-0006 and
-ADR-0007. Coordinate changes to those contracts with their owners. This guide
-does not assign unfinished homepage, examples, live-editor, chart-integration,
-or accessibility work to the author of the import/control documentation.
+ADR-0007. The editor types in `src/editorTypes.js` describe the existing sample
+and upload representations. Every dataset supplies row arrays or typed columns;
+typed columns take precedence when both are present. Presentation controls use
+the shared chart-type, empty-cell, and settings contracts.
 
 The shared tooling is described in [Contributing](../CONTRIBUTING.md) and
 [Testing](../TESTING.md). Browser tests use Playwright with Chromium and Firefox.
 JavaScript type diagnostics remain advisory; axe scans record existing findings
 rather than enforcing zero violations. The generated JSDoc reference covers the
 chart library and shared numeric utilities, not these React component comments.
-Record results for the actual commit being demonstrated.
+Record verification results against the tested commit.

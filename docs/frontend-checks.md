@@ -2,8 +2,8 @@
 
 Use this checklist for the file-import, chart-control, and error-feedback area.
 Record the commit, environment, actual result, and any limitations when running
-it. An unchecked item is not a passing result. Homepage/example/live-editor and
-full keyboard/accessibility coverage can be added by their respective owners.
+it. An unchecked item is not a passing result. This checklist does not cover
+the homepage, examples, live editor, or a full accessibility audit.
 
 ## Existing automated checks
 
@@ -23,6 +23,12 @@ npm run build
 | Chunked import parity, typed-column conversion, byte boundaries and large inputs                     | `test/chunked-import.test.js`                      |
 | Gap/Zero/Connect and unchanged imported data                                                         | `test/empty-cells-option.test.js`                  |
 | Series alignment, settings and adapter behavior                                                      | `test/chart-adapter.test.js`, `test/state.test.js` |
+
+`test/editor-types.test.js` compiles caller examples against the shared editor
+types. It checks sample and uploaded state, accepted-upload callbacks, supported
+chart types, and rejection of inputs missing both data representations. This is
+a focused contract regression; run `npm run typecheck` separately for all source
+diagnostics, which remain advisory.
 
 The rendered-feedback tests use React server rendering. They cannot validate
 click handlers, browser focus, asynchronous upload races, Canvas pixels, or
@@ -80,12 +86,11 @@ bad,2
 | R1  | Start a slow upload, then choose a second file before the first finishes | The older request cannot replace the newer result. This requires a controlled browser test; a static-render test does not cover it. |
 
 For each completed row, record actual results rather than checking off an
-expectation. Keep failures and untested rows visible for the team run-through.
+expectation. Keep failures and untested rows in the verification record.
 
-## Checkoff evidence
+## Verification records
 
-For each demonstrated improvement, keep four items together: the original
-problem, the changed files or PR, why the change helps maintain the project,
-and the verification result. Separate existing Part 2 behavior from the new
-Part 3 documentation or testing contribution. Local work, an open PR, and a
-merged change are different states and should be described accordingly.
+For each change, record the problem, changed files or PR, expected behavior,
+and actual verification result. Include the tested commit and browser version
+so the result can be reproduced. Distinguish local verification from CI results
+and identify any checks that were not run.
