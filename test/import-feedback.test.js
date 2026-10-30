@@ -198,3 +198,33 @@ test('typed file imports reject an all-invalid X dataset with an actionable reas
 	assert.equal(parsed.numericColumns.length, 0)
 	assert.equal(checkParsed(parsed, 'invalid-x.csv'), 'invalid-x.csv has no valid X values.')
 })
+
+test('typed data takes precedence over legacy rows in validation and summaries', () => {
+	const numericColumns = {
+		length: 2,
+		x: new Float64Array([2, 4]),
+		ys: [new Float64Array([20, 40]), new Float64Array([3, 5])],
+	}
+	const typed = { sourceName: 'typed.csv', columns, numericColumns, issues: [] }
+	const both = { ...typed, rows: [[100, 200, 300]] }
+	assert.equal(checkParsed(typed, typed.sourceName), '')
+	assert.equal(checkParsed(both, both.sourceName), '')
+	const expected = {
+		sourceName: 'typed.csv',
+		rowCount: 2,
+		seriesCount: 2,
+		xName: 'Month',
+		xRange: [2, 4],
+	}
+	assert.deepEqual(summarizeData(typed), expected)
+	assert.deepEqual(summarizeData(both), expected)
+	const empty = {
+		...both,
+		numericColumns: { length: 0, x: new Float64Array(), ys: [] },
+	}
+	assert.equal(
+		checkParsed(empty, empty.sourceName),
+		'typed.csv has a header row but no data rows.',
+	)
+	assert.deepEqual(summarizeData(empty), { ...expected, rowCount: 0, xRange: null })
+})
